@@ -9,9 +9,27 @@ import { Server } from './Server';
 import { loadConfig } from './utils/loadConfig';
 import { log } from './utils/log';
 
+/**
+ * Classe que representa um bot script carregavel
+ * @class Bot
+ * @property {string} name - Nome unico do bot
+ * @property {string} path - Caminho para o arquivo do script
+ * @property {string} [displayName] - Nome exibido (opcional)
+ */
 class Bot {
+  /**
+   * Cria uma instancia de Bot
+   * @param {string} name - Nome unico do bot
+   * @param {string} path - Caminho para o arquivo do script
+   * @param {string} [displayName] - Nome exibido (opcional)
+   */
   constructor(public name: string, public path: string, public displayName?: string) {}
 
+  /**
+   * Le o conteudo do arquivo do bot script
+   * @returns {Promise<string>} Conteudo do arquivo do bot script
+   * @throws {Error} Se arquivo nao pode ser lido
+   */
   read(): Promise<string> {
     return new Promise((resolve, reject) => {
       fs.readFile(this.path, { encoding: 'utf-8' }, async (err, data) => {
@@ -24,6 +42,14 @@ class Bot {
     });
   }
 
+  /**
+   * Executa o script do bot em uma sala
+   * @param {Server} server - Instancia do gerenciador de servidores
+   * @param {string} data - Conteudo do script a executar
+   * @param {string|string[]} tokens - Token(ns) headless do Haxball
+   * @param {CustomSettings} [settings] - Configuracoes personalizadas (opcional)
+   * @returns {Promise} Promessa com resultado da execucao do servidor
+   */
   run(
     server: Server,
     data: string,
@@ -39,6 +65,15 @@ class Bot {
   }
 }
 
+/**
+ * Painel de controle para gerenciar servidores Haxball via Discord bot
+ * Fornece interface Discord para:
+ * - Abrir/fechar salas
+ * - Gerenciar bots
+ * - Monitorar CPU/memoria
+ * - Aplicar configuracoes personalizadas
+ * @class ControlPanel
+ */
 export class ControlPanel {
   private client = new Discord.Client({
     intents: [
@@ -62,11 +97,22 @@ export class ControlPanel {
 
   private maxRooms?: number;
 
+  /**
+   * Inicializa o painel de controle Discord
+   * @param {Server} server - Instancia do gerenciador de servidores
+   * @param {PanelConfig} config - Configuracoes do painel
+   * @param {string} [fileName] - Nome do arquivo de configuracao (opcional)
+   */
   constructor(private server: Server, config: PanelConfig, private fileName?: string) {
     this.prefix = config.discordPrefix;
     this.token = config.discordToken;
     this.mastersDiscordId = config.mastersDiscordId;
     this.maxRooms = config.maxRooms;
+
+//    __  ____ ____ _  _
+//  / _\/ ___) ___) )( \
+// /    \___ \___ ) \/ (
+// \_/\_(____(____|____/
 
     if (config.customSettings) this.loadCustomSettings(config.customSettings);
     this.loadBots(config.bots);

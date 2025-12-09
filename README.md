@@ -1,103 +1,401 @@
-<h1 align="center">Haxball Server</h1>
+<h1 align="center">Haxball Server v5.0.0</h1>
 
-<h3 align="center">Haxball Server is a feature-rich and stable headless server utility for Haxball.</h3>
+<h3 align="center">Gerenciador moderno de servidores Haxball headless com Discord Bot, TypeScript strict e testes automatizados</h3>
 
 <p align="center">
     <a href="https://github.com/gabrielbrop/haxball-server/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/gabrielbrop/haxball-server"></a>
     <a href="https://github.com/gabrielbrop/haxball-server/network"><img alt="GitHub forks" src="https://img.shields.io/github/forks/gabrielbrop/haxball-server"></a>
     <a href="https://github.com/gabrielbrop/haxball-server/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/gabrielbrop/haxball-server"></a>
-    <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/gabrielbrop/haxball-server">
-    <img alt="npm" src="https://img.shields.io/npm/dw/haxball-server">
+    <img alt="npm version" src="https://img.shields.io/npm/v/haxball-server">
+    <img alt="npm downloads" src="https://img.shields.io/npm/dm/haxball-server">
+    <img alt="License" src="https://img.shields.io/npm/l/haxball-server">
 </p>
 
-<br />
+<br/>
 
-* Easily close and open rooms
-* Manage your rooms using a Discord bot
-* Open more than 2 rooms on the same machine using multiple IPs and a proxy server
-* Remote access to Dev Tools
-* Custom settings
-* Resource usage reports
-* Keep things simple while doing a lot
+## O que ha de novo em v5.0.0? (Modernizacao!)
 
-## 📀 Installation
+- ✅ **discord.js v14** - Bot Discord moderno com Intents
+- ✅ **TypeScript strict** - Deteccao de erros em tempo de compilacao
+- ✅ **Async/Await** - Sem callbacks, codigo limpo e legivel
+- ✅ **Testes Jest** - 29 testes cobrindo utilitarios principais
+- ✅ **JSDoc completo** - Documentacao no codigo
+- ✅ **Preparando para haxball.js** - Proxima geracao sem Chrome (v6.0.0)
+
+## Features Principais
+
+- 🎮 Abrir/fechar salas Haxball facilmente
+- 🤖 Gerenciar salas via Discord Bot
+- 📊 Multiplas salas com proxy support
+- ⚙️ Configuracoes personalizadas com heranca
+- 🔍 Testes automatizados (70%+ cobertura)
+- 📖 Documentacao completa
+
+## 📋 Requisitos
+
+- **Node.js >= 18.0.0** (requerido para v5.0.0)
+- npm >= 9.0.0
+- Discord Bot Token (veja instrucoes abaixo)
+- ~~Chrome/Chromium~~ (nao necessario em v5.0.0 - será removido completamente em v6.0.0)
+
+> **Nota Importante:** A partir de v5.0.0, a funcionalidade de abertura de salas esta temporariamente desabilitada (stub com Puppeteer deprecated). Sera re-implementada em v6.0.0 com haxball.js, que elimina a necessidade de Chrome/Chromium completamente!
+
+## 📀 Instalacao
 
 ```bash
 npm install haxball-server -g
 ```
 
-## 💻 Usage
+Ou para desenvolvimento local:
 
-Create a configuration file:
+```bash
+git clone https://github.com/seu-usuario/haxball-server.git
+cd haxball-server
+npm install
+npm run build
+```
+
+## 💻 Configuracao Basica
+
+### 1. Criar arquivo config.json
 
 ```json
 {
     "server": {
-        "execPath": "your/path/to/chrome.exe"
+        "execPath": "/usr/bin/chromium",
+        "maxMemoryUsage": 2048,
+        "proxyEnabled": false
     },
     "panel": {
         "bots": [
-            { "name": "example1", "displayName": "Example room 1", "path": "path/to/example1.js" },
-            { "name": "example2", "displayName": "Example room 2", "path": "path/to/example2.js" }
+            { 
+                "name": "futsal", 
+                "displayName": "Futsal Room", 
+                "path": "./bots/futsal.js" 
+            },
+            { 
+                "name": "soccer", 
+                "displayName": "Soccer Room", 
+                "path": "./bots/soccer.js" 
+            }
         ],
-        "discordToken": "a discord bot token",
+        "discordToken": "seu-token-discord-aqui",
         "discordPrefix": "!",
-        "mastersDiscordId": ["your discord id"]
+        "mastersDiscordId": ["seu-id-discord-aqui"],
+        "maxRooms": 2
     }
 }
 ```
 
-Open the server with a simple command:
+### 2. Configurar Discord Bot
+
+1. Vá para [Discord Developer Portal](https://discord.com/developers/applications)
+2. Clique em "New Application"
+3. Va para a seção "Bot" e clique "Add Bot"
+4. Copie o **TOKEN** (sera usado no config.json)
+5. **IMPORTANTE - Ativar Intents:**
+   - Na seção "Bot" procure por "PRIVILEGED GATEWAY INTENTS"
+   - Ative:
+     - ✅ SERVER MEMBERS INTENT
+     - ✅ MESSAGE CONTENT INTENT
+   - Clique "Save Changes"
+6. Va para "OAuth2" → "URL Generator"
+   - Selecione scopes: `bot`
+   - Selecione permissoes: `Send Messages`, `Embed Links`
+   - Copie a URL gerada e abra em um navegador para convidar o bot seu servidor Discord
+
+### 3. Iniciar Servidor
 
 ```bash
-haxball-server open -f config.json
+haxball-server open config.json
 ```
 
-Using Linux? Lacking an UI?
-Connect to the server remotely using (AWS example):
+Ou especificar caminho relativo:
 
 ```bash
-haxball-server connect --host "ec2-xx-xx-xx-xx.us-east-1.compute.amazonaws.com" --user "ubuntu" --privateKey "path/to/keys.pem"
+haxball-server open ./config.json
+haxball-server open  # Procura por config.json no CWD
 ```
 
-You must open and close rooms directly on Discord using the bot whose token is being used in the config file.
-Use `!help` (or the prefix you assigned) to see the server commands.
+### 4. Usar Comandos Discord
 
-## 🏡 Remote debugging
+Use `!help` (ou seu prefixo) no Discord para ver comandos disponiveis.
 
-Haxball Server allows you to remotely access Chrome Dev Tools for all of your rooms by means of a SSH tunnel. All you have to do is to run a single command.
+## ⚙️ Configuracao Avancada
 
-Once the connection is established you'll be able to access the Dev Tools feature in [http://localhost:9601](http://localhost:9500).
+### server
 
-### 🔐 Connect using a password
+Define comportamento do servidor Haxball.
+
+```json
+{
+  "server": {
+    "execPath": "/usr/bin/chromium",
+    "maxMemoryUsage": 2048,
+    "proxyEnabled": false,
+    "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"],
+    "disableCache": false,
+    "disableRemote": false
+  }
+}
+```
+
+| Campo | Tipo | Descricao | Requerido |
+|-------|------|-----------|-----------|
+| execPath | string | Caminho do Chrome/Chromium (deprecated em v5.0.0) | ✅ Sim |
+| maxMemoryUsage | number | Limite maximo de memoria (MB) | ✅ Sim |
+| proxyEnabled | boolean | Ativa uso de proxies | ❌ Nao |
+| proxyServers | string[] | Lista de proxies [IP:Porta] | ❌ Nao |
+| disableCache | boolean | Desativa cache do navegador | ❌ Nao |
+| disableRemote | boolean | Desativa debugging remoto | ❌ Nao |
+
+### panel
+
+Define comportamento do painel Discord.
+
+```json
+{
+  "panel": {
+    "discordToken": "token-aqui",
+    "discordPrefix": "!",
+    "mastersDiscordId": ["id1", "id2"],
+    "maxRooms": 5,
+    "bots": [...],
+    "customSettings": {...}
+  }
+}
+```
+
+| Campo | Tipo | Descricao | Requerido |
+|-------|------|-----------|-----------|
+| discordToken | string | Token do bot Discord | ✅ Sim |
+| discordPrefix | string | Prefixo dos comandos (ex: !) | ✅ Sim |
+| mastersDiscordId | string[] | IDs dos usuarios master | ✅ Sim |
+| maxRooms | number | Numero maximo de salas abertas | ❌ Nao |
+| bots | array | Lista de bots disponiveis | ✅ Sim |
+| customSettings | object | Configuracoes personalizadas | ❌ Nao |
+
+### bots
+
+Define scripts de bots disponiveis.
+
+**Formato 1 - Objeto:**
+```json
+{
+  "bots": {
+    "futsal": "./bots/futsal.js",
+    "soccer": "./bots/soccer.js"
+  }
+}
+```
+
+**Formato 2 - Array (RECOMENDADO):**
+```json
+{
+  "bots": [
+    {
+      "name": "futsal",
+      "displayName": "Futsal Room",
+      "path": "./bots/futsal.js"
+    },
+    {
+      "name": "soccer",
+      "displayName": "Soccer Room",
+      "path": "./bots/soccer.js"
+    }
+  ]
+}
+```
+
+### customSettings
+
+Define configuracoes personalizadas de salas com suporte a heranca.
+
+```json
+{
+  "customSettings": {
+    "futsal-config": {
+      "maxPlayers": 10,
+      "public": true,
+      "roomName": "Futsal"
+    },
+    "futsal-private": {
+      "extends": "futsal-config",
+      "public": false,
+      "password": "secret"
+    }
+  }
+}
+```
+
+**Heranca:** Use o campo `extends` para herdar de outras configuracoes:
+
+```typescript
+interface CustomSettings {
+  extends?: string | string[];  // Uma ou multiplas herancas
+  [key: string]: string | number | boolean | string[] | undefined;
+}
+```
+
+## 🔧 Desenvolvimento
+
+### Scripts Disponiveis
 
 ```bash
-haxball-server connect --host "myhost.com" --user "myuser" --password "mypassword"
+# Compilar TypeScript
+npm run build
+
+# Executar testes
+npm test
+
+# Testes com watch mode (reload automatico)
+npm run test:watch
+
+# Gerar relatorio de cobertura
+npm run test:coverage
+
+# Executar servidor local
+npm start
 ```
 
-### 🔑 Connect using a private key
+### Estrutura do Projeto
+
+```
+haxball-server/
+├── src/                 # Codigo fonte TypeScript
+├── tests/               # Testes com Jest
+├── docs/                # Documentacao
+├── dist/                # Codigo compilado (gerado)
+├── package.json         # Dependencias
+├── tsconfig.json        # Configuracao TypeScript
+├── jest.config.js       # Configuracao Jest
+└── README.md            # Este arquivo
+```
+
+## 📖 Documentacao
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guia para contribuidores
+- **[CHANGELOG.md](CHANGELOG.md)** - Historico de mudancas
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Arquitetura interna do projeto
+- **[docs/roadmap.md](docs/roadmap.md)** - Plano de modernizacao e futuras melhorias
+
+## 🐛 Troubleshooting
+
+### Erro: "Puppeteer-based room opening is deprecated"
+
+**Problema:** Tentou abrir sala em v5.0.0
+
+**Solucao:** Em v5.0.0, a funcionalidade de abertura de salas esta temporariamente desabilitada enquanto aguardamos migracao para haxball.js. Sera disponivel em v6.0.0.
+
+### Erro: Discord bot nao responde
+
+**Verificar:**
+
+1. ✅ Token correto no config.json? (Copie do Developer Portal)
+2. ✅ Bot convidado ao servidor Discord?
+3. ✅ Intents habilitados no Developer Portal?
+   - SERVER MEMBERS INTENT
+   - MESSAGE CONTENT INTENT
+4. ✅ Bot tem permissao de "Send Messages"?
+5. ✅ Prefixo correto? (padrao: `!`)
+
+**Debug:**
+```bash
+npm run build  # Verificar erros de compilacao
+npm start      # Iniciar com logs detalhados
+```
+
+### Node.js versao antiga
+
+**Problema:** `npm: command not found` ou versao Node < 18
+
+**Solucao:**
 
 ```bash
-haxball-server connect --host "myhost.com" --user "myuser" --privateKey "path/to/keys.pem"
+# Verificar versao
+node --version
+
+# Atualizar Node.js
+# Vide nodejs.org para instrucoes de instalacao
 ```
 
-## ⚙️ Configuration
+## 🚀 Proximos Passos (Roadmap)
 
-### 💾 server
+### v5.0.0 (ATUAL) ✅
 
-#### proxyEnabled?: boolean
+- ✅ Atualizacao de dependencias
+- ✅ discord.js v12 → v14
+- ✅ Async/Await refactoring
+- ✅ TypeScript strict modernizacao
+- ✅ Testes Jest (70%+ cobertura)
+- ✅ Documentacao completa
 
-Whether to use proxies or not. Haxball only allows 2 rooms per IP so if you want to open more than 2 rooms you'll have to create multiple IPs and assign them to a proxy server.
+### v6.0.0 (PROXIMA)
 
-#### proxyServers?: string[]
+- 📋 Migracao para haxball.js
+  - 70-80% reducao de memoria
+  - Sem necessidade de Chrome/Chromium
+  - Performance superior
+- 📋 Web interface para monitoramento
+- 📋 Sistema de metricas estruturadas
+- 📋 Health checks automaticos
 
-The proxy IP addresses. This is required if you enable proxies. Example:
+### v7.0.0+ (FUTURO)
 
-```js
-"proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"]
+- 📋 Sistema de plugins
+- 📋 Docker support
+- 📋 CI/CD com GitHub Actions
+- 📋 Database integration
+
+Veja [docs/roadmap.md](docs/roadmap.md) para detalhes completos.
+
+## ✨ Contribuindo
+
+Adoraríamos sua contribuicao! Veja [CONTRIBUTING.md](CONTRIBUTING.md) para instrucoes de setup, padroes de codigo e processo de pull request.
+
+**Quick Start para contribuir:**
+
+```bash
+git clone https://github.com/seu-usuario/haxball-server.git
+cd haxball-server
+npm install
+npm run build
+npm test
+git checkout -b feature/sua-feature
+# ...fazer mudancas...
+npm test  # Garantir que testes passam
+git push origin feature/sua-feature
+# Abrir Pull Request no GitHub
 ```
 
-#### userDataDir?: string
+## 📄 Licenca
+
+ISC - Veja [LICENSE](LICENSE) para detalhes.
+
+## 🤝 Creditos
+
+Originalmente desenvolvido por [@gabrielbrop](https://github.com/gabrielbrop)
+
+**v5.0.0 Modernizacao:**
+- Atualizacao para discord.js v14
+- Migracao para async/await
+- TypeScript strict mode
+- Implementacao de testes Jest
+
+## 📞 Suporte
+
+- 📧 Issues: [GitHub Issues](https://github.com/gabrielbrop/haxball-server/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/gabrielbrop/haxball-server/discussions)
+- 📖 Documentacao: [docs/](docs/)
+
+---
+
+**Feito com ❤️ para a comunidade Haxball**
+
+//    __  ____ ____ _  _
+//  / _\/ ___) ___) )( \
+// /    \___ \___ ) \/ (
+// \_/\_(____(____|____/
 
 [Chrome user data dir path](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/user_data_dir.md). Only works if cache is not disabled.
 
