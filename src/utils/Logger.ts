@@ -6,7 +6,7 @@ export enum LogLevel {
   DEBUG = 'DEBUG',
   INFO = 'INFO',
   WARN = 'WARN',
-  ERROR = 'ERROR'
+  ERROR = 'ERROR',
 }
 
 export interface LogEntry {
@@ -31,7 +31,7 @@ export class Logger {
     if (!fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true });
     }
-    
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     this.logFile = path.join(logsDir, `haxball-${timestamp}.log`);
   }
@@ -50,7 +50,7 @@ export class Logger {
   public subscribe(callback: (entry: LogEntry) => void): () => void {
     this.subscribers.push(callback);
     return () => {
-      this.subscribers = this.subscribers.filter(cb => cb !== callback);
+      this.subscribers = this.subscribers.filter((cb) => cb !== callback);
     };
   }
 
@@ -88,7 +88,7 @@ export class Logger {
       level,
       component,
       message,
-      data
+      data,
     };
 
     this.logs.push(entry);
@@ -104,9 +104,9 @@ export class Logger {
   private printToConsole(entry: LogEntry): void {
     const levelColor = this.getColorCode(entry.level);
     const reset = '\x1b[0m';
-    
+
     let logMessage = `${levelColor}[${entry.timestamp}] [${entry.level}] [${entry.component}]${reset} ${entry.message}`;
-    
+
     if (entry.data !== undefined) {
       logMessage += ` ${JSON.stringify(entry.data)}`;
     }
@@ -134,9 +134,11 @@ export class Logger {
   }
 
   private writeToFile(entry: LogEntry): void {
-    const logLine = `${entry.timestamp} | ${entry.level.padEnd(5)} | ${entry.component.padEnd(20)} | ${entry.message}${
-      entry.data ? ' | ' + JSON.stringify(entry.data) : ''
-    }${entry.roomId ? ` | Room: ${entry.roomId}` : ''}\n`;
+    const logLine = `${entry.timestamp} | ${entry.level.padEnd(5)} | ${entry.component.padEnd(
+      20
+    )} | ${entry.message}${entry.data ? ' | ' + JSON.stringify(entry.data) : ''}${
+      entry.roomId ? ` | Room: ${entry.roomId}` : ''
+    }\n`;
 
     fs.appendFileSync(this.logFile, logLine, 'utf-8');
   }
@@ -151,21 +153,24 @@ export class Logger {
     }
   }
 
-  public getLogs(
-    filter?: { level?: LogLevel; component?: string; roomId?: number; limit?: number }
-  ): LogEntry[] {
+  public getLogs(filter?: {
+    level?: LogLevel;
+    component?: string;
+    roomId?: number;
+    limit?: number;
+  }): LogEntry[] {
     let filtered = [...this.logs];
 
     if (filter?.level) {
-      filtered = filtered.filter(log => log.level === filter.level);
+      filtered = filtered.filter((log) => log.level === filter.level);
     }
 
     if (filter?.component) {
-      filtered = filtered.filter(log => log.component.includes(filter.component || ''));
+      filtered = filtered.filter((log) => log.component.includes(filter.component || ''));
     }
 
     if (filter?.roomId !== undefined) {
-      filtered = filtered.filter(log => log.roomId === filter.roomId);
+      filtered = filtered.filter((log) => log.roomId === filter.roomId);
     }
 
     if (filter?.limit) {
@@ -183,7 +188,7 @@ export class Logger {
     const stats = {
       totalLogs: this.logs.length,
       byLevel: {} as Record<string, number>,
-      byComponent: {} as Record<string, number>
+      byComponent: {} as Record<string, number>,
     };
 
     for (const log of this.logs) {

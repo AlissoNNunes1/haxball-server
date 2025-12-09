@@ -46,13 +46,13 @@ export class WebMonitor {
     this.app.get('/api/stats', (_req, res) => {
       const stats = logger.getStats();
       const roomMetrics = this.roomMonitor.getAllMetrics();
-      
+
       res.json({
         logging: stats,
         rooms: {
           total: roomMetrics.length,
-          metrics: roomMetrics
-        }
+          metrics: roomMetrics,
+        },
       });
     });
 
@@ -64,7 +64,7 @@ export class WebMonitor {
     this.app.get('/api/rooms/:pid', (req, res) => {
       const pid = parseInt(req.params.pid);
       const metric = this.roomMonitor.getMetrics(pid);
-      
+
       if (!metric) {
         res.status(404).json({ error: 'Room not found' });
         return;
@@ -131,7 +131,7 @@ export class WebMonitor {
       this.logUnsubscribe = logger.subscribe((entry: LogEntry) => {
         this.broadcast({
           type: 'log',
-          data: entry
+          data: entry,
         });
       });
     }

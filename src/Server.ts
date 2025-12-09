@@ -249,7 +249,10 @@ export class Server {
     }
 
     log('SERVER', `Todas as salas fechadas: ${closedCount}/${pids.length}`);
-    logger.info('Server', `Shutdown completo`, { closedRooms: closedCount, totalRooms: pids.length });
+    logger.info('Server', `Shutdown completo`, {
+      closedRooms: closedCount,
+      totalRooms: pids.length,
+    });
     return closedCount;
   }
 

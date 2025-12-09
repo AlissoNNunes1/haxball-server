@@ -29,7 +29,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
     userDataDir: '',
     disableAnonymizeLocalIps: false,
     execPath: '/mock/path',
-    maxMemoryUsage: 512
+    maxMemoryUsage: 512,
   };
 
   const getSample = (): MemorySample => {
@@ -39,7 +39,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       timestamp: Date.now(),
       heapUsed: mem.heapUsed,
       heapTotal: mem.heapTotal,
-      external: mem.external
+      external: mem.external,
     };
   };
 
@@ -75,7 +75,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
 
       logger.info('Benchmark', 'Baseline memory', {
         heapUsed: formatBytes(sample.heapUsed),
-        heapTotal: formatBytes(sample.heapTotal)
+        heapTotal: formatBytes(sample.heapTotal),
       });
     });
 
@@ -86,7 +86,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       expect(heapUsedMB).toBeLessThan(100);
 
       logger.info('Benchmark', 'Server baseline', {
-        heapMB: heapUsedMB.toFixed(2)
+        heapMB: heapUsedMB.toFixed(2),
       });
     });
   });
@@ -111,7 +111,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', 'Room tracking overhead', {
         delta: formatBytes(delta),
         deltaKB: (delta / 1024).toFixed(2),
-        perRoom: formatBytes(delta / 3)
+        perRoom: formatBytes(delta / 3),
       });
     });
 
@@ -135,7 +135,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
 
       logger.info('Benchmark', 'Linear growth test', {
         avgDeltaPerRoom: formatBytes(avgDelta),
-        samples: samples.map(s => formatBytes(s))
+        samples: samples.map((s) => formatBytes(s)),
       });
     });
   });
@@ -148,7 +148,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
         logger.info('Benchmark', `Log message ${i}`, {
           data: 'Test data',
           index: i,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -163,7 +163,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', '1000 logs memory', {
         total: formatBytes(delta),
         perLog: formatBytes(perLog),
-        logsStored: logsCount
+        logsStored: logsCount,
       });
     });
 
@@ -181,7 +181,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', 'Buffer limit enforcement', {
         messagesWritten: 15000,
         messagesStored: logs.length,
-        maxBuffer: 10000
+        maxBuffer: 10000,
       });
     });
   });
@@ -205,7 +205,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', 'RoomMonitor scalability', {
         rooms: roomCount,
         duration: `${duration}ms`,
-        perRoom: `${(duration / roomCount).toFixed(2)}ms`
+        perRoom: `${(duration / roomCount).toFixed(2)}ms`,
       });
     });
 
@@ -227,7 +227,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', 'Metrics retrieval speed', {
         queries: 100,
         duration: `${duration}ms`,
-        perQuery: `${(duration / 100).toFixed(3)}ms`
+        perQuery: `${(duration / 100).toFixed(3)}ms`,
       });
     });
   });
@@ -249,7 +249,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
 
       logger.info('Benchmark', 'Cleanup effectiveness', {
         freed: formatBytes(freed),
-        percentageFreed: ((freed / before.heapUsed) * 100).toFixed(2) + '%'
+        percentageFreed: ((freed / before.heapUsed) * 100).toFixed(2) + '%',
       });
     });
 
@@ -270,11 +270,11 @@ describe('Performance Benchmarks - Memory Usage', () => {
         samples.push(after.heapUsed);
       }
 
-      const trend = samples.map((v, i) => i === 0 ? 0 : v - samples[i - 1]);
+      const trend = samples.map((v, i) => (i === 0 ? 0 : v - samples[i - 1]));
 
       logger.info('Benchmark', 'Memory leak detection', {
-        samples: samples.map(s => formatBytes(s)),
-        trend: trend.map(t => formatBytes(t))
+        samples: samples.map((s) => formatBytes(s)),
+        trend: trend.map((t) => formatBytes(t)),
       });
     });
   });
@@ -288,7 +288,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', 'Memory vs Target', {
         current: `${heapUsedMB.toFixed(2)} MB`,
         target: `${targetMB} MB`,
-        status: heapUsedMB < targetMB ? 'PASS' : 'ABOVE_TARGET'
+        status: heapUsedMB < targetMB ? 'PASS' : 'ABOVE_TARGET',
       });
     });
 
@@ -300,7 +300,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
         heapTotalMB: (sample.heapTotal / 1024 / 1024).toFixed(2),
         externalMB: (sample.external / 1024 / 1024).toFixed(2),
         nodeVersion: process.version,
-        platform: process.platform
+        platform: process.platform,
       });
     });
   });
@@ -313,7 +313,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       for (let i = 0; i < messageCount; i++) {
         logger.info('Stress', `Message ${i}`, {
           data: 'x'.repeat(100),
-          index: i
+          index: i,
         });
       }
 
@@ -325,7 +325,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       logger.info('Benchmark', 'Stress test results', {
         messages: messageCount,
         duration: `${duration}ms`,
-        throughput: `${messagesPerSecond.toFixed(0)} msg/s`
+        throughput: `${messagesPerSecond.toFixed(0)} msg/s`,
       });
     });
   });

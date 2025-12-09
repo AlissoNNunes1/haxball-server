@@ -13,7 +13,7 @@ describe('Room Lifecycle Integration Tests', () => {
     userDataDir: '',
     disableAnonymizeLocalIps: false,
     execPath: '/mock/path',
-    maxMemoryUsage: 512
+    maxMemoryUsage: 512,
   };
 
   beforeEach(() => {
@@ -46,7 +46,7 @@ describe('Room Lifecycle Integration Tests', () => {
         onPlayerLeave: null,
         onPlayerChat: null,
         onGoal: null,
-        getLink: () => 'https://www.haxball.com/headless?c=abc123'
+        getLink: () => 'https://www.haxball.com/headless?c=abc123',
       };
 
       const mockPid = 1001;
@@ -96,7 +96,7 @@ describe('Room Lifecycle Integration Tests', () => {
         onPlayerJoin: null,
         onPlayerLeave: null,
         onPlayerChat: null,
-        onGoal: null
+        onGoal: null,
       };
 
       const pid = 3001;
@@ -119,7 +119,7 @@ describe('Room Lifecycle Integration Tests', () => {
         onPlayerJoin: null,
         onPlayerLeave: null,
         onPlayerChat: null,
-        onGoal: null
+        onGoal: null,
       };
 
       const pid = 3002;
@@ -139,20 +139,20 @@ describe('Room Lifecycle Integration Tests', () => {
 
       const logs = logger.getLogs({ component: 'Server', limit: 10 });
       expect(logs.length).toBeGreaterThan(0);
-      expect(logs.some(l => l.message.includes('Sala aberta'))).toBe(true);
+      expect(logs.some((l) => l.message.includes('Sala aberta'))).toBe(true);
     });
 
     it('deve registrar fechamento de sala em logs', () => {
       logger.info('Server', 'Sala fechada', { pid: 4002, name: 'TestRoom' });
 
       const logs = logger.getLogs({ component: 'Server', limit: 10 });
-      expect(logs.some(l => l.message.includes('Sala fechada'))).toBe(true);
+      expect(logs.some((l) => l.message.includes('Sala fechada'))).toBe(true);
     });
 
     it('deve registrar erros de sala em logs', () => {
-      logger.error('Server', 'Erro ao abrir sala', { 
-        pid: 4003, 
-        error: 'Token invalido' 
+      logger.error('Server', 'Erro ao abrir sala', {
+        pid: 4003,
+        error: 'Token invalido',
       });
 
       const errorLogs = logger.getLogs({ limit: 10 });
@@ -160,10 +160,10 @@ describe('Room Lifecycle Integration Tests', () => {
     });
 
     it('deve incluir dados estruturados nos logs', () => {
-      const testData = { 
-        pid: 4004, 
-        players: 5, 
-        duration: 3600000 
+      const testData = {
+        pid: 4004,
+        players: 5,
+        duration: 3600000,
       };
       logger.info('RoomMonitor', 'Sala estatisticas', testData);
 
@@ -231,7 +231,7 @@ describe('Room Lifecycle Integration Tests', () => {
     it('deve fornecer metricas de uptime', () => {
       const mockRoom = {
         createdAt: Date.now(),
-        onPlayerJoin: null
+        onPlayerJoin: null,
       };
 
       roomMonitor.trackRoom(5001, mockRoom as any);
@@ -289,7 +289,7 @@ describe('Room Lifecycle Integration Tests', () => {
       const metrics = roomMonitor.getAllMetrics();
 
       expect(Array.isArray(metrics)).toBe(true);
-      metrics.forEach(m => {
+      metrics.forEach((m) => {
         expect(m.pid).toBeDefined();
         expect(typeof m.playerCount).toBe('number');
         expect(typeof m.gameCount).toBe('number');

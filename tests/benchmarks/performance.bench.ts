@@ -26,7 +26,7 @@ describe('Performance Benchmarks - Startup Time', () => {
     userDataDir: '',
     disableAnonymizeLocalIps: false,
     execPath: '/mock/path',
-    maxMemoryUsage: 512
+    maxMemoryUsage: 512,
   };
 
   beforeEach(() => {
@@ -55,7 +55,7 @@ describe('Performance Benchmarks - Startup Time', () => {
       logger.info('Benchmark', 'Server init time', {
         duration: `${duration}ms`,
         target: '<2000ms',
-        status: duration < 2000 ? 'PASS' : 'ABOVE_TARGET'
+        status: duration < 2000 ? 'PASS' : 'ABOVE_TARGET',
       });
     });
 
@@ -82,7 +82,7 @@ describe('Performance Benchmarks - Startup Time', () => {
         onPlayerJoin: null,
         onPlayerLeave: null,
         onPlayerChat: null,
-        onGoal: null
+        onGoal: null,
       };
 
       roomMonitor.trackRoom(50001, mockRoom);
@@ -93,7 +93,7 @@ describe('Performance Benchmarks - Startup Time', () => {
 
       logger.info('Benchmark', 'Room tracking startup', {
         duration: `${duration}ms`,
-        overhead: formatBytes(0)
+        overhead: formatBytes(0),
       });
     });
 
@@ -105,7 +105,7 @@ describe('Performance Benchmarks - Startup Time', () => {
 
         const mockRoom = {
           getLink: () => `https://www.haxball.com/headless?c=test${i}`,
-          onPlayerJoin: null
+          onPlayerJoin: null,
         };
 
         roomMonitor.trackRoom(50010 + i, mockRoom);
@@ -124,7 +124,7 @@ describe('Performance Benchmarks - Startup Time', () => {
         avg: `${avg.toFixed(2)}ms`,
         min: `${Math.min(...times)}ms`,
         max: `${max}ms`,
-        stdDev: calculateStdDev(times)
+        stdDev: calculateStdDev(times),
       });
     });
   });
@@ -140,7 +140,7 @@ describe('Performance Benchmarks - Startup Time', () => {
       expect(duration).toBeLessThan(10);
 
       logger.info('Benchmark', 'Logger init overhead', {
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
       });
     });
 
@@ -157,7 +157,7 @@ describe('Performance Benchmarks - Startup Time', () => {
 
       logger.info('Benchmark', 'First message latency', {
         duration: `${duration}ms`,
-        perMessage: `${(duration / 3).toFixed(2)}ms`
+        perMessage: `${(duration / 3).toFixed(2)}ms`,
       });
     });
   });
@@ -180,7 +180,7 @@ describe('Performance Benchmarks - Startup Time', () => {
       logger.info('Benchmark', 'Cold vs Warm startup', {
         coldStart: `${coldDuration}ms`,
         warmStart: `${warmDuration}ms`,
-        improvement: warmDuration < coldDuration ? 'Yes' : 'No'
+        improvement: warmDuration < coldDuration ? 'Yes' : 'No',
       });
     });
   });
@@ -205,7 +205,7 @@ describe('Performance Benchmarks - Startup Time', () => {
         rooms: 5,
         perRoom: `${(totalTime / 5).toFixed(2)}ms`,
         target: '<5000ms for 5 rooms',
-        status: totalTime < 5000 ? 'PASS' : 'ABOVE_TARGET'
+        status: totalTime < 5000 ? 'PASS' : 'ABOVE_TARGET',
       });
     });
   });
@@ -226,7 +226,7 @@ describe('Performance Benchmarks - Startup Time', () => {
         duration: `${readyTime}ms`,
         components: ['Server', 'RoomMonitor', 'Logger'],
         target: '<3000ms',
-        status: readyTime < 3000 ? 'PASS' : 'ABOVE_TARGET'
+        status: readyTime < 3000 ? 'PASS' : 'ABOVE_TARGET',
       });
     });
   });
@@ -241,7 +241,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
     userDataDir: '',
     disableAnonymizeLocalIps: false,
     execPath: '/mock/path',
-    maxMemoryUsage: 512
+    maxMemoryUsage: 512,
   };
 
   beforeEach(() => {
@@ -257,7 +257,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
       logger.info('Benchmark', 'CPU baseline', {
         user: `${(cpuUsage.user / 1000).toFixed(2)}ms`,
-        system: `${(cpuUsage.system / 1000).toFixed(2)}ms`
+        system: `${(cpuUsage.system / 1000).toFixed(2)}ms`,
       });
     });
 
@@ -274,7 +274,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
       logger.info('Benchmark', 'CPU usage for computation', {
         userCPU: `${(after.user / 1000).toFixed(2)}ms`,
-        systemCPU: `${(after.system / 1000).toFixed(2)}ms`
+        systemCPU: `${(after.system / 1000).toFixed(2)}ms`,
       });
     });
   });
@@ -299,7 +299,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
         rooms: 100,
         totalCPU: `${totalMS.toFixed(2)}ms`,
         perRoom: `${(totalMS / 100).toFixed(3)}ms`,
-        target: '<100ms total'
+        target: '<100ms total',
       });
     });
 
@@ -319,7 +319,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
         messages: 1000,
         totalCPU: `${totalMS.toFixed(2)}ms`,
         perMessage: `${(totalMS / 1000).toFixed(3)}ms`,
-        messagesPerSecond: ((1000 / totalMS) * 1000).toFixed(0)
+        messagesPerSecond: ((1000 / totalMS) * 1000).toFixed(0),
       });
     });
   });
@@ -344,7 +344,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
       logger.info('Benchmark', 'CPU efficiency read', {
         queries: 100,
         totalCPU: `${totalMS.toFixed(2)}ms`,
-        perQuery: `${(totalMS / 100).toFixed(3)}ms`
+        perQuery: `${(totalMS / 100).toFixed(3)}ms`,
       });
     });
 
@@ -367,7 +367,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
       logger.info('Benchmark', 'CPU efficiency stats', {
         operations: 10,
         totalCPU: `${totalMS.toFixed(2)}ms`,
-        perOp: `${(totalMS / 10).toFixed(3)}ms`
+        perOp: `${(totalMS / 10).toFixed(3)}ms`,
       });
     });
   });
@@ -378,8 +378,8 @@ describe('Performance Benchmarks - CPU Usage', () => {
       const cpuBefore = process.cpuUsage();
 
       for (let i = 0; i < 2000; i++) {
-        logger.info('Benchmark', `Message ${i}`, { 
-          data: 'test'.repeat(20) 
+        logger.info('Benchmark', `Message ${i}`, {
+          data: 'test'.repeat(20),
         });
       }
 
@@ -394,7 +394,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
         memoryUsed: `${memDelta.toFixed(2)}KB`,
         cpuUsed: `${cpuDeltaMS.toFixed(2)}ms`,
         memPerMessage: `${(memDelta / 2000).toFixed(3)}KB`,
-        cpuPerMessage: `${(cpuDeltaMS / 2000).toFixed(4)}ms`
+        cpuPerMessage: `${(cpuDeltaMS / 2000).toFixed(4)}ms`,
       });
     });
   });
@@ -418,7 +418,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
       logger.info('Benchmark', 'CPU target validation', {
         used: `${cpuMS.toFixed(2)}ms`,
         target: `<${targetPercentage}% during startup`,
-        expectation: 'Low CPU impact for startup sequence'
+        expectation: 'Low CPU impact for startup sequence',
       });
     });
   });
@@ -426,7 +426,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
 function calculateStdDev(values: number[]): string {
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const squareDiffs = values.map(v => Math.pow(v - avg, 2));
+  const squareDiffs = values.map((v) => Math.pow(v - avg, 2));
   const stdDev = Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / values.length);
   return `${stdDev.toFixed(2)}ms`;
 }

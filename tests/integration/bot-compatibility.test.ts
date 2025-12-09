@@ -11,7 +11,7 @@ describe('Bot Compatibility Tests', () => {
     userDataDir: '',
     disableAnonymizeLocalIps: false,
     execPath: '/mock/path',
-    maxMemoryUsage: 512
+    maxMemoryUsage: 512,
   };
 
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('Bot Compatibility Tests', () => {
         setScoreLimit: jest.fn(),
         startGame: jest.fn(),
         stopGame: jest.fn(),
-        getPlayerList: jest.fn(() => [])
+        getPlayerList: jest.fn(() => []),
       };
 
       expect(mockRoom.setScoreLimit).toBeDefined();
@@ -46,7 +46,7 @@ describe('Bot Compatibility Tests', () => {
       const mockRoom = {
         onPlayerJoin: null as any,
         onPlayerLeave: null as any,
-        onPlayerChat: null as any
+        onPlayerChat: null as any,
       };
 
       mockRoom.onPlayerJoin = (_player: any) => {
@@ -100,9 +100,13 @@ describe('Bot Compatibility Tests', () => {
       let gameStatus = 'stop';
 
       const mockRoom = {
-        startGame: () => { gameStatus = 'play'; },
-        stopGame: () => { gameStatus = 'stop'; },
-        getGameStatus: () => gameStatus
+        startGame: () => {
+          gameStatus = 'play';
+        },
+        stopGame: () => {
+          gameStatus = 'stop';
+        },
+        getGameStatus: () => gameStatus,
       };
 
       mockRoom.startGame();
@@ -119,11 +123,11 @@ describe('Bot Compatibility Tests', () => {
       const players = [
         { id: 1, team: 1 },
         { id: 2, team: 1 },
-        { id: 3, team: 2 }
+        { id: 3, team: 2 },
       ];
 
-      const redCount = players.filter(p => p.team === 1).length;
-      const blueCount = players.filter(p => p.team === 2).length;
+      const redCount = players.filter((p) => p.team === 1).length;
+      const blueCount = players.filter((p) => p.team === 2).length;
 
       expect(redCount).toBe(2);
       expect(blueCount).toBe(1);
@@ -136,8 +140,12 @@ describe('Bot Compatibility Tests', () => {
       const events: string[] = [];
 
       const handler = {
-        onJoin: () => { events.push('joined'); },
-        onLeave: () => { events.push('left'); }
+        onJoin: () => {
+          events.push('joined');
+        },
+        onLeave: () => {
+          events.push('left');
+        },
       };
 
       handler.onJoin();
@@ -172,7 +180,7 @@ describe('Bot Compatibility Tests', () => {
       const mockRoom = {
         onGoal: null,
         setScoreLimit: jest.fn(),
-        getScores: () => ({ red: 0, blue: 0, time: 0 })
+        getScores: () => ({ red: 0, blue: 0, time: 0 }),
       };
 
       expect(mockRoom.onGoal).toBeDefined();

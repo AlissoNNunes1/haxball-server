@@ -744,14 +744,12 @@ O Haxball Server e estruturado em camadas:
 
 **Problemas Atuais com Puppeteer**:
 
-
 - Requer Chrome/Chromium instalado (grande dependencia)
 - Puppeteer v10 → v23 tem 13 major versions de atraso
 - Alto consumo de memoria (navegador completo por sala)
 - Overhead de browser automation
 - Vulnerabilidades de seguranca constantes
 - Dificil de manter atualizado
-
 
 **Vantagens do haxball.js**:
 
@@ -766,7 +764,6 @@ O Haxball Server e estruturado em camadas:
 - ✅ Menos camadas de abstracao = mais estavel
 - ✅ Node.js >= 18 (compativel com stack moderna)
 
-
 **Desvantagens**:
 
 - ❌ Breaking change massivo na arquitetura
@@ -774,7 +771,6 @@ O Haxball Server e estruturado em camadas:
 - ❌ Scripts de bots precisam ser adaptados
 - ❌ Sistema de debugging remoto precisa ser reimplementado
 - ❌ Mudanca fundamental no funcionamento
-
 
 ### Analise Tecnica
 
@@ -1153,7 +1149,6 @@ interface RoomMetrics {
 }
 ```
 
-
 **Dependencias Removidas**:
 
 - ❌ puppeteer-core (economiza ~350MB)
@@ -1232,7 +1227,6 @@ Tempo de startup: ~3-5 segundos por sala
 Dependencias: 15+ pacotes NPM
 ```
 
-
 #### Depois (haxball.js)
 
 ```
@@ -1244,7 +1238,6 @@ Dependencias: 8 pacotes NPM
 ```
 
 ### Riscos e Mitigacao
-
 
 #### Risco 1: Breaking Changes para Usuarios
 
@@ -1276,14 +1269,12 @@ Dependencias: 8 pacotes NPM
 
 **Impacto**: MEDIO - Alguns scripts podem nao funcionar
 
-
 **Mitigacao**:
 
 1. Testes extensivos com scripts comuns
 2. Documentacao de diferencas de comportamento
 3. Suporte a "modo compatibilidade" se necessario
 4. Comunidade ajuda a identificar problemas
-
 
 #### Risco 4: Estabilidade do haxball.js
 
@@ -1298,7 +1289,6 @@ Dependencias: 8 pacotes NPM
 4. Testes de estabilidade antes de release
 
 ### Cronograma de Migracao
-
 
 #### Fase 8.1: Prototipo e Validacao (1 semana)
 
@@ -1316,7 +1306,6 @@ Dependencias: 8 pacotes NPM
 - [ ] Sistema de proxy
 - [ ] Custom settings
 - [ ] Event handlers
-
 
 #### Fase 8.3: Compatibilidade (1 semana)
 
@@ -1866,7 +1855,6 @@ npm install
 
 ## Recursos e Referencias
 
-
 ### Documentacao Oficial
 
 - [Discord.js v14 Guide](https://discordjs.guide/)
@@ -1895,7 +1883,6 @@ npm install
 ## Conclusao
 
 Este plano fornece um roadmap completo para modernizar o haxball-server, desde atualizacoes criticas de seguranca ate melhorias opcionais de arquitetura. A abordagem faseada permite progresso incremental com validacao em cada etapa.
-
 
 **Destaque Especial - Fase 8 (haxball.js)**:
 A migracao para haxball.js representa uma mudanca revolucionaria que:
