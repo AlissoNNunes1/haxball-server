@@ -17,8 +17,8 @@ args.command({
       type: 'string',
     },
   },
-  handler: (argv) => {
-    openServer(argv.file as string);
+  handler: async (argv) => {
+    await openServer(argv.file as string);
   },
 });
 
