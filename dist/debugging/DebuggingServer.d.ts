@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import net from "net";
 export declare enum RoomDebuggingMessageType {
     UpdateRooms = 0,

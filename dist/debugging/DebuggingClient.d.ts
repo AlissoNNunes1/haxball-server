@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import net from "net";
 import EventEmitter from "events";
 export declare class DebuggingClient extends EventEmitter {

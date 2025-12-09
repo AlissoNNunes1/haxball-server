@@ -18,6 +18,5 @@ export declare class ControlPanel {
     private loadBots;
     private logError;
     private getRoomNameList;
-    private getRoomUsageList;
     private command;
 }

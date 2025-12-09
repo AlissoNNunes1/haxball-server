@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.openServer = void 0;
+exports.openServer = openServer;
 const Server_1 = require("../Server");
 const ControlPanel_1 = require("../ControlPanel");
 const loadConfig_1 = require("../utils/loadConfig");
@@ -13,5 +13,4 @@ function openServer(file) {
         process.exit();
     });
 }
-exports.openServer = openServer;
 //# sourceMappingURL=openServer.js.map

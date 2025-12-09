@@ -7,7 +7,7 @@ export declare const clientRoomFirstPort = 9603;
 export declare const maxLengthLog = 300;
 export declare const maxTimeSSHConnection: number;
 export declare const roomCustomConfigsList: string[];
-declare type BotList = {
+type BotList = {
     [key: string]: string;
 } | {
     name: string;
@@ -40,8 +40,8 @@ export interface CustomSettings {
     extends?: string | string[];
     [key: string]: any;
 }
-export declare type ReservedCustomSettings = "reserved.haxball.roomName" | "reserved.haxball.playerName" | "reserved.haxball.password" | "reserved.haxball.maxPlayers" | "reserved.haxball.public" | "reserved.haxball.geo" | "reserved.haxball.noPlayer";
-export declare type CustomSettingsList = {
+export type ReservedCustomSettings = "reserved.haxball.roomName" | "reserved.haxball.playerName" | "reserved.haxball.password" | "reserved.haxball.maxPlayers" | "reserved.haxball.public" | "reserved.haxball.geo" | "reserved.haxball.noPlayer";
+export type CustomSettingsList = {
     [key: string]: CustomSettings;
 };
 export {};

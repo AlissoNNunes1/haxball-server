@@ -1,26 +1,20 @@
-import puppeteer from 'puppeteer-core';
 import { CustomSettings, ServerConfig } from "./Global";
+export interface BrowserInfo {
+    pid: number;
+    link: string;
+    remotePort?: number;
+    process?: () => {
+        pid?: number;
+    } | null;
+    pages?: () => Promise<any[]>;
+}
 export declare class Server {
-    browsers: puppeteer.Browser[];
-    private unnamedCount;
-    private remoteChromePort;
-    private proxyEnabled;
-    private proxyServers;
-    private execPath;
-    private disableCache;
-    private userDataDir?;
-    private disableRemote;
-    private disableAnonymizeLocalIps;
-    private maxMemoryUsage?;
-    private debuggingServer?;
-    constructor(config: ServerConfig);
-    private createNewBrowser;
-    private checkTokenWorks;
-    private openRoom;
-    open(script: string, tokens: string | string[], name?: string, settings?: CustomSettings): Promise<{
+    browsers: BrowserInfo[];
+    constructor(_config: ServerConfig);
+    open(_script: string, _tokens: string | string[], _name?: string, _settings?: CustomSettings): Promise<{
         link: string;
-        pid: number | undefined;
-        remotePort: any;
-    }>;
-    close(pidOrTitle: string | number): Promise<boolean>;
+        pid: number;
+        remotePort?: number;
+    } | null>;
+    close(_pidOrTitle: string | number): Promise<boolean>;
 }

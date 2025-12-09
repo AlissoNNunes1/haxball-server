@@ -11,11 +11,12 @@ var RoomDebuggingMessageType;
     RoomDebuggingMessageType[RoomDebuggingMessageType["UpdateRooms"] = 0] = "UpdateRooms";
     RoomDebuggingMessageType[RoomDebuggingMessageType["AddRoom"] = 1] = "AddRoom";
     RoomDebuggingMessageType[RoomDebuggingMessageType["RemoveRoom"] = 2] = "RemoveRoom";
-})(RoomDebuggingMessageType = exports.RoomDebuggingMessageType || (exports.RoomDebuggingMessageType = {}));
+})(RoomDebuggingMessageType || (exports.RoomDebuggingMessageType = RoomDebuggingMessageType = {}));
 class DebuggingServer {
+    server;
+    sockets = [];
+    roomServers = [];
     constructor() {
-        this.sockets = [];
-        this.roomServers = [];
         this.server = net_1.default.createServer();
     }
     message(socket, type, message) {

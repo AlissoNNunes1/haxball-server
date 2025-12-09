@@ -1,2 +1,2 @@
-import { Config } from 'tunnel-ssh';
-export declare function connect(connectConfig: Config): Promise<void>;
+import { Config } from "../Global";
+export declare function connect(_connectConfig: Config): Promise<void>;
