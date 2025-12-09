@@ -34,25 +34,28 @@ function validate(object) {
  * console.log(config.server.execPath);
  */
 async function loadConfig(file) {
-    const filePath = file == null || file == "" ? path_1.default.resolve(path_1.default.resolve('.'), "config.json") : file;
+    const filePath = file == null || file == '' ? path_1.default.resolve(path_1.default.resolve('.'), 'config.json') : file;
     try {
-        const data = await fs_1.promises.readFile(filePath, { encoding: "utf-8" });
+        const data = await fs_1.promises.readFile(filePath, { encoding: 'utf-8' });
         const json = JSON.parse(data);
         if (!validate(json)) {
             throw {
                 message: `Invalid configuration`,
-                error: null
+                error: null,
             };
         }
         return json;
     }
     catch (err) {
-        if (err && typeof err === 'object' && 'message' in err && err.message === 'Invalid configuration') {
+        if (err &&
+            typeof err === 'object' &&
+            'message' in err &&
+            err.message === 'Invalid configuration') {
             throw err;
         }
         throw {
             message: `Error while loading or parsing config file`,
-            error: err
+            error: err,
         };
     }
 }

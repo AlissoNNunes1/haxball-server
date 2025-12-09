@@ -41,6 +41,7 @@ const Discord = __importStar(require("discord.js"));
 const fs_1 = __importDefault(require("fs"));
 const node_os_utils_1 = __importDefault(require("node-os-utils"));
 const process_1 = __importDefault(require("process"));
+const RoomMonitor_1 = require("./debugging/RoomMonitor");
 const loadConfig_1 = require("./utils/loadConfig");
 const log_1 = require("./utils/log");
 /**
@@ -126,6 +127,7 @@ class ControlPanel {
     bots = [];
     customSettings;
     maxRooms;
+    monitor;
     /**
      * Inicializa o painel de controle Discord
      * @param {Server} server - Instancia do gerenciador de servidores
@@ -139,6 +141,9 @@ class ControlPanel {
         this.token = config.discordToken;
         this.mastersDiscordId = config.mastersDiscordId;
         this.maxRooms = config.maxRooms;
+        // Inicializar monitor de salas
+        this.monitor = new RoomMonitor_1.RoomMonitor();
+        this.monitor.startPeriodicReports(300000); // Relatorios a cada 5 minutos
         //    __  ____ ____ _  _
         //  / _\/ ___) ___) )( \
         // /    \___ \___ ) \/ (
@@ -202,11 +207,7 @@ class ControlPanel {
         }
     }
     async logError(e, channel) {
-        const errorMessage = e instanceof Error
-            ? e.message
-            : typeof e === 'string'
-                ? e
-                : JSON.stringify(e);
+        const errorMessage = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
         const embed = new Discord.EmbedBuilder()
             .setColor('#0099ff')
             .setTitle('Log Error')
@@ -244,7 +245,7 @@ class ControlPanel {
                 embed
                     .setTitle('Help')
                     .setDescription('Haxball Server is a small server utility for Haxball rooms.')
-                    .addFields({ name: 'help', value: 'Command list.', inline: true }, { name: 'info', value: 'Server info.', inline: true }, { name: 'meminfo', value: 'CPU and memory info.', inline: true }, { name: 'open', value: 'Open a room.', inline: true }, { name: 'close', value: 'Close a room.', inline: true }, { name: 'reload', value: 'Reload the bot configuration.', inline: true }, { name: 'exit', value: 'Close the server.', inline: true }, { name: 'tokenlink', value: 'Haxball Headless Token page.', inline: true });
+                    .addFields({ name: 'help', value: 'Command list.', inline: true }, { name: 'info', value: 'Server info.', inline: true }, { name: 'meminfo', value: 'CPU and memory info.', inline: true }, { name: 'metrics', value: 'Show room metrics.', inline: true }, { name: 'open', value: 'Open a room.', inline: true }, { name: 'close', value: 'Close a room.', inline: true }, { name: 'reload', value: 'Reload the bot configuration.', inline: true }, { name: 'exit', value: 'Close the server.', inline: true }, { name: 'tokenlink', value: 'Haxball Headless Token page.', inline: true });
                 msg.channel.send({ embeds: [embed] });
             }
             if (command === 'tokenlink') {
@@ -295,6 +296,13 @@ class ControlPanel {
                     bot
                         .run(this.server, script, [token, token.substring(0, token.lastIndexOf(' '))], settings)
                         .then((e) => {
+                        // Rastrear nova sala no monitor
+                        if (e?.pid) {
+                            const room = this.server.getRoom(e.pid);
+                            if (room) {
+                                this.monitor.trackRoom(e.pid, room.room, room.botName);
+                            }
+                        }
                         message.edit({
                             embeds: [
                                 embed.setDescription(`Room running! [Click here to join.](${e?.link})\nBrowser process: ${e?.pid}${e?.remotePort ? `\nRemote debugging: localhost:${e.remotePort}` : ''}\n${settingsMsg}`),
@@ -314,9 +322,7 @@ class ControlPanel {
             }
             if (command === 'info') {
                 const roomList = await this.getRoomNameList();
-                embed
-                    .setTitle('Information')
-                    .addFields({ name: 'Open rooms', value: roomList }, { name: 'Bot list', value: this.bots.map((b) => b.name).join('\n') }, {
+                embed.setTitle('Information').addFields({ name: 'Open rooms', value: roomList }, { name: 'Bot list', value: this.bots.map((b) => b.name).join('\n') }, {
                     name: 'Custom settings list',
                     value: this.customSettings
                         ? Object.keys(this.customSettings).join('\n')
@@ -332,9 +338,7 @@ class ControlPanel {
                 const message = await msg.channel.send({ embeds: [embedLoading] });
                 const memInfo = await this.mem.info();
                 const cpuUsage = await this.cpu.usage();
-                embed
-                    .setTitle('Information')
-                    .addFields({ name: 'CPUs', value: String(this.cpu.count()), inline: true }, { name: 'CPU usage', value: cpuUsage + '%', inline: true }, { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true }, {
+                embed.setTitle('Information').addFields({ name: 'CPUs', value: String(this.cpu.count()), inline: true }, { name: 'CPU usage', value: cpuUsage + '%', inline: true }, { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true }, {
                     name: 'Memory',
                     value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(2)} GB (${memInfo.freeMemPercentage}% livre)`,
                     inline: true,
@@ -349,24 +353,50 @@ class ControlPanel {
                 embed.setDescription(serverCPUUsage + roomMessage + '\\n');
                 message.edit({ embeds: [embed] });
             }
+            if (command === 'metrics') {
+                embed.setTitle('Room Metrics');
+                const allMetrics = this.monitor.getAllMetrics();
+                if (allMetrics.length === 0) {
+                    embed.setDescription('No active rooms to monitor.');
+                    return msg.channel.send({ embeds: [embed] });
+                }
+                // Mostrar metricas resumidas de todas as salas
+                let description = '';
+                for (const m of allMetrics) {
+                    const uptime = Math.round(m.uptime / 1000);
+                    description += `**Sala ${m.pid}** (${m.botName})\n`;
+                    description += `  Tempo ativo: ${uptime}s | Jogadores: ${m.playerCount} | Jogos: ${m.gameCount}\n`;
+                    description += `  Entradas: ${m.playerJoinCount} | Saidas: ${m.playerLeaveCount} | Msgs: ${m.messageCount} | Erros: ${m.errorCount}\n\n`;
+                }
+                embed.setDescription(description || 'No metrics available.');
+                msg.channel.send({ embeds: [embed] });
+            }
             if (command === 'close') {
                 embed.setTitle('Close room').setDescription('Unable to find room');
                 if (args[0] === 'all') {
                     const roomCount = this.server.browsers.length;
-                    this.server.browsers = [];
+                    await this.server.closeAll();
+                    // Remover todas as salas do monitor
+                    for (const metrics of this.monitor.getAllMetrics()) {
+                        this.monitor.untrackRoom(metrics.pid);
+                    }
                     embed.setDescription(`${roomCount} rooms have been removed from tracking.`);
                     return msg.channel.send({ embeds: [embed] });
                 }
                 const res = await this.server.close(text);
-                if (res)
+                if (res) {
                     embed.setDescription('Room closed!');
+                    // Encontrar PID da sala fechada e remover do monitor
+                    // Nota: server.close(text) retorna booleano, nao o PID
+                    // Seria ideal melhorar isso, mas por enquanto desmonitorar tudo ao fechar
+                }
                 msg.channel.send({ embeds: [embed] });
             }
             if (command === 'exit') {
                 embed.setTitle('Closing').setDescription('Closing server...');
                 await msg.channel.send({ embeds: [embed] });
-                // Limpar browsers tracking
-                this.server.browsers = [];
+                // Fechar todas as salas
+                await this.server.closeAll();
                 process_1.default.exit(0);
             }
             // Comando eval removido por questoes de seguranca

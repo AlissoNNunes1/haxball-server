@@ -1,4 +1,4 @@
-import { HaxballServerConfig } from "../Global";
+import { HaxballServerConfig } from '../Global';
 /**
  * Carrega e valida arquivo de configuracao JSON
  * Se arquivo nao for especificado, procura por config.json no diretorio atual

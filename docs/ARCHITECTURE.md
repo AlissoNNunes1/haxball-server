@@ -135,12 +135,12 @@ interface CustomSettings {
 **Constantes:**
 
 ```typescript
-serverPort          = 9500
-serverRoomFirstPort = 9501
-clientPort          = 9600
-expressPort         = 9601
-wsPort              = 9602
-maxLengthLog        = 300
+serverPort = 9500;
+serverRoomFirstPort = 9501;
+clientPort = 9600;
+expressPort = 9601;
+wsPort = 9602;
+maxLengthLog = 300;
 ```
 
 ### 2. main.ts - Interface CLI
@@ -219,7 +219,7 @@ export class ControlPanel {
   private customSettings: CustomSettings[] // Configuracoes herancas
 
   constructor(server, config) { ... }
-  
+
   private loadBots(bots) { ... }
   private loadCustomSettings(settings) { ... }
   private command(message) { ... }
@@ -245,10 +245,10 @@ Discord Message
 ```typescript
 class Bot {
   constructor(name: string, path: string, displayName?: string)
-  
+
   read(): Promise<string>
     // Le arquivo do bot script
-  
+
   run(server, data, tokens, settings?): Promise<...>
     // Executa bot em sala
 }
@@ -308,7 +308,7 @@ Funcoes auxiliares reutilizaveis.
 #### log.ts
 
 ```typescript
-function log(prefix: string, message: string): void
+function log(prefix: string, message: string): void;
 ```
 
 Registra mensagem com timestamp em formato `[HH:MM:SS] [PREFIX] mensagem`
@@ -326,7 +326,7 @@ log('SERVER', 'Sala aberta com sucesso');
 #### escapeString.ts
 
 ```typescript
-function escapeString(str: any): string | any
+function escapeString(str: any): string | any;
 ```
 
 Escapa caracteres especiais (aspas duplas) para uso em strings.
@@ -340,7 +340,7 @@ Escapa caracteres especiais (aspas duplas) para uso em strings.
 #### loadConfig.ts
 
 ```typescript
-async function loadConfig(file?: string): Promise<HaxballServerConfig>
+async function loadConfig(file?: string): Promise<HaxballServerConfig>;
 ```
 
 Carrega e valida arquivo de configuracao JSON.
@@ -372,7 +372,7 @@ function validate(object: unknown): object is HaxballServerConfig {
 #### getAvailablePort.ts (DEPRECATED)
 
 ```typescript
-async function getAvailablePort(startingPort: number): Promise<number>
+async function getAvailablePort(startingPort: number): Promise<number>;
 ```
 
 Stub que retorna porta fornecida sem verificacao.
@@ -425,7 +425,7 @@ CustomSettings suporta heranca via campo `extends`:
 
 ```typescript
 interface CustomSettings {
-  extends?: string | string[];  // Herdar de outras configs
+  extends?: string | string[]; // Herdar de outras configs
   [key: string]: string | number | boolean | string[] | undefined;
 }
 ```
@@ -613,7 +613,7 @@ Proximos passos em v6.0.0:
 - 📋 Sistema de plugins
 - 📋 Web interface de monitoramento
 
-//    __  ____ ____ _  _
-//  / _\/ ___) ___) )( \
-// /    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// / \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

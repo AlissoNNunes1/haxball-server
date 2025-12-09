@@ -743,6 +743,8 @@ O Haxball Server e estruturado em camadas:
 ### Por que Migrar?
 
 **Problemas Atuais com Puppeteer**:
+
+
 - Requer Chrome/Chromium instalado (grande dependencia)
 - Puppeteer v10 → v23 tem 13 major versions de atraso
 - Alto consumo de memoria (navegador completo por sala)
@@ -750,7 +752,9 @@ O Haxball Server e estruturado em camadas:
 - Vulnerabilidades de seguranca constantes
 - Dificil de manter atualizado
 
+
 **Vantagens do haxball.js**:
+
 - ✅ Sem necessidade de Chrome/Chromium
 - ✅ WebRTC nativo (node-datachannel) - muito mais leve
 - ✅ 70-80% menos uso de memoria por sala
@@ -762,32 +766,40 @@ O Haxball Server e estruturado em camadas:
 - ✅ Menos camadas de abstracao = mais estavel
 - ✅ Node.js >= 18 (compativel com stack moderna)
 
+
 **Desvantagens**:
+
 - ❌ Breaking change massivo na arquitetura
 - ❌ Perde Chrome DevTools visual (mas logs ficam melhores)
 - ❌ Scripts de bots precisam ser adaptados
 - ❌ Sistema de debugging remoto precisa ser reimplementado
 - ❌ Mudanca fundamental no funcionamento
 
+
 ### Analise Tecnica
 
 #### Arquitetura Atual (Puppeteer)
+
 ```
 Usuario → CLI → Server.ts → Puppeteer → Chrome → Haxball Web → Bot JS
                                 ↓
+
                           Chrome DevTools
 ```
 
 #### Arquitetura Nova (haxball.js)
+
 ```
 Usuario → CLI → Server.ts → haxball.js → WebRTC → Haxball → Bot JS
                                 ↓
                           Logs + Metricas
+
 ```
 
 ### Comparacao de Codigo
 
 #### ANTES (Puppeteer - Server.ts)
+
 ```typescript
 import puppeteer from 'puppeteer-core';
 
@@ -804,12 +816,14 @@ async openRoom(bot: Bot, token: string) {
   // Injetar bot script
   await page.evaluate((botCode, token) => {
     eval(botCode);
+
     // ... complexidade de injecao
   }, botScript, token);
 }
 ```
 
 #### DEPOIS (haxball.js - Server.ts)
+
 ```typescript
 import HaxballJS from 'haxball.js';
 
@@ -983,6 +997,7 @@ export class Server {
 
   getRoom(pid: number) {
     return this.rooms.get(pid);
+
   }
 }
 ```
@@ -990,11 +1005,13 @@ export class Server {
 #### 3. Adaptar Scripts de Bots
 
 **Scripts Antigos (Para Puppeteer)**:
+
 ```javascript
 // bots/futsal.js
 var room = window.HBInit({
   roomName: 'Futsal',
   maxPlayers: 16
+
 });
 
 room.onPlayerJoin = function(player) {
@@ -1003,6 +1020,7 @@ room.onPlayerJoin = function(player) {
 ```
 
 **Scripts Novos (Para haxball.js)**:
+
 ```javascript
 // bots/futsal.js
 // room ja esta disponivel no contexto
@@ -1010,6 +1028,7 @@ room.onPlayerJoin = function(player) {
 room.onPlayerJoin = function(player) {
   room.sendChat('Welcome ' + player.name);
 };
+
 
 // Ou com suporte a custom settings
 const gameMode = customSettings?.gameMode ?? 4;
@@ -1020,6 +1039,7 @@ room.onPlayerJoin = function(player) {
 ```
 
 **Script de Migracao Automatica**:
+
 ```javascript
 // scripts/migrate-bot-scripts.js
 const fs = require('fs').promises;
@@ -1123,6 +1143,7 @@ interface RoomMetrics {
     "haxball.js": "^latest",
     "node-os-utils": "^1.3.7",
     "ws": "^8.18.0",
+
     "yargs": "^17.7.2"
   },
   "devDependencies": {
@@ -1132,7 +1153,9 @@ interface RoomMetrics {
 }
 ```
 
+
 **Dependencias Removidas**:
+
 - ❌ puppeteer-core (economiza ~350MB)
 - ❌ tunnel-ssh (nao precisa mais de SSH tunneling)
 - ❌ portscanner (nao precisa gerenciar portas Chrome)
@@ -1141,32 +1164,38 @@ interface RoomMetrics {
 #### 6. Atualizar Documentacao
 
 **README.md - Secao de Instalacao**:
+
 ```markdown
 ## Requisitos
 
 - Node.js >= 18
+
 - NPM ou Yarn
 - ~~Chrome ou Chromium instalado~~ (NAO MAIS NECESSARIO!)
 
 ## Instalacao
 
+
 ```bash
 npm install haxball-server -g
 ```
 
-**Nota**: A partir da versao 5.0.0, o haxball-server usa `haxball.js` 
+**Nota**: A partir da versao 5.0.0, o haxball-server usa `haxball.js`
 internamente, eliminando a necessidade de ter Chrome/Chromium instalado.
 Isso resulta em:
+
 - 70-80% menos uso de memoria
 - Instalacao mais simples (sem dependencias de sistema)
 - Performance superior
 - Maior estabilidade
+
 ```
 
 **Atualizar config.json**:
 ```json
 {
   "server": {
+
     "proxyEnabled": true,
     "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"]
   },
@@ -1177,20 +1206,24 @@ Isso resulta em:
     "discordToken": "...",
     "mastersDiscordId": ["..."]
   }
+
 }
 ```
 
 **Configuracoes Removidas** (nao mais necessarias):
+
 - ❌ `server.execPath` (sem Chrome)
 - ❌ `server.userDataDir` (sem cache de navegador)
 - ❌ `server.disableCache` (sem navegador)
 - ❌ `server.disableRemote` (debugging diferente)
+
 - ❌ `server.disableAnonymizeLocalIps` (WebRTC nativo)
 - ❌ `server.maxMemoryUsage` (gerenciado pelo Node.js)
 
 ### Vantagens Mensuráveis
 
 #### Antes (Puppeteer)
+
 ```
 Memoria por sala: ~150-200 MB
 CPU por sala: ~5-10%
@@ -1199,7 +1232,9 @@ Tempo de startup: ~3-5 segundos por sala
 Dependencias: 15+ pacotes NPM
 ```
 
+
 #### Depois (haxball.js)
+
 ```
 Memoria por sala: ~30-50 MB (70% reducao)
 CPU por sala: ~2-5% (50% reducao)
@@ -1210,15 +1245,18 @@ Dependencias: 8 pacotes NPM
 
 ### Riscos e Mitigacao
 
+
 #### Risco 1: Breaking Changes para Usuarios
 
 **Impacto**: CRITICO - Scripts de bots precisam ser adaptados
 
 **Mitigacao**:
+
 1. Criar ferramenta de migracao automatica de scripts
 2. Manter versao 4.x com Puppeteer em branch separada
 3. Documentacao clara de migracao
 4. Periodo de transicao com ambas versoes disponiveis
+
 5. Versionar como v5.0.0 (major version)
 
 #### Risco 2: Perda de Chrome DevTools
@@ -1226,8 +1264,10 @@ Dependencias: 8 pacotes NPM
 **Impacto**: ALTO - Desenvolvedores perdem debugging visual
 
 **Mitigacao**:
+
 1. Implementar sistema de logging avancado
 2. Web dashboard com logs em tempo real
+
 3. Metrics e monitoring detalhados
 4. CLI para inspecionar salas ativas
 5. Documentacao de debugging alternativo
@@ -1236,51 +1276,66 @@ Dependencias: 8 pacotes NPM
 
 **Impacto**: MEDIO - Alguns scripts podem nao funcionar
 
+
 **Mitigacao**:
+
 1. Testes extensivos com scripts comuns
 2. Documentacao de diferencas de comportamento
 3. Suporte a "modo compatibilidade" se necessario
 4. Comunidade ajuda a identificar problemas
+
 
 #### Risco 4: Estabilidade do haxball.js
 
 **Impacto**: MEDIO - Dependencia de biblioteca terceira
 
 **Mitigacao**:
+
 1. haxball.js e mantido ativamente
+
 2. Codigo open-source (pode fazer fork se necessario)
 3. Comunidade ativa do Haxball
 4. Testes de estabilidade antes de release
 
 ### Cronograma de Migracao
 
+
 #### Fase 8.1: Prototipo e Validacao (1 semana)
+
 - [ ] Criar branch experimental
 - [ ] Instalar haxball.js
 - [ ] Implementar Server.ts basico
 - [ ] Testar abertura de 1 sala
+
 - [ ] Validar funcionalidade basica
 
 #### Fase 8.2: Implementacao Core (2 semanas)
+
 - [ ] Refatorar Server.ts completamente
 - [ ] Implementar gerenciamento de salas
 - [ ] Sistema de proxy
 - [ ] Custom settings
 - [ ] Event handlers
 
+
 #### Fase 8.3: Compatibilidade (1 semana)
+
 - [ ] Script de migracao de bots
 - [ ] Adaptar ControlPanel.ts
 - [ ] Manter compatibilidade de comandos Discord
+
 - [ ] Testes de integracao
 
 #### Fase 8.4: Monitoramento e Logging (1 semana)
+
 - [ ] Implementar RoomMonitor
 - [ ] Sistema de metricas
+
 - [ ] Logs estruturados
 - [ ] Web interface para monitoramento
 
 #### Fase 8.5: Testes e Documentacao (1 semana)
+
 - [ ] Testes extensivos
 - [ ] Benchmarks de performance
 - [ ] Atualizacao completa de documentacao
@@ -1291,17 +1346,20 @@ Dependencias: 8 pacotes NPM
 ### Decisao: Quando Implementar?
 
 **Opcao A**: Imediatamente apos Fase 7
+
 - Moderniza tudo de uma vez
 - Maior impacto, mas maior risco
 - Recomendado se houver tempo
 
 **Opcao B**: Release separado (v6.0.0)
+
 - Faz v5.0.0 com modernizacao basica
 - Depois v6.0.0 com haxball.js
 - Menos risco, mais tempo para validacao
 - **RECOMENDADO**
 
 **Opcao C**: Branch experimental permanente
+
 - Mantem ambas versoes
 - Usuarios escolhem qual usar
 - Mais trabalho de manutencao
@@ -1808,6 +1866,7 @@ npm install
 
 ## Recursos e Referencias
 
+
 ### Documentacao Oficial
 
 - [Discord.js v14 Guide](https://discordjs.guide/)
@@ -1820,12 +1879,14 @@ npm install
 - [npm-check-updates](https://github.com/raineorshine/npm-check-updates) - Atualizar dependencias
 - [Jest](https://jestjs.io/) - Framework de testes
 - [ESLint](https://eslint.org/) - Linter
+
 - [Prettier](https://prettier.io/) - Formatador
 
 ### Migracoes
 
 - [Discord.js v13 → v14 Migration](https://discordjs.guide/additional-info/changes-in-v14.html)
 - [Puppeteer Migration Guide](https://pptr.dev/guides/migration)
+
 - [haxball.js GitHub Repository](https://github.com/mertushka/haxball.js)
 - [haxball.js NPM Package](https://www.npmjs.com/package/haxball.js)
 
@@ -1835,26 +1896,30 @@ npm install
 
 Este plano fornece um roadmap completo para modernizar o haxball-server, desde atualizacoes criticas de seguranca ate melhorias opcionais de arquitetura. A abordagem faseada permite progresso incremental com validacao em cada etapa.
 
+
 **Destaque Especial - Fase 8 (haxball.js)**:
 A migracao para haxball.js representa uma mudanca revolucionaria que:
+
 - Elimina a dependencia de Chrome/Chromium
 - Reduz uso de memoria em 70-80%
 - Reduz tamanho de instalacao em 90%
-- Melhora performance e estabilidade
+- elora performance e estabilidade
 - Simplifica instalacao e manutencao
-- Remove multiplas dependencias obsoletas (puppeteer, tunnel-ssh, portscanner, open)
+- Remove mutiplas dependencias obsoletas (puppeteer, tunnel-ssh, portscanner, open)
 
 Esta e uma oportunidade unica de transformar o projeto em algo muito mais leve, rapido e facil de manter.
 
 **Proximos Passos Imediatos**:
 
 **Cenario 1 - Modernizacao Conservadora (v5.0.0)**:
+
 1. Criar branch de desenvolvimento
 2. Iniciar Fase 1 (atualizacao de dependencias)
 3. Executar Fases 2-7 sequencialmente
 4. Release v5.0.0 em 4-6 semanas
 
 **Cenario 2 - Modernizacao Revolucionaria (v5.0.0 ou v6.0.0 - RECOMENDADO)**:
+
 1. Criar branch de desenvolvimento
 2. Iniciar Fases 1-2 (dependencias criticas + Discord.js)
 3. PULAR Fase 3 (Puppeteer)
@@ -1863,6 +1928,7 @@ Esta e uma oportunidade unica de transformar o projeto em algo muito mais leve, 
 6. Release v5.0.0 ou v6.0.0 em 10-12 semanas
 
 **Cenario 3 - Abordagem Hibrida**:
+
 1. Release v5.0.0 com Fases 1-7 (4-6 semanas)
 2. Branch experimental para Fase 8
 3. Validacao extensa da Fase 8
@@ -1870,7 +1936,7 @@ Esta e uma oportunidade unica de transformar o projeto em algo muito mais leve, 
 
 O projeto tem uma base solida e com estas atualizacoes estara moderno, seguro e preparado para continuar evoluindo. A opcao de usar haxball.js e especialmente interessante pois resolve os problemas de manutencao do Puppeteer de forma definitiva.
 
-/_ ** \_\_** \_**\_ \_ *
+/_**\_\_** \_**\_ \_ *
 / *\/ \_**) **\_) )( \
-/ \_** \_** ) \/ (
-\_/\_(\_\_**(\_**\_|\_\_**/ _/
+/ \_** \_**) \/ (
+\_/\_(\_\_**(\_**\_|\_\_**/_/

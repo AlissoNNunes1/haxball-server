@@ -109,6 +109,7 @@ git checkout -b docs/melhora-readme
 ```
 
 **Formato de nome recomendado:**
+
 - `feature/` para novas funcionalidades
 - `fix/` para correcoes de bugs
 - `docs/` para atualizacoes de documentacao
@@ -149,6 +150,7 @@ git commit -m "Update files"
 ```
 
 **Prefixos recomendados:**
+
 - `feat:` - Nova funcionalidade
 - `fix:` - Correcao de bug
 - `docs:` - Alteracao em documentacao
@@ -175,23 +177,28 @@ git push origin feature/nova-funcionalidade
 
 ```markdown
 ## Descricao
+
 Breve descricao do que muda neste PR
 
 ## Tipo de Mudanca
+
 - [ ] Nova funcionalidade
 - [ ] Correcao de bug
 - [ ] Breaking change
 - [ ] Atualizacao de documentacao
 
 ## Mudancas Principais
+
 - Ponto 1
 - Ponto 2
 - Ponto 3
 
 ## Testing (se aplicavel)
+
 Descreva como testar as mudancas
 
 ## Checklist
+
 - [ ] Meu codigo segue o estilo do projeto
 - [ ] Atualizei a documentacao
 - [ ] Adicionei/atualizei testes
@@ -252,6 +259,7 @@ describe('escapeString', () => {
 ```
 
 **Cobertura de testes:**
+
 - Funcoes utilitarias: 100% de cobertura
 - Classes principais: >= 70% de cobertura
 - Logica complexa: 100% de cobertura
@@ -304,6 +312,7 @@ src/
 Veja [docs/roadmap.md](docs/roadmap.md) para o plano de modernizacao v5.0.0 e futuras melhorias.
 
 **Fases Ativas:**
+
 - ✅ Fase 1-6: Modernizacao basica (completa)
 - 🔄 Fase 7: Documentacao e qualidade de codigo (em progresso)
 - 📋 Fase 8: Migracao haxball.js (planejada)
@@ -352,7 +361,7 @@ git push -f origin sua-branch
 
 Obrigado por contribuir!
 
-//    __  ____ ____ _  _
-//  / _\/ ___) ___) )( \
-// /    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// / \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

@@ -61,29 +61,29 @@ npm run build
 
 ```json
 {
-    "server": {
-        "execPath": "/usr/bin/chromium",
-        "maxMemoryUsage": 2048,
-        "proxyEnabled": false
-    },
-    "panel": {
-        "bots": [
-            { 
-                "name": "futsal", 
-                "displayName": "Futsal Room", 
-                "path": "./bots/futsal.js" 
-            },
-            { 
-                "name": "soccer", 
-                "displayName": "Soccer Room", 
-                "path": "./bots/soccer.js" 
-            }
-        ],
-        "discordToken": "seu-token-discord-aqui",
-        "discordPrefix": "!",
-        "mastersDiscordId": ["seu-id-discord-aqui"],
-        "maxRooms": 2
-    }
+  "server": {
+    "execPath": "/usr/bin/chromium",
+    "maxMemoryUsage": 2048,
+    "proxyEnabled": false
+  },
+  "panel": {
+    "bots": [
+      {
+        "name": "futsal",
+        "displayName": "Futsal Room",
+        "path": "./bots/futsal.js"
+      },
+      {
+        "name": "soccer",
+        "displayName": "Soccer Room",
+        "path": "./bots/soccer.js"
+      }
+    ],
+    "discordToken": "seu-token-discord-aqui",
+    "discordPrefix": "!",
+    "mastersDiscordId": ["seu-id-discord-aqui"],
+    "maxRooms": 2
+  }
 }
 ```
 
@@ -140,14 +140,14 @@ Define comportamento do servidor Haxball.
 }
 ```
 
-| Campo | Tipo | Descricao | Requerido |
-|-------|------|-----------|-----------|
-| execPath | string | Caminho do Chrome/Chromium (deprecated em v5.0.0) | ✅ Sim |
-| maxMemoryUsage | number | Limite maximo de memoria (MB) | ✅ Sim |
-| proxyEnabled | boolean | Ativa uso de proxies | ❌ Nao |
-| proxyServers | string[] | Lista de proxies [IP:Porta] | ❌ Nao |
-| disableCache | boolean | Desativa cache do navegador | ❌ Nao |
-| disableRemote | boolean | Desativa debugging remoto | ❌ Nao |
+| Campo          | Tipo     | Descricao                                         | Requerido |
+| -------------- | -------- | ------------------------------------------------- | --------- |
+| execPath       | string   | Caminho do Chrome/Chromium (deprecated em v5.0.0) | ✅ Sim    |
+| maxMemoryUsage | number   | Limite maximo de memoria (MB)                     | ✅ Sim    |
+| proxyEnabled   | boolean  | Ativa uso de proxies                              | ❌ Nao    |
+| proxyServers   | string[] | Lista de proxies [IP:Porta]                       | ❌ Nao    |
+| disableCache   | boolean  | Desativa cache do navegador                       | ❌ Nao    |
+| disableRemote  | boolean  | Desativa debugging remoto                         | ❌ Nao    |
 
 ### panel
 
@@ -166,20 +166,21 @@ Define comportamento do painel Discord.
 }
 ```
 
-| Campo | Tipo | Descricao | Requerido |
-|-------|------|-----------|-----------|
-| discordToken | string | Token do bot Discord | ✅ Sim |
-| discordPrefix | string | Prefixo dos comandos (ex: !) | ✅ Sim |
-| mastersDiscordId | string[] | IDs dos usuarios master | ✅ Sim |
-| maxRooms | number | Numero maximo de salas abertas | ❌ Nao |
-| bots | array | Lista de bots disponiveis | ✅ Sim |
-| customSettings | object | Configuracoes personalizadas | ❌ Nao |
+| Campo            | Tipo     | Descricao                      | Requerido |
+| ---------------- | -------- | ------------------------------ | --------- |
+| discordToken     | string   | Token do bot Discord           | ✅ Sim    |
+| discordPrefix    | string   | Prefixo dos comandos (ex: !)   | ✅ Sim    |
+| mastersDiscordId | string[] | IDs dos usuarios master        | ✅ Sim    |
+| maxRooms         | number   | Numero maximo de salas abertas | ❌ Nao    |
+| bots             | array    | Lista de bots disponiveis      | ✅ Sim    |
+| customSettings   | object   | Configuracoes personalizadas   | ❌ Nao    |
 
 ### bots
 
 Define scripts de bots disponiveis.
 
 **Formato 1 - Objeto:**
+
 ```json
 {
   "bots": {
@@ -190,6 +191,7 @@ Define scripts de bots disponiveis.
 ```
 
 **Formato 2 - Array (RECOMENDADO):**
+
 ```json
 {
   "bots": [
@@ -232,7 +234,7 @@ Define configuracoes personalizadas de salas com suporte a heranca.
 
 ```typescript
 interface CustomSettings {
-  extends?: string | string[];  // Uma ou multiplas herancas
+  extends?: string | string[]; // Uma ou multiplas herancas
   [key: string]: string | number | boolean | string[] | undefined;
 }
 ```
@@ -300,6 +302,7 @@ haxball-server/
 5. ✅ Prefixo correto? (padrao: `!`)
 
 **Debug:**
+
 ```bash
 npm run build  # Verificar erros de compilacao
 npm start      # Iniciar com logs detalhados
@@ -377,6 +380,7 @@ ISC - Veja [LICENSE](LICENSE) para detalhes.
 Originalmente desenvolvido por [@gabrielbrop](https://github.com/gabrielbrop)
 
 **v5.0.0 Modernizacao:**
+
 - Atualizacao para discord.js v14
 - Migracao para async/await
 - TypeScript strict mode
@@ -392,10 +396,10 @@ Originalmente desenvolvido por [@gabrielbrop](https://github.com/gabrielbrop)
 
 **Feito com ❤️ para a comunidade Haxball**
 
-//    __  ____ ____ _  _
-//  / _\/ ___) ___) )( \
-// /    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// / \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/
 
 [Chrome user data dir path](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/user_data_dir.md). Only works if cache is not disabled.
 
@@ -558,7 +562,7 @@ Shows open rooms and available bots.
 Information about CPU and memory usage.
 
 ### open
->
+
 > Requires two parameters: bot name and token.
 >
 > One optional parameter: custom settings.
@@ -579,7 +583,7 @@ You can learn more about the custom settings parameter [here](#-custom-settings)
 Once the room is open you'll be given the ID of the browser process. You may use it to close the room.
 
 ### close
->
+
 > Requires one parameter: PID (process ID).
 >
 > Example: !close 5478
@@ -681,49 +685,49 @@ Discord IDs and token are fictional.
 
 ```json
 {
-    "server": {
-        "execPath": "/usr/bin/chromium-browser",
-        "userDataDir": "./userdatadir"
-    },
-    "panel": {
-        "bots": [
-            { "name": "futsal", "displayName": "Futsal room", "path": "./bots/futsal.js" },
-            { "name": "classic", "displayName": "Classic room", "path": "./bots/classic.js" }
-        ],
-  
-        "discordToken": "4cDNNDATgTTODgE2xON35IyO.MYCAr_a.UIrBFWioA6Po9HPyrJAyjgvR4AA",
-        "discordPrefix": "!",
-  
-        "mastersDiscordId": ["6833789556844662784", "5748686793348656842"],
-  
-        "customSettings": {
-            "myGeo": {
-                "reserved.haxball.geo": {
-                    "code": "fr",
-                    "lat": 48.8032,
-                    "lon": 2.3511
-                }
-            },
-     "testMode": {
-             "reserved.haxball.public": false
-            },
-            "3v3": {
-                "extends": "myGeo",
-                "reserved.haxball.roomName": "Futsal 3v3",
-                "gameMode": 3
-            },
-            "4v4": {
-                "extends": "myGeo",
-                "reserved.haxball.roomName": "Futsal 4v4",
-                "gameMode": 4
-            },
-            "testMode3v3": {
-      "extends": ["3v3", "testMode"]
-            },
-     "testMode4v4": {
-      "extends": ["4v4", "testMode"]
-            }
+  "server": {
+    "execPath": "/usr/bin/chromium-browser",
+    "userDataDir": "./userdatadir"
+  },
+  "panel": {
+    "bots": [
+      { "name": "futsal", "displayName": "Futsal room", "path": "./bots/futsal.js" },
+      { "name": "classic", "displayName": "Classic room", "path": "./bots/classic.js" }
+    ],
+
+    "discordToken": "4cDNNDATgTTODgE2xON35IyO.MYCAr_a.UIrBFWioA6Po9HPyrJAyjgvR4AA",
+    "discordPrefix": "!",
+
+    "mastersDiscordId": ["6833789556844662784", "5748686793348656842"],
+
+    "customSettings": {
+      "myGeo": {
+        "reserved.haxball.geo": {
+          "code": "fr",
+          "lat": 48.8032,
+          "lon": 2.3511
         }
+      },
+      "testMode": {
+        "reserved.haxball.public": false
+      },
+      "3v3": {
+        "extends": "myGeo",
+        "reserved.haxball.roomName": "Futsal 3v3",
+        "gameMode": 3
+      },
+      "4v4": {
+        "extends": "myGeo",
+        "reserved.haxball.roomName": "Futsal 4v4",
+        "gameMode": 4
+      },
+      "testMode3v3": {
+        "extends": ["3v3", "testMode"]
+      },
+      "testMode4v4": {
+        "extends": ["4v4", "testMode"]
+      }
     }
+  }
 }
 ```

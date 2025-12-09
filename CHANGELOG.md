@@ -12,17 +12,20 @@ e este projeto adere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 #### Dependencias Atualizadas (CRITICAS)
 
 - **discord.js**: v12.5.3 → v14.16.3
+
   - Requer configuracao de Intents no Discord Developer Portal
   - `MessageEmbed` substituido por `EmbedBuilder`
   - Evento `message` substituido por `messageCreate`
   - Veja [Guia de Migracao Discord.js](https://discordjs.guide/additional-info/changes-in-v14.html)
 
 - **puppeteer-core**: v10.1.0 → Deprecado para v23.11.1 (Stub only)
+
   - Funcionalidade de abertura de salas desabilitada
   - Sera reescrita completamente em v6.0.0 com haxball.js
   - `headless: true` deprecado em favor de `headless: 'new'`
 
 - **typescript**: v4.3.5 → v5.7.2
+
   - Target compilacao alterado de ES2017 para ES2022
   - Modo strict ativado com sete opcoes adicionais
   - Compatibilidade minima com Node.js v18+
@@ -55,11 +58,13 @@ Ativadas as seguintes opcoes de tipo strict:
 #### Modernizacao Codigo
 
 - **Async/Await**: Refatoracao completa de callbacks para async/await
+
   - `fs.readFile` → `fs.promises.readFile`
   - Promise-based error handling com try/catch
   - Melhor legibilidade e manutencao
 
 - **Type Safety**: Eliminacao completa de `any` type
+
   - Substituido por `unknown` com proper type guards
   - Todas as variaveis agora possuem tipos explicitos
   - Reducao significativa de bugs em tempo de compilacao
@@ -83,18 +88,21 @@ Ativadas as seguintes opcoes de tipo strict:
 #### Documentacao
 
 - **JSDoc completo** em todas as funcoes e classes publicas
+
   - Parametros documentados
   - Tipos explicitos
   - Exemplos de uso
   - Anotacoes @deprecated onde aplicavel
 
 - **CONTRIBUTING.md**: Guia completo para contribuidores
+
   - Setup de ambiente
   - Padroes de codigo
   - Processo de pull request
   - Dicas de desenvolvimento
 
 - **CHANGELOG.md**: Este arquivo
+
   - Rastreamento de mudancas por versao
   - Breaking changes claramente marcados
   - Migration guides quando necessario
@@ -108,8 +116,9 @@ Ativadas as seguintes opcoes de tipo strict:
 #### Configuracoes Modernizadas
 
 - **package.json** atualizado com versoes seguras
+
   - Removidas dependencias obsoletas (portscanner, open, tunnel-ssh, pidusage)
-  - Adicionadas dependencias modernas (jest, ts-jest, @types/*)
+  - Adicionadas dependencias modernas (jest, ts-jest, @types/\*)
   - Todos os scripts de build/test configurados
 
 - **tsconfig.json** otimizado
@@ -161,21 +170,21 @@ Ativadas as seguintes opcoes de tipo strict:
 #### Migracao Discord.js v12 → v14
 
 **Antes (v12):**
-```typescript
-const embed = new Discord.MessageEmbed()
-  .setColor('#0099ff');
 
-client.on('message', msg => {
+```typescript
+const embed = new Discord.MessageEmbed().setColor('#0099ff');
+
+client.on('message', (msg) => {
   msg.channel.send(embed);
 });
 ```
 
 **Depois (v14):**
-```typescript
-const embed = new Discord.EmbedBuilder()
-  .setColor('#0099ff');
 
-client.on('messageCreate', msg => {
+```typescript
+const embed = new Discord.EmbedBuilder().setColor('#0099ff');
+
+client.on('messageCreate', (msg) => {
   await msg.channel.send({ embeds: [embed] });
 });
 ```
@@ -183,6 +192,7 @@ client.on('messageCreate', msg => {
 #### Callbacks → Async/Await
 
 **Antes:**
+
 ```typescript
 fs.readFile(path, 'utf-8', (err, data) => {
   if (err) throw err;
@@ -191,6 +201,7 @@ fs.readFile(path, 'utf-8', (err, data) => {
 ```
 
 **Depois:**
+
 ```typescript
 const data = await fs.readFile(path, 'utf-8');
 return JSON.parse(data);
@@ -199,6 +210,7 @@ return JSON.parse(data);
 #### Type Safety com `unknown`
 
 **Antes:**
+
 ```typescript
 function process(config: any) {
   return config.server.path;
@@ -206,6 +218,7 @@ function process(config: any) {
 ```
 
 **Depois:**
+
 ```typescript
 function validate(obj: unknown): obj is Config {
   return obj && typeof obj === 'object' && 'server' in obj;
@@ -222,15 +235,18 @@ function process(config: unknown): string {
 #### Para usuarios existentes com v4.x
 
 1. **Atualize globalmente:**
+
    ```bash
    npm install -g haxball-server@latest
    ```
 
 2. **Verifique sua config.json:**
+
    - As chaves `server` e `panel` devem estar presentes
    - Remova campos deprecados (ssh, tunnel, etc)
 
 3. **Discord Bot Setup:**
+
    - Vá para [Discord Developer Portal](https://discord.com/developers/applications)
    - Selecione seu bot
    - Vá para "Bot" → "TOKEN" (copie o token)
@@ -275,7 +291,7 @@ function process(config: unknown): string {
 
 Versoes anteriores nao sao mantidas. Veja o repositorio principal para historico completo.
 
-//    __  ____ ____ _  _
-//  / _\/ ___) ___) )( \
-// /    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// / \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

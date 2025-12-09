@@ -115,7 +115,7 @@ export interface CustomSettings {
     extends?: string | string[];
     [key: string]: string | number | boolean | string[] | undefined;
 }
-export type ReservedCustomSettings = "reserved.haxball.roomName" | "reserved.haxball.playerName" | "reserved.haxball.password" | "reserved.haxball.maxPlayers" | "reserved.haxball.public" | "reserved.haxball.geo" | "reserved.haxball.noPlayer";
+export type ReservedCustomSettings = 'reserved.haxball.roomName' | 'reserved.haxball.playerName' | 'reserved.haxball.password' | 'reserved.haxball.maxPlayers' | 'reserved.haxball.public' | 'reserved.haxball.geo' | 'reserved.haxball.noPlayer';
 export type CustomSettingsList = {
     [key: string]: CustomSettings;
 };

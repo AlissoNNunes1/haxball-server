@@ -21,6 +21,7 @@ export declare class ControlPanel {
     private bots;
     private customSettings?;
     private maxRooms?;
+    private monitor;
     /**
      * Inicializa o painel de controle Discord
      * @param {Server} server - Instancia do gerenciador de servidores

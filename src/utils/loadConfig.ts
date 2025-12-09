@@ -1,7 +1,7 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from 'fs';
+import path from 'path';
 
-import { HaxballServerConfig } from "../Global";
+import { HaxballServerConfig } from '../Global';
 
 /**
  * Valida se um objeto e uma configuracao Haxball valida
@@ -11,12 +11,12 @@ import { HaxballServerConfig } from "../Global";
  * @private
  */
 function validate(object: unknown): object is HaxballServerConfig {
-    if (!object || typeof object !== 'object') return false;
-    const config = object as Record<string, unknown>;
-    if (!config.server || typeof config.server !== 'object') return false;
-    if (!config.panel || typeof config.panel !== 'object') return false;
+  if (!object || typeof object !== 'object') return false;
+  const config = object as Record<string, unknown>;
+  if (!config.server || typeof config.server !== 'object') return false;
+  if (!config.panel || typeof config.panel !== 'object') return false;
 
-    return true;
+  return true;
 }
 
 /**
@@ -30,30 +30,36 @@ function validate(object: unknown): object is HaxballServerConfig {
  * console.log(config.server.execPath);
  */
 export async function loadConfig(file?: string): Promise<HaxballServerConfig> {
-    const filePath = file == null || file == "" ? path.resolve(path.resolve('.'), "config.json") : file;
+  const filePath =
+    file == null || file == '' ? path.resolve(path.resolve('.'), 'config.json') : file;
 
-    try {
-        const data = await fs.readFile(filePath, { encoding: "utf-8" });
-        const json = JSON.parse(data);
+  try {
+    const data = await fs.readFile(filePath, { encoding: 'utf-8' });
+    const json = JSON.parse(data);
 
-        if (!validate(json)) {
-            throw {
-                message: `Invalid configuration`,
-                error: null
-            };
-        }
-
-        return json;
-    } catch (err) {
-        if (err && typeof err === 'object' && 'message' in err && err.message === 'Invalid configuration') {
-            throw err;
-        }
-        
-        throw {
-            message: `Error while loading or parsing config file`,
-            error: err
-        };
+    if (!validate(json)) {
+      throw {
+        message: `Invalid configuration`,
+        error: null,
+      };
     }
+
+    return json;
+  } catch (err) {
+    if (
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      err.message === 'Invalid configuration'
+    ) {
+      throw err;
+    }
+
+    throw {
+      message: `Error while loading or parsing config file`,
+      error: err,
+    };
+  }
 }
 
 //    __  ____ ____ _  _

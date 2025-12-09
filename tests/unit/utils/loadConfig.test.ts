@@ -15,7 +15,7 @@ describe('loadConfig', () => {
   it('deve carregar configuracao valida', async () => {
     const mockConfig = {
       server: { execPath: '/path', maxMemoryUsage: 512 },
-      panel: { discordToken: 'token', discordPrefix: '!', bots: {}, mastersDiscordId: [] }
+      panel: { discordToken: 'token', discordPrefix: '!', bots: {}, mastersDiscordId: [] },
     };
 
     (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockConfig));
@@ -28,7 +28,7 @@ describe('loadConfig', () => {
   it('deve usar config.json padrao se nenhum arquivo especificado', async () => {
     const mockConfig = {
       server: { execPath: '/path', maxMemoryUsage: 512 },
-      panel: { discordToken: 'token', discordPrefix: '!', bots: {}, mastersDiscordId: [] }
+      panel: { discordToken: 'token', discordPrefix: '!', bots: {}, mastersDiscordId: [] },
     };
 
     (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockConfig));
@@ -43,7 +43,7 @@ describe('loadConfig', () => {
 
     await expect(loadConfig('invalid.json')).rejects.toEqual({
       message: 'Error while loading or parsing config file',
-      error: error
+      error: error,
     });
   });
 
@@ -52,34 +52,34 @@ describe('loadConfig', () => {
 
     await expect(loadConfig('test.json')).rejects.toEqual(
       expect.objectContaining({
-        message: 'Error while loading or parsing config file'
+        message: 'Error while loading or parsing config file',
       })
     );
   });
 
   it('deve lancar erro se configuracao nao tiver server', async () => {
     const mockConfig = {
-      panel: { discordToken: 'token', discordPrefix: '!', bots: {}, mastersDiscordId: [] }
+      panel: { discordToken: 'token', discordPrefix: '!', bots: {}, mastersDiscordId: [] },
     };
 
     (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockConfig));
 
     await expect(loadConfig('test.json')).rejects.toEqual({
       message: 'Invalid configuration',
-      error: null
+      error: null,
     });
   });
 
   it('deve lancar erro se configuracao nao tiver panel', async () => {
     const mockConfig = {
-      server: { execPath: '/path', maxMemoryUsage: 512 }
+      server: { execPath: '/path', maxMemoryUsage: 512 },
     };
 
     (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockConfig));
 
     await expect(loadConfig('test.json')).rejects.toEqual({
       message: 'Invalid configuration',
-      error: null
+      error: null,
     });
   });
 
@@ -88,7 +88,7 @@ describe('loadConfig', () => {
 
     await expect(loadConfig('test.json')).rejects.toEqual({
       message: 'Invalid configuration',
-      error: null
+      error: null,
     });
   });
 
@@ -97,7 +97,7 @@ describe('loadConfig', () => {
 
     await expect(loadConfig('test.json')).rejects.toEqual({
       message: 'Invalid configuration',
-      error: null
+      error: null,
     });
   });
 });

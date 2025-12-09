@@ -52,20 +52,20 @@ export const maxTimeSSHConnection = 2 * 60 * 1000;
  * @type {string[]}
  */
 export const roomCustomConfigsList = [
-    "roomName",
-    "playerName",
-    "password",
-    "maxPlayers",
-    "public",
-    "geo",
-    "noPlayer"
+  'roomName',
+  'playerName',
+  'password',
+  'maxPlayers',
+  'public',
+  'geo',
+  'noPlayer',
 ];
 
 /**
  * Tipo para lista de bots - pode ser objeto com nome:caminho ou array de objetos
  * @typedef {Object|Array} BotList
  */
-type BotList = { [key: string]: string } | { name: string, path: string, displayName?: string }[];
+type BotList = { [key: string]: string } | { name: string; path: string; displayName?: string }[];
 
 /**
  * Configuracao do painel de controle Discord
@@ -78,12 +78,12 @@ type BotList = { [key: string]: string } | { name: string, path: string, display
  * @property {number} [maxRooms] - Numero maximo de salas simultaneas
  */
 export interface PanelConfig {
-    discordToken: string;
-    discordPrefix: string;
-    bots: BotList;
-    mastersDiscordId: string[];
-    customSettings?: CustomSettingsList;
-    maxRooms?: number;
+  discordToken: string;
+  discordPrefix: string;
+  bots: BotList;
+  mastersDiscordId: string[];
+  customSettings?: CustomSettingsList;
+  maxRooms?: number;
 }
 
 /**
@@ -99,14 +99,14 @@ export interface PanelConfig {
  * @property {number} maxMemoryUsage - Uso maximo de memoria em MB
  */
 export interface ServerConfig {
-    proxyEnabled?: boolean,
-    proxyServers?: string[],
-    disableCache?: boolean,
-    disableRemote?: boolean,
-    userDataDir?: string,
-    disableAnonymizeLocalIps?: boolean,
-    execPath: string,
-    maxMemoryUsage: number
+  proxyEnabled?: boolean;
+  proxyServers?: string[];
+  disableCache?: boolean;
+  disableRemote?: boolean;
+  userDataDir?: string;
+  disableAnonymizeLocalIps?: boolean;
+  execPath: string;
+  maxMemoryUsage: number;
 }
 
 /**
@@ -116,8 +116,8 @@ export interface ServerConfig {
  * @property {PanelConfig} panel - Configuracoes do painel Discord
  */
 export interface HaxballServerConfig {
-    server: ServerConfig,
-    panel: PanelConfig
+  server: ServerConfig;
+  panel: PanelConfig;
 }
 
 /**
@@ -127,8 +127,8 @@ export interface HaxballServerConfig {
  * @property {string|number|boolean|string[]} [key] - Valores configuráveis da sala
  */
 export interface CustomSettings {
-    extends?: string | string[];
-    [key: string]: string | number | boolean | string[] | undefined;
+  extends?: string | string[];
+  [key: string]: string | number | boolean | string[] | undefined;
 }
 
 //    __  ____ ____ _  _
@@ -137,14 +137,14 @@ export interface CustomSettings {
 // \_/\_(____(____|____/
 
 export type ReservedCustomSettings =
-    "reserved.haxball.roomName" |
-    "reserved.haxball.playerName" |
-    "reserved.haxball.password" |
-    "reserved.haxball.maxPlayers" |
-    "reserved.haxball.public" |
-    "reserved.haxball.geo" |
-    "reserved.haxball.noPlayer";
+  | 'reserved.haxball.roomName'
+  | 'reserved.haxball.playerName'
+  | 'reserved.haxball.password'
+  | 'reserved.haxball.maxPlayers'
+  | 'reserved.haxball.public'
+  | 'reserved.haxball.geo'
+  | 'reserved.haxball.noPlayer';
 
 export type CustomSettingsList = {
-    [key: string]: CustomSettings
+  [key: string]: CustomSettings;
 };

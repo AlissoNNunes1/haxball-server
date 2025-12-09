@@ -8,9 +8,9 @@
  * escapeString(123) // Retorna: 123
  */
 export function escapeString(str: any) {
-    if (typeof str !== "string") return str;
+  if (typeof str !== 'string') return str;
 
-    return str.replace(/"/g, '\\"');
+  return str.replace(/"/g, '\\"');
 }
 
 //    __  ____ ____ _  _

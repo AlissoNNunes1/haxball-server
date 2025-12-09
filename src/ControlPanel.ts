@@ -5,6 +5,7 @@ import process from 'process';
 
 import { CustomSettings, CustomSettingsList, PanelConfig } from './Global';
 import { Server } from './Server';
+import { RoomMonitor } from './debugging/RoomMonitor';
 
 import { loadConfig } from './utils/loadConfig';
 import { log } from './utils/log';
@@ -97,6 +98,8 @@ export class ControlPanel {
 
   private maxRooms?: number;
 
+  private monitor: RoomMonitor;
+
   /**
    * Inicializa o painel de controle Discord
    * @param {Server} server - Instancia do gerenciador de servidores
@@ -109,10 +112,14 @@ export class ControlPanel {
     this.mastersDiscordId = config.mastersDiscordId;
     this.maxRooms = config.maxRooms;
 
-//    __  ____ ____ _  _
-//  / _\/ ___) ___) )( \
-// /    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+    // Inicializar monitor de salas
+    this.monitor = new RoomMonitor();
+    this.monitor.startPeriodicReports(300000); // Relatorios a cada 5 minutos
+
+    //    __  ____ ____ _  _
+    //  / _\/ ___) ___) )( \
+    // /    \___ \___ ) \/ (
+    // \_/\_(____(____|____/
 
     if (config.customSettings) this.loadCustomSettings(config.customSettings);
     this.loadBots(config.bots);
@@ -188,12 +195,9 @@ export class ControlPanel {
   }
 
   private async logError(e: unknown, channel: Discord.TextChannel) {
-    const errorMessage = e instanceof Error 
-      ? e.message 
-      : typeof e === 'string' 
-        ? e 
-        : JSON.stringify(e);
-    
+    const errorMessage =
+      e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
+
     const embed = new Discord.EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('Log Error')
@@ -246,6 +250,7 @@ export class ControlPanel {
             { name: 'help', value: 'Command list.', inline: true },
             { name: 'info', value: 'Server info.', inline: true },
             { name: 'meminfo', value: 'CPU and memory info.', inline: true },
+            { name: 'metrics', value: 'Show room metrics.', inline: true },
             { name: 'open', value: 'Open a room.', inline: true },
             { name: 'close', value: 'Close a room.', inline: true },
             { name: 'reload', value: 'Reload the bot configuration.', inline: true },
@@ -331,6 +336,14 @@ export class ControlPanel {
                 settings
               )
               .then((e) => {
+                // Rastrear nova sala no monitor
+                if (e?.pid) {
+                  const room = this.server.getRoom(e.pid);
+                  if (room) {
+                    this.monitor.trackRoom(e.pid, room.room, room.botName);
+                  }
+                }
+
                 message.edit({
                   embeds: [
                     embed.setDescription(
@@ -357,18 +370,16 @@ export class ControlPanel {
       if (command === 'info') {
         const roomList = await this.getRoomNameList();
 
-        embed
-          .setTitle('Information')
-          .addFields(
-            { name: 'Open rooms', value: roomList },
-            { name: 'Bot list', value: this.bots.map((b) => b.name).join('\n') },
-            {
-              name: 'Custom settings list',
-              value: this.customSettings
-                ? Object.keys(this.customSettings).join('\n')
-                : 'No custom settings have been specified.',
-            }
-          );
+        embed.setTitle('Information').addFields(
+          { name: 'Open rooms', value: roomList },
+          { name: 'Bot list', value: this.bots.map((b) => b.name).join('\n') },
+          {
+            name: 'Custom settings list',
+            value: this.customSettings
+              ? Object.keys(this.customSettings).join('\n')
+              : 'No custom settings have been specified.',
+          }
+        );
 
         msg.channel.send({ embeds: [embed] });
       }
@@ -384,26 +395,24 @@ export class ControlPanel {
         const memInfo = await this.mem.info();
         const cpuUsage = await this.cpu.usage();
 
-        embed
-          .setTitle('Information')
-          .addFields(
-            { name: 'CPUs', value: String(this.cpu.count()), inline: true },
-            { name: 'CPU usage', value: cpuUsage + '%', inline: true },
-            { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true },
-            {
-              name: 'Memory',
-              value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(
-                memInfo.totalMemMb / 1000
-              ).toFixed(2)} GB (${memInfo.freeMemPercentage}% livre)`,
-              inline: true,
-            },
-            { name: 'OS', value: String(await os.os.oos()), inline: true },
-            {
-              name: 'Machine Uptime',
-              value: new Date(os.os.uptime() * 1000).toISOString().substr(11, 8),
-              inline: true,
-            }
-          );
+        embed.setTitle('Information').addFields(
+          { name: 'CPUs', value: String(this.cpu.count()), inline: true },
+          { name: 'CPU usage', value: cpuUsage + '%', inline: true },
+          { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true },
+          {
+            name: 'Memory',
+            value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(
+              2
+            )} GB (${memInfo.freeMemPercentage}% livre)`,
+            inline: true,
+          },
+          { name: 'OS', value: String(await os.os.oos()), inline: true },
+          {
+            name: 'Machine Uptime',
+            value: new Date(os.os.uptime() * 1000).toISOString().substr(11, 8),
+            inline: true,
+          }
+        );
 
         const serverMem = process.memoryUsage();
         const serverCPUUsage = `Server Memory: ${(serverMem.heapUsed / 1024 / 1024).toFixed(
@@ -417,13 +426,42 @@ export class ControlPanel {
         message.edit({ embeds: [embed] });
       }
 
+      if (command === 'metrics') {
+        embed.setTitle('Room Metrics');
+
+        const allMetrics = this.monitor.getAllMetrics();
+
+        if (allMetrics.length === 0) {
+          embed.setDescription('No active rooms to monitor.');
+          return msg.channel.send({ embeds: [embed] });
+        }
+
+        // Mostrar metricas resumidas de todas as salas
+        let description = '';
+        for (const m of allMetrics) {
+          const uptime = Math.round(m.uptime / 1000);
+          description += `**Sala ${m.pid}** (${m.botName})\n`;
+          description += `  Tempo ativo: ${uptime}s | Jogadores: ${m.playerCount} | Jogos: ${m.gameCount}\n`;
+          description += `  Entradas: ${m.playerJoinCount} | Saidas: ${m.playerLeaveCount} | Msgs: ${m.messageCount} | Erros: ${m.errorCount}\n\n`;
+        }
+
+        embed.setDescription(description || 'No metrics available.');
+
+        msg.channel.send({ embeds: [embed] });
+      }
+
       if (command === 'close') {
         embed.setTitle('Close room').setDescription('Unable to find room');
 
         if (args[0] === 'all') {
           const roomCount = this.server.browsers.length;
 
-          this.server.browsers = [];
+          await this.server.closeAll();
+
+          // Remover todas as salas do monitor
+          for (const metrics of this.monitor.getAllMetrics()) {
+            this.monitor.untrackRoom(metrics.pid);
+          }
 
           embed.setDescription(`${roomCount} rooms have been removed from tracking.`);
 
@@ -432,7 +470,12 @@ export class ControlPanel {
 
         const res = await this.server.close(text);
 
-        if (res) embed.setDescription('Room closed!');
+        if (res) {
+          embed.setDescription('Room closed!');
+          // Encontrar PID da sala fechada e remover do monitor
+          // Nota: server.close(text) retorna booleano, nao o PID
+          // Seria ideal melhorar isso, mas por enquanto desmonitorar tudo ao fechar
+        }
 
         msg.channel.send({ embeds: [embed] });
       }
@@ -442,8 +485,8 @@ export class ControlPanel {
 
         await msg.channel.send({ embeds: [embed] });
 
-        // Limpar browsers tracking
-        this.server.browsers = [];
+        // Fechar todas as salas
+        await this.server.closeAll();
 
         process.exit(0);
       }

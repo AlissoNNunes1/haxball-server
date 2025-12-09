@@ -13,25 +13,28 @@ module.exports = {
     '!src/Server.ts',
     '!src/Server_DEPRECATED.ts',
     '!src/commands/*.ts',
-    '!src/debugging/*.ts'
+    '!src/debugging/*.ts',
   ],
   coverageThreshold: {
     global: {
       branches: 70,
       functions: 70,
       lines: 70,
-      statements: 70
-    }
+      statements: 70,
+    },
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true
-      }
-    }]
-  }
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+        },
+      },
+    ],
+  },
 };
 
 /*   __  ____ ____ _  _ 

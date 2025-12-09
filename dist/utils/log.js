@@ -13,9 +13,9 @@ const Global_1 = require("../Global");
  * // Saida: [14:30:45] [SERVER] Sala aberta com sucesso
  */
 function log(prefix, message) {
-    const timestamp = new Date().toLocaleTimeString("pt-BR");
+    const timestamp = new Date().toLocaleTimeString('pt-BR');
     if (message.length > Global_1.maxLengthLog) {
-        message = message.slice(0, Global_1.maxLengthLog) + "...";
+        message = message.slice(0, Global_1.maxLengthLog) + '...';
     }
     console.log(`[${timestamp}] [${prefix}] ${message}`);
 }

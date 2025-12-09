@@ -47,12 +47,12 @@ exports.maxTimeSSHConnection = 2 * 60 * 1000;
  * @type {string[]}
  */
 exports.roomCustomConfigsList = [
-    "roomName",
-    "playerName",
-    "password",
-    "maxPlayers",
-    "public",
-    "geo",
-    "noPlayer"
+    'roomName',
+    'playerName',
+    'password',
+    'maxPlayers',
+    'public',
+    'geo',
+    'noPlayer',
 ];
 //# sourceMappingURL=Global.js.map
