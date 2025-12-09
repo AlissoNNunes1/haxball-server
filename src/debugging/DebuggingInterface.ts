@@ -57,7 +57,7 @@ export class ConnectInterface {
 
         const url = `http://localhost:${port}`;
 
-        app.get('/', (req, res) => {
+        app.get('/', (_req, res) => {
             res.send(html);
         });
 
@@ -72,11 +72,11 @@ export class ConnectInterface {
         const wss = new WebSocket.Server({ port });
 
         wss.on('connection', (ws) => {
-            client.on("add", async (server, client) => {
+            client.on("add", async (_server, client) => {
                 setTimeout(() => this.addRoomToList(client, ws), 2000);
             });
 
-            client.on("remove", async (server, client) => {
+            client.on("remove", async (_server, client) => {
                 this.removeRoomFromList(client, ws);
             });
 
