@@ -102,9 +102,7 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
         context.room.onPlayerJoin(mockPlayer);
       }
 
-      expect(context.room.sendChat).toHaveBeenCalledWith(
-        'Welcome Player1'
-      );
+      expect(context.room.sendChat).toHaveBeenCalledWith('Welcome Player1');
     });
 
     it('onPlayerChat deve processar comandos', () => {
@@ -127,9 +125,7 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
         ? context.room.onPlayerChat(mockPlayer, '!help')
         : true;
 
-      expect(context.room.sendChat).toHaveBeenCalledWith(
-        'Available commands'
-      );
+      expect(context.room.sendChat).toHaveBeenCalledWith('Available commands');
       expect(result).toBe(false);
     });
 
@@ -153,9 +149,7 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
         context.room.onGoal(mockPlayer);
       }
 
-      expect(context.room.sendChat).toHaveBeenCalledWith(
-        'Score: Red 1 Blue 0'
-      );
+      expect(context.room.sendChat).toHaveBeenCalledWith('Score: Red 1 Blue 0');
     });
   });
 
@@ -170,9 +164,7 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
       const fn = new Function('room', 'customSettings', script);
       fn(context.room, context.customSettings);
 
-      expect(context.room.sendChat).toHaveBeenCalledWith(
-        'Game Mode: 4v4'
-      );
+      expect(context.room.sendChat).toHaveBeenCalledWith('Game Mode: 4v4');
     });
 
     it('deve ter valor padrao se customSettings nao existe', () => {
@@ -185,9 +177,7 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
       const fn = new Function('room', 'customSettings', script);
       fn(context.room, context.customSettings);
 
-      expect(context.room.sendChat).toHaveBeenCalledWith(
-        'Value: default'
-      );
+      expect(context.room.sendChat).toHaveBeenCalledWith('Value: default');
     });
   });
 
@@ -235,12 +225,7 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
       `;
 
       const context = createBotContext();
-      const fn = new Function(
-        'room',
-        'customSettings',
-        'console',
-        script
-      );
+      const fn = new Function('room', 'customSettings', 'console', script);
       fn(context.room, context.customSettings, context.console);
 
       expect(context.console.log).toHaveBeenCalledWith('Bot iniciado');
@@ -314,11 +299,10 @@ describe('Bot Script Compatibility - haxball.js v5.0.0+', () => {
       `;
 
       // Simular remocao de window.HBInit
-      const migratedScript = legacyScript
-        .replace(
-          /var\s+room\s*=\s*window\.HBInit\s*\(\s*\{[\s\S]*?\}\s*\);?/gm,
-          ''
-        );
+      const migratedScript = legacyScript.replace(
+        /var\s+room\s*=\s*window\.HBInit\s*\(\s*\{[\s\S]*?\}\s*\);?/gm,
+        ''
+      );
 
       const context = createBotContext();
 

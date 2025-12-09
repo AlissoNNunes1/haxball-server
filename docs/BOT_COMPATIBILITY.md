@@ -13,15 +13,16 @@ Este documento descreve como adaptar scripts de bot escritos para a arquitetura 
 var room = window.HBInit({
   roomName: 'Minha Sala',
   maxPlayers: 16,
-  token: 'thr1.xxxxx'  // Token injetado aqui
+  token: 'thr1.xxxxx', // Token injetado aqui
 });
 
-room.onPlayerJoin = function(player) {
+room.onPlayerJoin = function (player) {
   // ... bot logic
 };
 ```
 
 **Problemas:**
+
 - Depende de injecao de codigo em pagina HTML
 - window.HBInit nao e mais disponivel
 - Token e injetado via JavaScript
@@ -33,12 +34,13 @@ room.onPlayerJoin = function(player) {
 // room e fornecida automaticamente no contexto
 // Token e configuracao sao passados pelo Server.ts
 
-room.onPlayerJoin = function(player) {
+room.onPlayerJoin = function (player) {
   // ... bot logic
 };
 ```
 
 **Vantagens:**
+
 - Execucao direta sem dependencia de browser
 - Contexto limpo com apenas o necessario
 - Token gerenciado pelo servidor
@@ -49,17 +51,19 @@ room.onPlayerJoin = function(player) {
 ### 1. Remover window.HBInit
 
 **ANTES:**
+
 ```javascript
 var room = window.HBInit({
   roomName: 'Futsal',
   maxPlayers: 16,
   public: true,
   noPlayer: true,
-  token: 'thr1.xxxxx'
+  token: 'thr1.xxxxx',
 });
 ```
 
 **DEPOIS:**
+
 ```javascript
 // room e fornecida automaticamente
 // Configuracao e feita em Server.ts ou via customSettings
@@ -68,6 +72,7 @@ var room = window.HBInit({
 **Como Configurar:**
 
 No `ControlPanel.ts` ao abrir uma sala:
+
 ```typescript
 // room ja e configurada com os parametros corretos
 // O bot script recebe room ja pronta
@@ -78,24 +83,26 @@ No `ControlPanel.ts` ao abrir uma sala:
 Se seu bot precisa de configuracoes personalizadas:
 
 **ANTES:**
+
 ```javascript
 var gameMode = window.customSettings?.gameMode ?? 4;
 ```
 
 **DEPOIS:**
+
 ```javascript
 // customSettings e injetada no contexto
 var gameMode = customSettings?.gameMode ?? 4;
 
 // Ou se preferir:
-var gameMode = (typeof customSettings !== 'undefined' && customSettings.gameMode)
-  ? customSettings.gameMode
-  : 4;
+var gameMode =
+  typeof customSettings !== 'undefined' && customSettings.gameMode ? customSettings.gameMode : 4;
 ```
 
 ### 3. Logging e Debug
 
 **ANTES:**
+
 ```javascript
 // Chrome DevTools
 console.log('Debug info');
@@ -103,6 +110,7 @@ console.log('Debug info');
 ```
 
 **DEPOIS:**
+
 ```javascript
 // Logging estruturado
 console.log('Debug info');
@@ -116,6 +124,7 @@ console.log('Debug info');
 ### 4. localStorage nao Funciona
 
 **PROBLEMA:**
+
 ```javascript
 // NAOAVA FUNCIONAR
 var data = localStorage.getItem('myKey');
@@ -123,11 +132,12 @@ localStorage.setItem('myKey', 'myValue');
 ```
 
 **SOLUCAO 1: Usar Variaveis Globais**
+
 ```javascript
 // Declarar fora dos handlers
 let botData = {
   playerStats: {},
-  gameConfig: {}
+  gameConfig: {},
 };
 
 // Usar em handlers
@@ -135,6 +145,7 @@ botData.playerStats[player.id] = { goals: 0 };
 ```
 
 **SOLUCAO 2: Inicializar no Contexto Global**
+
 ```javascript
 // Server.ts pode injetar dados iniciais via customSettings
 var playerStats = customSettings?.playerStats || {};
@@ -146,15 +157,17 @@ var gameConfig = customSettings?.gameConfig || {};
 Se seu bot precisa se comunicar com o servidor:
 
 **ANTES:**
+
 ```javascript
 // Via fetch para endpoint externo
 fetch('http://localhost:3000/api/goal', {
   method: 'POST',
-  body: JSON.stringify({ player: player.id, goal: true })
+  body: JSON.stringify({ player: player.id, goal: true }),
 });
 ```
 
 **DEPOIS:**
+
 ```javascript
 // Mesmo metodo ainda funciona
 // Mas recomenda-se usar event handlers para logging
@@ -170,26 +183,28 @@ fetch('http://localhost:3000/api/goal', {
 ### Padroes 1: Bot Simples (Sem Estado)
 
 **ANTES:**
+
 ```javascript
 var room = window.HBInit({ roomName: 'Simple' });
 
-room.onPlayerJoin = function(player) {
+room.onPlayerJoin = function (player) {
   room.sendChat('Bem-vindo ' + player.name);
 };
 
-room.onGoal = function(player) {
+room.onGoal = function (player) {
   room.sendChat('Goool!');
 };
 ```
 
 **DEPOIS:**
+
 ```javascript
 // Nenhuma mudanca necessaria!
-room.onPlayerJoin = function(player) {
+room.onPlayerJoin = function (player) {
   room.sendChat('Bem-vindo ' + player.name);
 };
 
-room.onGoal = function(player) {
+room.onGoal = function (player) {
   room.sendChat('Goool!');
 };
 ```
@@ -197,23 +212,25 @@ room.onGoal = function(player) {
 ### Padroes 2: Bot com Estado Local
 
 **ANTES:**
+
 ```javascript
 var room = window.HBInit({ roomName: 'Stateful' });
 
 var gameState = { redScore: 0, blueScore: 0 };
 
-room.onGoal = function(player) {
+room.onGoal = function (player) {
   if (player.team === 1) gameState.redScore++;
   if (player.team === 2) gameState.blueScore++;
 };
 ```
 
 **DEPOIS:**
+
 ```javascript
 // Praticamente identico, apenas remova window.HBInit
 var gameState = { redScore: 0, blueScore: 0 };
 
-room.onGoal = function(player) {
+room.onGoal = function (player) {
   if (player.team === 1) gameState.redScore++;
   if (player.team === 2) gameState.blueScore++;
 };
@@ -222,6 +239,7 @@ room.onGoal = function(player) {
 ### Padroes 3: Bot com Configuracao
 
 **ANTES:**
+
 ```javascript
 var room = window.HBInit({ roomName: 'Configured' });
 
@@ -232,6 +250,7 @@ room.sendChat(`Modo: ${gameMode}, Limite: ${maxScore}`);
 ```
 
 **DEPOIS:**
+
 ```javascript
 // Praticamente identico
 var maxScore = customSettings?.maxScore ?? 5;
@@ -246,35 +265,37 @@ Todos os event handlers padrao do haxball funcionam:
 
 ```javascript
 // Entrada/saida de jogador
-room.onPlayerJoin = function(player) { };
-room.onPlayerLeave = function(player) { };
+room.onPlayerJoin = function (player) {};
+room.onPlayerLeave = function (player) {};
 
 // Gol
-room.onGoal = function(player) { };
+room.onGoal = function (player) {};
 
 // Chat
-room.onPlayerChat = function(player, message) { return true; };
+room.onPlayerChat = function (player, message) {
+  return true;
+};
 
 // Jogo
-room.onGameStart = function() { };
-room.onGameStop = function() { };
-room.onGamePause = function() { };
-room.onGameUnpause = function() { };
+room.onGameStart = function () {};
+room.onGameStop = function () {};
+room.onGamePause = function () {};
+room.onGameUnpause = function () {};
 
 // Bola
-room.onBallKick = function(player) { };
+room.onBallKick = function (player) {};
 
 // Time
-room.onTeamGoal = function(team) { };
+room.onTeamGoal = function (team) {};
 
 // Tick do jogo
-room.onGameTick = function() { };
+room.onGameTick = function () {};
 
 // Link da sala atualizado
-room.onRoomLink = function(link) { };
+room.onRoomLink = function (link) {};
 
 // Erro
-room.onRoomError = function(error) { };
+room.onRoomError = function (error) {};
 ```
 
 ## Ferramentas de Migracao
@@ -298,6 +319,7 @@ node scripts/migrate-bot-scripts.js bots/ --guide
 ```
 
 **O que o script faz automaticamente:**
+
 - Remove `var room = window.HBInit(...)`
 - Remove `const room = window.HBInit(...)`
 - Remove `let room = window.HBInit(...)`
@@ -305,6 +327,7 @@ node scripts/migrate-bot-scripts.js bots/ --guide
 - Avisa sobre patterns que precisam revisao manual
 
 **O que REQUER revisao manual:**
+
 - Referencias a `window.*`
 - Uso de `localStorage` / `sessionStorage`
 - Scripts complexos com efeitos colaterais
@@ -361,6 +384,7 @@ if (scriptConfig.version === 'v4') {
 ## Exemplos de Scripts Migrados
 
 Veja `bots/futsal-example.js` para um exemplo completo de:
+
 - Gerenciamento de times
 - Sistema de pontuacao
 - Comandos de chat
@@ -379,10 +403,9 @@ Veja `bots/futsal-example.js` para um exemplo completo de:
 **Causa:** Script tenta acessar customSettings mas nao foi fornecida
 
 **Solucao:** Adicione verificacao de seguranca:
+
 ```javascript
-var setting = (typeof customSettings !== 'undefined')
-  ? customSettings.myKey
-  : defaultValue;
+var setting = typeof customSettings !== 'undefined' ? customSettings.myKey : defaultValue;
 ```
 
 ### Room nao funciona
@@ -390,6 +413,7 @@ var setting = (typeof customSettings !== 'undefined')
 **Causa:** Possivelmente script foi escrito para Puppeteer
 
 **Solucao:** Execute o script de migracao automatica:
+
 ```bash
 node scripts/migrate-bot-scripts.js bots/seu-bot.js --verbose
 ```
@@ -433,7 +457,7 @@ node scripts/migrate-bot-scripts.js bots/seu-bot.js --verbose
 **Ultima Atualizacao:** 2024-12-09  
 **Status:** Producao
 
-//    __  ____ ____ _  _
-//  / _\/ ___) ___) )( \
-// /    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ **
+// / \_\/ **_) _**) )( \
+// / \_** \_** ) \/ (
+// \_/\_(****(****|\_\_\_\_/

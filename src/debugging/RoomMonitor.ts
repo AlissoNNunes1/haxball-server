@@ -254,10 +254,7 @@ Erros capturados: ${metrics.errorCount}
     if (this.metrics.has(pid)) {
       const metrics = this.metrics.get(pid)!;
       const uptime = Math.round((Date.now() - metrics.startTime) / 1000);
-      log(
-        'MONITOR',
-        `Sala ${pid} desmonitorada apos ${uptime}s (${metrics.gameCount} jogos)`
-      );
+      log('MONITOR', `Sala ${pid} desmonitorada apos ${uptime}s (${metrics.gameCount} jogos)`);
       this.metrics.delete(pid);
       return true;
     }

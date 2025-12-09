@@ -64,6 +64,9 @@ type BotList = {
  * @property {string[]} mastersDiscordId - IDs dos usuarios com acesso master
  * @property {CustomSettingsList} [customSettings] - Configuracoes personalizadas opcionais
  * @property {number} [maxRooms] - Numero maximo de salas simultaneas
+ * @property {Object} [webMonitor] - Configuracao do monitor web
+ * @property {number} [webMonitor.port] - Porta do monitor web
+ * @property {string} [webMonitor.host] - Host do monitor web
  */
 export interface PanelConfig {
     discordToken: string;
@@ -72,6 +75,10 @@ export interface PanelConfig {
     mastersDiscordId: string[];
     customSettings?: CustomSettingsList;
     maxRooms?: number;
+    webMonitor?: {
+        port?: number;
+        host?: string;
+    };
 }
 /**
  * Configuracao do servidor Haxball

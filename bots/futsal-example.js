@@ -64,12 +64,8 @@ room.onPlayerLeave = function (player) {
   room.sendChat(`${player.name} saiu da sala`);
 
   // Parar jogo se muito poucos jogadores
-  const totalPlayers =
-    gameState.redTeam.length + gameState.blueTeam.length;
-  if (
-    totalPlayers < gameConfig.minPlayers &&
-    gameState.gameActive
-  ) {
+  const totalPlayers = gameState.redTeam.length + gameState.blueTeam.length;
+  if (totalPlayers < gameConfig.minPlayers && gameState.gameActive) {
     room.stopGame();
     gameState.gameActive = false;
     room.sendChat('Jogo parou: Jogadores insuficientes');
@@ -165,11 +161,7 @@ room.onGoal = function (player) {
  * Se a bola fica parada muito tempo, resetar posicao
  */
 room.onGameTick = function () {
-  if (
-    !room.getBallTrajectory ||
-    Date.now() - gameState.lastBallReset >
-      gameConfig.ballResetTime
-  ) {
+  if (!room.getBallTrajectory || Date.now() - gameState.lastBallReset > gameConfig.ballResetTime) {
     return;
   }
 

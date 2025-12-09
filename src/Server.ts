@@ -8,6 +8,7 @@
 import HaxballJS from 'haxball.js';
 import { CustomSettings, ServerConfig } from './Global';
 import { log } from './utils/log';
+import { logger } from './utils/Logger';
 
 /**
  * Representa uma instancia de sala Haxball aberta
@@ -73,10 +74,7 @@ export class Server {
   constructor(config: ServerConfig) {
     this.proxyServers = config.proxyServers ?? [];
 
-    log(
-      'SERVER',
-      `Inicializando gerenciador de salas Haxball (haxball.js v6.0.0)`
-    );
+    log('SERVER', `Inicializando gerenciador de salas Haxball (haxball.js v6.0.0)`);
     log('SERVER', `Proxies habilitados: ${config.proxyEnabled ? 'SIM' : 'NAO'}`);
     if (this.proxyServers.length > 0) {
       log('SERVER', `Servidores proxy disponiveis: ${this.proxyServers.length}`);
@@ -138,14 +136,8 @@ export class Server {
         maxPlayers: settings?.['reserved.haxball.maxPlayers']
           ? Number(settings['reserved.haxball.maxPlayers'])
           : 16,
-        public:
-          settings?.['reserved.haxball.public'] !== false
-            ? true
-            : false,
-        noPlayer:
-          settings?.['reserved.haxball.noPlayer'] !== false
-            ? true
-            : false,
+        public: settings?.['reserved.haxball.public'] !== false ? true : false,
+        noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
         password: settings?.['reserved.haxball.password']
           ? String(settings['reserved.haxball.password'])
           : undefined,
@@ -186,10 +178,8 @@ export class Server {
 
       this.rooms.set(pid, roomInstance);
 
-      log(
-        'SERVER',
-        `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`
-      );
+      log('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`);
+      logger.info('Server', `Sala aberta`, { pid, name, link: roomInstance.link });
 
       return {
         link: roomInstance.link,
@@ -198,6 +188,7 @@ export class Server {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
+      logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
       throw error;
     }
   }
@@ -231,10 +222,12 @@ export class Server {
       }
 
       log('SERVER', `Sala ${pid} (${instance.botName}) fechada com sucesso`);
+      logger.info('Server', `Sala fechada`, { pid, name: instance.botName });
       return true;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log('SERVER', `ERRO ao fechar sala ${pid}: ${errorMsg}`);
+      logger.error('Server', `Erro ao fechar sala`, { pid, error: errorMsg });
       return false;
     }
   }
@@ -256,6 +249,7 @@ export class Server {
     }
 
     log('SERVER', `Todas as salas fechadas: ${closedCount}/${pids.length}`);
+    logger.info('Server', `Shutdown completo`, { closedRooms: closedCount, totalRooms: pids.length });
     return closedCount;
   }
 
@@ -291,11 +285,7 @@ export class Server {
    * @param {string} script - Codigo JavaScript do bot
    * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
    */
-  private executeBotScript(
-    room: any,
-    script: string,
-    settings?: CustomSettings
-  ): void {
+  private executeBotScript(room: any, script: string, settings?: CustomSettings): void {
     try {
       // Contexto disponivel ao script
       const context = {
@@ -314,10 +304,7 @@ export class Server {
       log('SERVER', 'Script bot carregado e executado com sucesso');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      log(
-        'SERVER',
-        `AVISO: Erro ao executar script bot: ${errorMsg.substring(0, 100)}`
-      );
+      log('SERVER', `AVISO: Erro ao executar script bot: ${errorMsg.substring(0, 100)}`);
       // Nao lancar erro - permitir que sala continue funcionando
     }
   }
@@ -329,11 +316,7 @@ export class Server {
    * @param {number} pid - ID da sala
    * @param {string} [_botName] - Nome do bot (para futuro uso em logging)
    */
-  private setupDefaultEventHandlers(
-    room: any,
-    pid: number,
-    _botName?: string
-  ): void {
+  private setupDefaultEventHandlers(room: any, pid: number, _botName?: string): void {
     try {
       // Evento: Link da sala disponivel
       if (room.onRoomLink) {

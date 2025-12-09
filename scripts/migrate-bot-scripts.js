@@ -22,20 +22,17 @@ const path = require('path');
 const MIGRATIONS = [
   {
     name: 'Remover window.HBInit com HBInit retornado',
-    pattern:
-      /var\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
+    pattern: /var\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
     replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
   },
   {
     name: 'Remover const room = window.HBInit',
-    pattern:
-      /const\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
+    pattern: /const\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
     replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
   },
   {
     name: 'Remover let room = window.HBInit',
-    pattern:
-      /let\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
+    pattern: /let\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
     replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
   },
   {
@@ -66,8 +63,7 @@ const MANUAL_CHANGES = [
   },
   {
     name: 'Event Handlers com referencia a window',
-    description:
-      'Callbacks que usam window devem ser adaptados para trabalhar sem browser window',
+    description: 'Callbacks que usam window devem ser adaptados para trabalhar sem browser window',
     example: `// ANTES: window.myCallback = () => {};
 // DEPOIS: const myCallback = () => {};`,
   },
@@ -79,11 +75,7 @@ const MANUAL_CHANGES = [
  * @returns {boolean} true se contem patterns legados
  */
 function needsMigration(content) {
-  return (
-    /window\.HBInit|var\s+room\s*=|const\s+room\s*=|let\s+room\s*=/.test(
-      content
-    )
-  );
+  return /window\.HBInit|var\s+room\s*=|const\s+room\s*=|let\s+room\s*=/.test(content);
 }
 
 /**
@@ -122,9 +114,7 @@ function migrateFile(filePath, verbose = false) {
     }
 
     if (!/room\s*=\s*\{|room\.onPlayerJoin|room\.sendChat/.test(content)) {
-      result.warnings.push(
-        'Script pode estar vazio ou nao usar room - verifique migracao'
-      );
+      result.warnings.push('Script pode estar vazio ou nao usar room - verifique migracao');
     }
 
     // Adicionar cabecalho de migracao
@@ -159,9 +149,7 @@ function processPath(targetPath, verbose = false) {
   if (stats.isFile()) {
     // Processar arquivo individual
     if (!targetPath.endsWith('.js')) {
-      console.error(
-        `Erro: Arquivo deve ter extensao .js, encontrado: ${targetPath}`
-      );
+      console.error(`Erro: Arquivo deve ter extensao .js, encontrado: ${targetPath}`);
       process.exit(1);
     }
 
@@ -173,9 +161,7 @@ function processPath(targetPath, verbose = false) {
     const jsFiles = files.filter((f) => f.endsWith('.js'));
 
     if (jsFiles.length === 0) {
-      console.log(
-        `Nenhum arquivo .js encontrado em ${targetPath}`
-      );
+      console.log(`Nenhum arquivo .js encontrado em ${targetPath}`);
       return;
     }
 
@@ -290,9 +276,7 @@ function main() {
   if (args.length === 0) {
     console.log('Ferramenta de Migracao de Scripts Haxball.js');
     console.log('');
-    console.log(
-      'Uso: node scripts/migrate-bot-scripts.js <arquivo-ou-diretorio> [opcoes]'
-    );
+    console.log('Uso: node scripts/migrate-bot-scripts.js <arquivo-ou-diretorio> [opcoes]');
     console.log('');
     console.log('Opcoes:');
     console.log('  --verbose, -v   Mostrar detalhes de cada mudanca');
@@ -301,9 +285,7 @@ function main() {
     console.log('Exemplos:');
     console.log('  node scripts/migrate-bot-scripts.js bots/futsal.js');
     console.log('  node scripts/migrate-bot-scripts.js bots/');
-    console.log(
-      '  node scripts/migrate-bot-scripts.js bots/ --verbose --guide'
-    );
+    console.log('  node scripts/migrate-bot-scripts.js bots/ --verbose --guide');
     process.exit(0);
   }
 

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Server = void 0;
 const haxball_js_1 = __importDefault(require("haxball.js"));
 const log_1 = require("./utils/log");
+const Logger_1 = require("./utils/Logger");
 /**
  * Gerenciador de salas Haxball usando haxball.js
  * 70-80% reducao de memoria comparado a Puppeteer
@@ -93,12 +94,8 @@ class Server {
                 maxPlayers: settings?.['reserved.haxball.maxPlayers']
                     ? Number(settings['reserved.haxball.maxPlayers'])
                     : 16,
-                public: settings?.['reserved.haxball.public'] !== false
-                    ? true
-                    : false,
-                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false
-                    ? true
-                    : false,
+                public: settings?.['reserved.haxball.public'] !== false ? true : false,
+                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
                 password: settings?.['reserved.haxball.password']
                     ? String(settings['reserved.haxball.password'])
                     : undefined,
@@ -129,6 +126,7 @@ class Server {
             };
             this.rooms.set(pid, roomInstance);
             (0, log_1.log)('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`);
+            Logger_1.logger.info('Server', `Sala aberta`, { pid, name, link: roomInstance.link });
             return {
                 link: roomInstance.link,
                 pid,
@@ -137,6 +135,7 @@ class Server {
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
             (0, log_1.log)('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
+            Logger_1.logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
             throw error;
         }
     }
@@ -165,11 +164,13 @@ class Server {
                 setImmediate(() => global.gc?.());
             }
             (0, log_1.log)('SERVER', `Sala ${pid} (${instance.botName}) fechada com sucesso`);
+            Logger_1.logger.info('Server', `Sala fechada`, { pid, name: instance.botName });
             return true;
         }
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
             (0, log_1.log)('SERVER', `ERRO ao fechar sala ${pid}: ${errorMsg}`);
+            Logger_1.logger.error('Server', `Erro ao fechar sala`, { pid, error: errorMsg });
             return false;
         }
     }
@@ -189,6 +190,7 @@ class Server {
                 closedCount++;
         }
         (0, log_1.log)('SERVER', `Todas as salas fechadas: ${closedCount}/${pids.length}`);
+        Logger_1.logger.info('Server', `Shutdown completo`, { closedRooms: closedCount, totalRooms: pids.length });
         return closedCount;
     }
     /**
