@@ -18,13 +18,13 @@ export class DebuggingServer {
         this.server = net.createServer();
     }
 
-    private message(socket: net.Socket, type: RoomDebuggingMessageType, message: any) {
+    private message(socket: net.Socket, type: RoomDebuggingMessageType, message: unknown) {
         const msg = JSON.stringify({ type, message });
 
         socket.write(msg);
     }
 
-    private broadcast(type: RoomDebuggingMessageType, message: any) {
+    private broadcast(type: RoomDebuggingMessageType, message: unknown) {
         this.sockets.forEach(s => {
             this.message(s, type, message);
         });

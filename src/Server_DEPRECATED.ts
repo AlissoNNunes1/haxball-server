@@ -10,7 +10,7 @@ export interface BrowserInfo {
 export class Server {
   browsers: BrowserInfo[] = [];
 
-  constructor(_config?: any) {
+  constructor(_config?: unknown) {
     console.warn('Server.ts: Puppeteer implementation deprecated');
     console.warn('This class will be replaced with haxball.js in Phase 8');
   }
@@ -18,7 +18,7 @@ export class Server {
   async open(
     _botScript: string,
     _token: string,
-    _customSettings?: any
+    _customSettings?: unknown
   ): Promise<BrowserInfo | null> {
     throw new Error(
       'Puppeteer-based room opening is deprecated. Please wait for Phase 8 migration to haxball.js'

@@ -3,9 +3,11 @@ import path from "path";
 
 import { HaxballServerConfig } from "../Global";
 
-function validate(object: any): object is HaxballServerConfig {
-    if (!(object as HaxballServerConfig).server) return false;
-    if (!(object as HaxballServerConfig).panel) return false;
+function validate(object: unknown): object is HaxballServerConfig {
+    if (!object || typeof object !== 'object') return false;
+    const config = object as Record<string, unknown>;
+    if (!config.server || typeof config.server !== 'object') return false;
+    if (!config.panel || typeof config.panel !== 'object') return false;
 
     return true;
 }
@@ -26,7 +28,7 @@ export async function loadConfig(file?: string): Promise<HaxballServerConfig> {
 
         return json;
     } catch (err) {
-        if ((err as any).message === 'Invalid configuration') {
+        if (err && typeof err === 'object' && 'message' in err && err.message === 'Invalid configuration') {
             throw err;
         }
         

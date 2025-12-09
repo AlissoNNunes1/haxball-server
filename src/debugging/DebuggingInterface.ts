@@ -86,7 +86,7 @@ export class ConnectInterface {
     });
   }
 
-  private addRoomToList(room: number, ws: any, iteration: number = 0) {
+  private addRoomToList(room: number, ws: WebSocket, iteration: number = 0) {
     const url = `http://localhost:${room}`;
 
     if (iteration >= 3) return;
@@ -118,7 +118,7 @@ export class ConnectInterface {
       });
   }
 
-  private removeRoomFromList(room: number, ws: any) {
+  private removeRoomFromList(room: number, ws: WebSocket) {
     try {
       ws.send(
         JSON.stringify({

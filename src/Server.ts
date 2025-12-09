@@ -8,7 +8,7 @@ export interface BrowserInfo {
   link: string;
   remotePort?: number;
   process?: () => { pid?: number } | null;
-  pages?: () => Promise<any[]>;
+  pages?: () => Promise<unknown[]>;
 }
 
 export class Server {

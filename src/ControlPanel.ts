@@ -141,12 +141,18 @@ export class ControlPanel {
     }
   }
 
-  private async logError(e: any, channel: Discord.TextChannel) {
+  private async logError(e: unknown, channel: Discord.TextChannel) {
+    const errorMessage = e instanceof Error 
+      ? e.message 
+      : typeof e === 'string' 
+        ? e 
+        : JSON.stringify(e);
+    
     const embed = new Discord.EmbedBuilder()
       .setColor('#0099ff')
       .setTitle('Log Error')
       .setTimestamp(Date.now())
-      .setDescription(e);
+      .setDescription(errorMessage);
 
     await channel.send({ embeds: [embed] });
   }

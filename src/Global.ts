@@ -49,7 +49,7 @@ export interface HaxballServerConfig {
 
 export interface CustomSettings {
     extends?: string | string[];
-    [key: string]: any;
+    [key: string]: string | number | boolean | string[] | undefined;
 }
 
 export type ReservedCustomSettings =
