@@ -36,11 +36,12 @@
 - **Node.js >= 18.0.0** (requerido para v5.0.0)
 - npm >= 9.0.0
 - Discord Bot Token (veja instrucoes abaixo)
-- ~~Chrome/Chromium~~ (nao necessario em v5.0.0 - será removido completamente em v6.0.0)
 
-> **Nota Importante:** A partir de v5.0.0, a funcionalidade de abertura de salas esta temporariamente desabilitada (stub com Puppeteer deprecated). Sera re-implementada em v6.0.0 com haxball.js, que elimina a necessidade de Chrome/Chromium completamente!
+> **Info:** A partir de v5.0.0, o haxball-server usa **haxball.js** nativamente, eliminando completamente a necessidade de Chrome/Chromium! Isso resulta em 70-80% menos uso de memoria e instalacao muito mais leve.
 
 ## 📀 Instalacao
+
+### Opcao 1: NPM (Recomendado para desenvolvimento)
 
 ```bash
 npm install haxball-server -g
@@ -55,6 +56,17 @@ npm install
 npm run build
 ```
 
+### Opcao 2: Sem npm (Apenas Node.js!)
+
+Se ja tem o projeto, pode usar direto sem `npm install`:
+
+```bash
+# Com o executavel ja compilado (dist/ presente)
+node dist/main.js open config.json
+```
+
+Veja **[QUICK_START.md](QUICK_START.md)** para mais detalhes de como usar sem npm.
+
 ## 💻 Configuracao Basica
 
 ### 1. Criar arquivo config.json
@@ -62,9 +74,8 @@ npm run build
 ```json
 {
   "server": {
-    "execPath": "/usr/bin/chromium",
-    "maxMemoryUsage": 2048,
-    "proxyEnabled": false
+    "proxyEnabled": false,
+    "proxyServers": []
   },
   "panel": {
     "bots": [
@@ -130,24 +141,18 @@ Define comportamento do servidor Haxball.
 ```json
 {
   "server": {
-    "execPath": "/usr/bin/chromium",
-    "maxMemoryUsage": 2048,
     "proxyEnabled": false,
-    "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"],
-    "disableCache": false,
-    "disableRemote": false
+    "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"]
   }
 }
 ```
 
-| Campo          | Tipo     | Descricao                                         | Requerido |
-| -------------- | -------- | ------------------------------------------------- | --------- |
-| execPath       | string   | Caminho do Chrome/Chromium (deprecated em v5.0.0) | ✅ Sim    |
-| maxMemoryUsage | number   | Limite maximo de memoria (MB)                     | ✅ Sim    |
-| proxyEnabled   | boolean  | Ativa uso de proxies                              | ❌ Nao    |
-| proxyServers   | string[] | Lista de proxies [IP:Porta]                       | ❌ Nao    |
-| disableCache   | boolean  | Desativa cache do navegador                       | ❌ Nao    |
-| disableRemote  | boolean  | Desativa debugging remoto                         | ❌ Nao    |
+| Campo        | Tipo     | Descricao                   | Requerido |
+| ------------ | -------- | --------------------------- | --------- |
+| proxyEnabled | boolean  | Ativa uso de proxies        | ❌ Nao    |
+| proxyServers | string[] | Lista de proxies [IP:Porta] | ❌ Nao    |
+
+**Nota:** Configuracoes antigas como `execPath`, `maxMemoryUsage`, `disableCache` foram removidas pois haxball.js nao precisa delas.
 
 ### panel
 
@@ -276,6 +281,7 @@ haxball-server/
 
 ## 📖 Documentacao
 
+- **[QUICK_START.md](QUICK_START.md)** - Guia rapido para usar sem npm install
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guia para contribuidores
 - **[CHANGELOG.md](CHANGELOG.md)** - Historico de mudancas
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Arquitetura interna do projeto
@@ -283,11 +289,16 @@ haxball-server/
 
 ## 🐛 Troubleshooting
 
-### Erro: "Puppeteer-based room opening is deprecated"
+### Abrir/Fechar Salas
 
-**Problema:** Tentou abrir sala em v5.0.0
+**Status em v5.0.0:** Funcionalidade completa implementada com haxball.js nativo
 
-**Solucao:** Em v5.0.0, a funcionalidade de abertura de salas esta temporariamente desabilitada enquanto aguardamos migracao para haxball.js. Sera disponivel em v6.0.0.
+**Comandos Discord:**
+
+- `!open <bot-name> <token>` - Abre uma sala
+- `!open <bot-name> <token> <custom-settings>` - Abre sala com configuracoes customizadas
+- `!close <pid>` - Fecha uma sala (pid retornado no comando open)
+- `!close all` - Fecha todas as salas
 
 ### Erro: Discord bot nao responde
 
@@ -396,9 +407,9 @@ Originalmente desenvolvido por [@gabrielbrop](https://github.com/gabrielbrop)
 
 **Feito com ❤️ para a comunidade Haxball**
 
-// ** \_\_** \_**\_ \_ _
+// **\_\_** \_**\_ \_ _
 // / _\/ \_**) **\_) )( \
-// / \_** \_** ) \/ (
+// / \_** \_**) \/ (
 // \_/\_(\_\_**(\_**\_|\_\_**/
 
 [Chrome user data dir path](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/docs/user_data_dir.md). Only works if cache is not disabled.
@@ -600,94 +611,34 @@ Reloads the `panel.bots` and `panel.customSettings` configurations.
 
 Closes all rooms and stops Haxball Server.
 
-### eval
-
-Executes Javascript code.
-
 ### tokenlink
 
 Gets the URL to the [Haxball headless token website](https://www.haxball.com/headlesstoken).
 
-## 📡 Using proxies
+## 📡 Suporte a Proxies
 
-If you are hosting your Haxball server on AWS EC2, you can use the proxy feature (and therefore open more than 2 full functional rooms) by assigning an [Elastic IP](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/MultipleIP.html#StepThreeEIP) to a [secondary IPv4 private address](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/MultipleIP.html#assignIP-existing).
-
-Enabling the new secondary IP depends on which service you're using. This will work for Ubuntu 20.04 running on the T4G family (`t4g-small` is the best one). [And according to the official documentation, Amazon Linux will automatically assign it for you](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/MultipleIP.html#StepTwoConfigOS). If you're not using Amazon Linux or Ubuntu 20.04 with the T4G family, you'll have to look it up yourself; however, the steps will likely be similar to the steps below.
-
-After assigning them, you can enable the new secondary IP using (you'll have to repeat this step every time you restart the instance):
-
-```bash
-sudo ip addr add xx.xx.xx.xx/20 dev ens5 label ens5:1
-```
-
-Where xx.xx.xx.xx is the new secondary IP.
-
-To add a proxy to the new secondary IP, install Squid:
-
-```bash
-sudo apt-get install squid
-```
-
-Open the `squid.conf` file:
-
-```bash
-sudo nano /etc/squid/squid.conf
-```
-
-Then add these lines to the file:
-
-```
-http_port 127.0.0.1:8000 name=8000
-http_port 127.0.0.1:8001 name=8001
-
-acl prt8000 myportname 8000 src xx.xx.xx.xx/24
-http_access allow prt8000
-tcp_outgoing_address xx.xx.xx.xx prt8000
-
-acl prt8001 myportname 8001 src yy.yy.yy.yy/24
-http_access allow prt8001
-tcp_outgoing_address yy.yy.yy.yy prt8001
-```
-
-Where xx.xx.xx.xx is your main private IP and yy.yy.yy.yy is the secondary one. If you want more than 2 proxies (more than 4 rooms), just add new configurations until you're done:
-
-```
-http_port 127.0.0.1:8002 name=8002
-
-acl prt8002 myportname 8002 src zz.zz.zz.zz/24
-http_access allow prt8002
-tcp_outgoing_address zz.zz.zz.zz prt8002
-```
-
-And then restart the service:
-
-```bash
-sudo systemctl restart squid
-```
-
-Now you'll be able to use the proxy feature by simply enabling the `server.proxyEnabled` config and adding your proxy IPs to `server.proxyServers`.
-
-Example:
+A partir de v5.0.0, o suporte a proxies eh nativo com haxball.js. Basta configurar no `config.json`:
 
 ```json
 "server": {
-    "execPath": "/usr/bin/chromium-browser",
-    "proxyEnabled": true,
-    "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"]
+  "proxyEnabled": true,
+  "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"]
 }
 ```
 
-## ⚙️ Full configuration example
+haxball.js maneja automaticamente o proxy durante a conexao com os servidores do Haxball, sem necessidade de SSH tunneling ou configuracoes complexas.
 
-A full example in an Ubuntu machine with a `bots` folder with `futsal.js` and `classic.js` files and multiple settings for the futsal bot.
+## ⚙️ Exemplo Completo de Configuracao
 
-Discord IDs and token are fictional.
+Exemplo completo com multiplos bots e configuracoes personalizadas.
+
+Discord IDs e token sao ficcionais.
 
 ```json
 {
   "server": {
-    "execPath": "/usr/bin/chromium-browser",
-    "userDataDir": "./userdatadir"
+    "proxyEnabled": false,
+    "proxyServers": []
   },
   "panel": {
     "bots": [

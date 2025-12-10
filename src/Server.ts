@@ -291,10 +291,31 @@ export class Server {
   private executeBotScript(room: any, script: string, settings?: CustomSettings): void {
     try {
       // Contexto disponivel ao script
-      const context = {
+      const context: any = {
         room,
+        HBInit: (_config: any) => {
+          // Compatibilidade: se o script chamar HBInit, retornamos a mesma sala
+          // Desta forma, scripts antigos que fazem var room = HBInit({...}) nao quebram
+          // e continuam a operar sobre a sala criada pelo Server.
+          return room;
+        },
         customSettings: settings || {},
         console: console,
+        // timer functions: allow scripts to use setTimeout/setInterval etc
+        setTimeout: globalThis.setTimeout.bind(globalThis),
+        clearTimeout: globalThis.clearTimeout.bind(globalThis),
+        setInterval: globalThis.setInterval.bind(globalThis),
+        clearInterval: globalThis.clearInterval.bind(globalThis),
+        setImmediate: (globalThis as any).setImmediate ? (globalThis as any).setImmediate.bind(globalThis) : undefined,
+        clearImmediate: (globalThis as any).clearImmediate ? (globalThis as any).clearImmediate.bind(globalThis) : undefined,
+        // additional helpful globals
+        Date: Date,
+        Promise: Promise,
+        // allow access to the Node.js global if required
+        global: globalThis,
+        // browser-like aliases
+        window: globalThis,
+        self: globalThis,
       };
 
       // Usar vm para executar com isolamento

@@ -26,6 +26,21 @@ const MIGRATIONS = [
     replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
   },
   {
+    name: 'Remover var room = HBInit',
+    pattern: /var\s+room\s*=\s*HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
+    replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
+  },
+  {
+    name: 'Remover const room = HBInit',
+    pattern: /const\s+room\s*=\s*HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
+    replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
+  },
+  {
+    name: 'Remover let room = HBInit',
+    pattern: /let\s+room\s*=\s*HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
+    replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',
+  },
+  {
     name: 'Remover const room = window.HBInit',
     pattern: /const\s+room\s*=\s*window\.HBInit\s*\(\s*\{([^}]*?)\}\s*\)\s*;?/gm,
     replacement: '// room e fornecida automaticamente pelo contexto de execucao\n',

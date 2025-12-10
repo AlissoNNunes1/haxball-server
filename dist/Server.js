@@ -190,7 +190,10 @@ class Server {
                 closedCount++;
         }
         (0, log_1.log)('SERVER', `Todas as salas fechadas: ${closedCount}/${pids.length}`);
-        Logger_1.logger.info('Server', `Shutdown completo`, { closedRooms: closedCount, totalRooms: pids.length });
+        Logger_1.logger.info('Server', `Shutdown completo`, {
+            closedRooms: closedCount,
+            totalRooms: pids.length,
+        });
         return closedCount;
     }
     /**
@@ -227,8 +230,29 @@ class Server {
             // Contexto disponivel ao script
             const context = {
                 room,
+                HBInit: (_config) => {
+                    // Compatibilidade: se o script chamar HBInit, retornamos a mesma sala
+                    // Desta forma, scripts antigos que fazem var room = HBInit({...}) nao quebram
+                    // e continuam a operar sobre a sala criada pelo Server.
+                    return room;
+                },
                 customSettings: settings || {},
                 console: console,
+                // timer functions: allow scripts to use setTimeout/setInterval etc
+                setTimeout: globalThis.setTimeout.bind(globalThis),
+                clearTimeout: globalThis.clearTimeout.bind(globalThis),
+                setInterval: globalThis.setInterval.bind(globalThis),
+                clearInterval: globalThis.clearInterval.bind(globalThis),
+                setImmediate: globalThis.setImmediate ? globalThis.setImmediate.bind(globalThis) : undefined,
+                clearImmediate: globalThis.clearImmediate ? globalThis.clearImmediate.bind(globalThis) : undefined,
+                // additional helpful globals
+                Date: Date,
+                Promise: Promise,
+                // allow access to the Node.js global if required
+                global: globalThis,
+                // browser-like aliases
+                window: globalThis,
+                self: globalThis,
             };
             // Usar vm para executar com isolamento
             const vm = require('vm');

@@ -26,13 +26,13 @@ async function openServer(file) {
         const roomMonitor = new RoomMonitor_1.RoomMonitor();
         Logger_1.logger.info('OpenServer', 'Servidor inicializado', {
             hasPanel: !!config.panel,
-            proxyEnabled: config.server?.proxyEnabled
+            proxyEnabled: config.server?.proxyEnabled,
         });
         // Iniciar WebMonitor se configurado
         const webMonitorPort = (config.panel?.webMonitor?.port || 3000);
         void new WebMonitor_1.WebMonitor(roomMonitor, {
             port: webMonitorPort,
-            host: (config.panel?.webMonitor?.host || 'localhost')
+            host: (config.panel?.webMonitor?.host || 'localhost'),
         });
         Logger_1.logger.info('OpenServer', 'Web Monitor iniciado', { port: webMonitorPort });
         new ControlPanel_1.ControlPanel(server, config.panel, file);
