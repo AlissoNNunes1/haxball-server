@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.openServer = openServer;
-const Server_1 = require("../Server");
 const ControlPanel_1 = require("../ControlPanel");
 const RoomMonitor_1 = require("../debugging/RoomMonitor");
 const WebMonitor_1 = require("../debugging/WebMonitor");
+const Server_1 = require("../Server");
 const Logger_1 = require("../utils/Logger");
+const client_1 = require("../database/client");
 const loadConfig_1 = require("../utils/loadConfig");
 /**
  * Abre um servidor Haxball com base em arquivo de configuracao
@@ -22,7 +23,8 @@ const loadConfig_1 = require("../utils/loadConfig");
 async function openServer(file) {
     try {
         const config = await (0, loadConfig_1.loadConfig)(file);
-        const server = new Server_1.Server(config.server);
+        const db = (0, client_1.initDb)();
+        const server = new Server_1.Server(config.server, db);
         const roomMonitor = new RoomMonitor_1.RoomMonitor();
         Logger_1.logger.info('OpenServer', 'Servidor inicializado', {
             hasPanel: !!config.panel,

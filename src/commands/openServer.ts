@@ -1,9 +1,10 @@
-import { Server } from '../Server';
 import { ControlPanel } from '../ControlPanel';
 import { RoomMonitor } from '../debugging/RoomMonitor';
 import { WebMonitor } from '../debugging/WebMonitor';
+import { Server } from '../Server';
 import { logger } from '../utils/Logger';
 
+import { initDb } from '../database/client';
 import { loadConfig } from '../utils/loadConfig';
 
 /**
@@ -21,7 +22,8 @@ import { loadConfig } from '../utils/loadConfig';
 export async function openServer(file?: string): Promise<void> {
   try {
     const config = await loadConfig(file);
-    const server = new Server(config.server);
+    const db = initDb();
+    const server = new Server(config.server, db);
     const roomMonitor = new RoomMonitor();
 
     logger.info('OpenServer', 'Servidor inicializado', {

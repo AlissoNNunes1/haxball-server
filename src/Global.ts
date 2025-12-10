@@ -68,6 +68,16 @@ export const roomCustomConfigsList = [
 type BotList = { [key: string]: string } | { name: string; path: string; displayName?: string }[];
 
 /**
+ * Room module list - ESM modules exposable as rooms
+ */
+export type RoomList = {
+  name: string;
+  path: string;
+  type?: 'esm' | 'script';
+  displayName?: string;
+}[];
+
+/**
  * Configuracao do painel de controle Discord
  * @interface PanelConfig
  * @property {string} discordToken - Token do bot Discord
@@ -84,6 +94,10 @@ export interface PanelConfig {
   discordToken: string;
   discordPrefix: string;
   bots: BotList;
+  rooms?: RoomList;
+  panelOptions?: {
+    enableEsmRooms?: boolean;
+  };
   mastersDiscordId: string[];
   customSettings?: CustomSettingsList;
   maxRooms?: number;

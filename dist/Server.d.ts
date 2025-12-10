@@ -48,6 +48,7 @@ export declare class Server {
     private rooms;
     private nextPid;
     private proxyServers;
+    private db;
     private hbInit;
     /**
      * Compatibilidade com codigo antigo que acessa browsers array
@@ -55,11 +56,15 @@ export declare class Server {
      */
     get browsers(): BrowserInfo[];
     /**
+     * Retorna o cliente DB (se inicializado)
+     */
+    getDb(): any;
+    /**
      * Inicializa o gerenciador de salas Haxball
      * @param {ServerConfig} config - Configuracao do servidor
      * @throws {Error} Se inicializacao de haxball.js falhar
      */
-    constructor(config: ServerConfig);
+    constructor(config: ServerConfig, db?: any);
     /**
      * Inicializa haxball.js de forma lazy (sob demanda)
      * @private
@@ -79,6 +84,26 @@ export declare class Server {
      * console.log(`Sala aberta: ${result.link}`);
      */
     open(script: string, tokens: string | string[], name?: string, settings?: CustomSettings): Promise<{
+        link: string;
+        pid: number;
+        remotePort?: number;
+    } | null>;
+    /**
+     * Abre sala consumindo um modulo ESM ja carregado (init executado direto sem VM)
+     * @param {object} roomModule - Modulo com metodo init({ room, settings })
+     * @param {string|string[]} tokens - Token(s) headless do Haxball
+     * @param {string} [name] - Nome da sala (opcional, fallback para roomModule.name)
+     * @param {CustomSettings} [settings] - Configuracoes personalizadas
+     * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
+     */
+    openWithModule(roomModule: {
+        init?: ({ room, settings, db }: {
+            room: any;
+            settings?: CustomSettings;
+            db?: any;
+        }) => any;
+        name?: string;
+    }, tokens: string | string[], name?: string, settings?: CustomSettings): Promise<{
         link: string;
         pid: number;
         remotePort?: number;

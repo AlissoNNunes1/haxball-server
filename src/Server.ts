@@ -53,6 +53,7 @@ export class Server {
   private rooms: Map<number, RoomInstance> = new Map();
   private nextPid: number = 1000;
   private proxyServers: string[];
+  private db: any | null = null;
   private hbInit: any = null;
 
   /**
@@ -67,12 +68,20 @@ export class Server {
   }
 
   /**
+   * Retorna o cliente DB (se inicializado)
+   */
+  getDb() {
+    return this.db;
+  }
+
+  /**
    * Inicializa o gerenciador de salas Haxball
    * @param {ServerConfig} config - Configuracao do servidor
    * @throws {Error} Se inicializacao de haxball.js falhar
    */
-  constructor(config: ServerConfig) {
+  constructor(config: ServerConfig, db?: any) {
     this.proxyServers = config.proxyServers ?? [];
+    this.db = db ?? null;
 
     log('SERVER', `Inicializando gerenciador de salas Haxball (haxball.js v6.0.0)`);
     log('SERVER', `Proxies habilitados: ${config.proxyEnabled ? 'SIM' : 'NAO'}`);
@@ -161,7 +170,7 @@ export class Server {
       const pid = this.nextPid++;
 
       // Executa script do bot
-      this.executeBotScript(room, script, settings);
+      this.executeBotScript(room, script, settings, this.db);
 
       // Aplicar event handlers padrao
       this.setupDefaultEventHandlers(room, pid, name);
@@ -189,6 +198,104 @@ export class Server {
       const errorMsg = error instanceof Error ? error.message : String(error);
       log('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
       logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
+      throw error;
+    }
+  }
+
+  /**
+   * Abre sala consumindo um modulo ESM ja carregado (init executado direto sem VM)
+   * @param {object} roomModule - Modulo com metodo init({ room, settings })
+   * @param {string|string[]} tokens - Token(s) headless do Haxball
+   * @param {string} [name] - Nome da sala (opcional, fallback para roomModule.name)
+   * @param {CustomSettings} [settings] - Configuracoes personalizadas
+   * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
+   */
+  async openWithModule(
+    roomModule: {
+      init?: ({ room, settings, db }: { room: any; settings?: CustomSettings; db?: any }) => any;
+      name?: string;
+    },
+    tokens: string | string[],
+    name?: string,
+    settings?: CustomSettings
+  ): Promise<{ link: string; pid: number; remotePort?: number } | null> {
+    try {
+      const HBInit = await this.getHBInit();
+
+      const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
+      const token = tokenArray[0];
+
+      if (!token) {
+        throw new Error('Nenhum token fornecido');
+      }
+
+      const roomConfig = {
+        roomName: name || roomModule?.name || 'Haxball Room',
+        maxPlayers: settings?.['reserved.haxball.maxPlayers']
+          ? Number(settings['reserved.haxball.maxPlayers'])
+          : 16,
+        public: settings?.['reserved.haxball.public'] !== false ? true : false,
+        noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
+        password: settings?.['reserved.haxball.password']
+          ? String(settings['reserved.haxball.password'])
+          : undefined,
+        geo: settings?.['reserved.haxball.geo']
+          ? JSON.parse(String(settings['reserved.haxball.geo']))
+          : undefined,
+        token: token,
+      };
+
+      Object.keys(roomConfig).forEach(
+        (key) =>
+          roomConfig[key as keyof typeof roomConfig] === undefined &&
+          delete roomConfig[key as keyof typeof roomConfig]
+      );
+
+      const room = HBInit(roomConfig);
+      const pid = this.nextPid++;
+
+      try {
+        if (typeof roomModule?.init === 'function') {
+          roomModule.init({ room, settings: settings || {}, db: this.db });
+        } else {
+          log('SERVER', 'Modulo de sala sem init definido');
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        log('SERVER', `AVISO: Erro ao executar modulo ESM: ${errorMsg.substring(0, 100)}`);
+      }
+
+      this.setupDefaultEventHandlers(room, pid, name || roomModule?.name);
+
+      const roomInstance: RoomInstance = {
+        room,
+        pid,
+        botName: name || roomModule?.name || 'Unknown',
+        link: room.getLink?.() || 'https://www.haxball.com/headless',
+        createdAt: Date.now(),
+        eventHandlers: new Map(),
+      };
+
+      this.rooms.set(pid, roomInstance);
+
+      log(
+        'SERVER',
+        `Sala aberta (ESM) - PID: ${pid}, Nome: ${roomInstance.botName}, Link: ${roomInstance.link}`
+      );
+      logger.info('Server', `Sala aberta ESM`, {
+        pid,
+        name: roomInstance.botName,
+        link: roomInstance.link,
+      });
+
+      return {
+        link: roomInstance.link,
+        pid,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      log('SERVER', `ERRO ao abrir sala ESM: ${errorMsg}`);
+      logger.error('Server', `Erro ao abrir sala ESM`, { name, error: errorMsg });
       throw error;
     }
   }
@@ -288,9 +395,20 @@ export class Server {
    * @param {string} script - Codigo JavaScript do bot
    * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
    */
-  private executeBotScript(room: any, script: string, settings?: CustomSettings): void {
+  private executeBotScript(room: any, script: string, settings?: CustomSettings, db?: any): void {
     try {
       // Contexto disponivel ao script
+      const safeDb = db
+        ? {
+            ensureUserByName: db.ensureUserByName?.bind(db),
+            createRoomSession: db.createRoomSession?.bind(db),
+            createMatch: db.createMatch?.bind(db),
+            insertMatchEvent: db.insertMatchEvent?.bind(db),
+            incrementStatCount: db.incrementStatCount?.bind(db),
+            logEvent: db.logEvent?.bind(db),
+          }
+        : undefined;
+
       const context: any = {
         room,
         HBInit: (_config: any) => {
@@ -300,14 +418,19 @@ export class Server {
           return room;
         },
         customSettings: settings || {},
+        db: safeDb,
         console: console,
         // timer functions: allow scripts to use setTimeout/setInterval etc
         setTimeout: globalThis.setTimeout.bind(globalThis),
         clearTimeout: globalThis.clearTimeout.bind(globalThis),
         setInterval: globalThis.setInterval.bind(globalThis),
         clearInterval: globalThis.clearInterval.bind(globalThis),
-        setImmediate: (globalThis as any).setImmediate ? (globalThis as any).setImmediate.bind(globalThis) : undefined,
-        clearImmediate: (globalThis as any).clearImmediate ? (globalThis as any).clearImmediate.bind(globalThis) : undefined,
+        setImmediate: (globalThis as any).setImmediate
+          ? (globalThis as any).setImmediate.bind(globalThis)
+          : undefined,
+        clearImmediate: (globalThis as any).clearImmediate
+          ? (globalThis as any).clearImmediate.bind(globalThis)
+          : undefined,
         // additional helpful globals
         Date: Date,
         Promise: Promise,

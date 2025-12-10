@@ -647,7 +647,7 @@ var token = 'thr1.AAAAAGiNH5hLLJwiOkRVbQ.y4LGvzqOIl0';
 var roomLink = '';
 var gameTime = 7;
 var map = 'RSR';
-var superAdmins = ['Rei Falcão'];
+var superAdmins = ['assu'];
 // Compatibilidade de execucao: se HBInit estiver disponivel (execucao standalone), usar HBInit
 // caso contrario o Server.open fornece 'room' no contexto da execucao.
 if (typeof HBInit === 'function' && typeof room === 'undefined') {

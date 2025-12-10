@@ -23,6 +23,7 @@ class Server {
     rooms = new Map();
     nextPid = 1000;
     proxyServers;
+    db = null;
     hbInit = null;
     /**
      * Compatibilidade com codigo antigo que acessa browsers array
@@ -35,12 +36,19 @@ class Server {
         }));
     }
     /**
+     * Retorna o cliente DB (se inicializado)
+     */
+    getDb() {
+        return this.db;
+    }
+    /**
      * Inicializa o gerenciador de salas Haxball
      * @param {ServerConfig} config - Configuracao do servidor
      * @throws {Error} Se inicializacao de haxball.js falhar
      */
-    constructor(config) {
+    constructor(config, db) {
         this.proxyServers = config.proxyServers ?? [];
+        this.db = db ?? null;
         (0, log_1.log)('SERVER', `Inicializando gerenciador de salas Haxball (haxball.js v6.0.0)`);
         (0, log_1.log)('SERVER', `Proxies habilitados: ${config.proxyEnabled ? 'SIM' : 'NAO'}`);
         if (this.proxyServers.length > 0) {
@@ -112,7 +120,7 @@ class Server {
             // Gerar PID ficticio para compatibilidade
             const pid = this.nextPid++;
             // Executa script do bot
-            this.executeBotScript(room, script, settings);
+            this.executeBotScript(room, script, settings, this.db);
             // Aplicar event handlers padrao
             this.setupDefaultEventHandlers(room, pid, name);
             // Armazenar instancia
@@ -136,6 +144,81 @@ class Server {
             const errorMsg = error instanceof Error ? error.message : String(error);
             (0, log_1.log)('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
             Logger_1.logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
+            throw error;
+        }
+    }
+    /**
+     * Abre sala consumindo um modulo ESM ja carregado (init executado direto sem VM)
+     * @param {object} roomModule - Modulo com metodo init({ room, settings })
+     * @param {string|string[]} tokens - Token(s) headless do Haxball
+     * @param {string} [name] - Nome da sala (opcional, fallback para roomModule.name)
+     * @param {CustomSettings} [settings] - Configuracoes personalizadas
+     * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
+     */
+    async openWithModule(roomModule, tokens, name, settings) {
+        try {
+            const HBInit = await this.getHBInit();
+            const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
+            const token = tokenArray[0];
+            if (!token) {
+                throw new Error('Nenhum token fornecido');
+            }
+            const roomConfig = {
+                roomName: name || roomModule?.name || 'Haxball Room',
+                maxPlayers: settings?.['reserved.haxball.maxPlayers']
+                    ? Number(settings['reserved.haxball.maxPlayers'])
+                    : 16,
+                public: settings?.['reserved.haxball.public'] !== false ? true : false,
+                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
+                password: settings?.['reserved.haxball.password']
+                    ? String(settings['reserved.haxball.password'])
+                    : undefined,
+                geo: settings?.['reserved.haxball.geo']
+                    ? JSON.parse(String(settings['reserved.haxball.geo']))
+                    : undefined,
+                token: token,
+            };
+            Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
+                delete roomConfig[key]);
+            const room = HBInit(roomConfig);
+            const pid = this.nextPid++;
+            try {
+                if (typeof roomModule?.init === 'function') {
+                    roomModule.init({ room, settings: settings || {}, db: this.db });
+                }
+                else {
+                    (0, log_1.log)('SERVER', 'Modulo de sala sem init definido');
+                }
+            }
+            catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                (0, log_1.log)('SERVER', `AVISO: Erro ao executar modulo ESM: ${errorMsg.substring(0, 100)}`);
+            }
+            this.setupDefaultEventHandlers(room, pid, name || roomModule?.name);
+            const roomInstance = {
+                room,
+                pid,
+                botName: name || roomModule?.name || 'Unknown',
+                link: room.getLink?.() || 'https://www.haxball.com/headless',
+                createdAt: Date.now(),
+                eventHandlers: new Map(),
+            };
+            this.rooms.set(pid, roomInstance);
+            (0, log_1.log)('SERVER', `Sala aberta (ESM) - PID: ${pid}, Nome: ${roomInstance.botName}, Link: ${roomInstance.link}`);
+            Logger_1.logger.info('Server', `Sala aberta ESM`, {
+                pid,
+                name: roomInstance.botName,
+                link: roomInstance.link,
+            });
+            return {
+                link: roomInstance.link,
+                pid,
+            };
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            (0, log_1.log)('SERVER', `ERRO ao abrir sala ESM: ${errorMsg}`);
+            Logger_1.logger.error('Server', `Erro ao abrir sala ESM`, { name, error: errorMsg });
             throw error;
         }
     }
@@ -225,9 +308,19 @@ class Server {
      * @param {string} script - Codigo JavaScript do bot
      * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
      */
-    executeBotScript(room, script, settings) {
+    executeBotScript(room, script, settings, db) {
         try {
             // Contexto disponivel ao script
+            const safeDb = db
+                ? {
+                    ensureUserByName: db.ensureUserByName?.bind(db),
+                    createRoomSession: db.createRoomSession?.bind(db),
+                    createMatch: db.createMatch?.bind(db),
+                    insertMatchEvent: db.insertMatchEvent?.bind(db),
+                    incrementStatCount: db.incrementStatCount?.bind(db),
+                    logEvent: db.logEvent?.bind(db),
+                }
+                : undefined;
             const context = {
                 room,
                 HBInit: (_config) => {
@@ -237,14 +330,19 @@ class Server {
                     return room;
                 },
                 customSettings: settings || {},
+                db: safeDb,
                 console: console,
                 // timer functions: allow scripts to use setTimeout/setInterval etc
                 setTimeout: globalThis.setTimeout.bind(globalThis),
                 clearTimeout: globalThis.clearTimeout.bind(globalThis),
                 setInterval: globalThis.setInterval.bind(globalThis),
                 clearInterval: globalThis.clearInterval.bind(globalThis),
-                setImmediate: globalThis.setImmediate ? globalThis.setImmediate.bind(globalThis) : undefined,
-                clearImmediate: globalThis.clearImmediate ? globalThis.clearImmediate.bind(globalThis) : undefined,
+                setImmediate: globalThis.setImmediate
+                    ? globalThis.setImmediate.bind(globalThis)
+                    : undefined,
+                clearImmediate: globalThis.clearImmediate
+                    ? globalThis.clearImmediate.bind(globalThis)
+                    : undefined,
                 // additional helpful globals
                 Date: Date,
                 Promise: Promise,
