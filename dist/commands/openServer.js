@@ -6,8 +6,11 @@ const RoomMonitor_1 = require("../debugging/RoomMonitor");
 const WebMonitor_1 = require("../debugging/WebMonitor");
 const Server_1 = require("../Server");
 const Logger_1 = require("../utils/Logger");
+const auth_client_1 = require("../database/auth-client");
 const client_1 = require("../database/client");
 const loadConfig_1 = require("../utils/loadConfig");
+// Importa modulos de auth para garantir compilacao (usados por bots externos)
+require("../auth/index");
 /**
  * Abre um servidor Haxball com base em arquivo de configuracao
  * Carrega configuracoes, inicializa servidor e painel Discord
@@ -24,6 +27,10 @@ async function openServer(file) {
     try {
         const config = await (0, loadConfig_1.loadConfig)(file);
         const db = (0, client_1.initDb)();
+        const authDb = (0, auth_client_1.initAuthDb)();
+        // Cria tabelas de autenticacao se nao existirem
+        authDb.createAuthTables();
+        Logger_1.logger.info('OpenServer', 'Banco de dados de autenticacao inicializado');
         const server = new Server_1.Server(config.server, db);
         const roomMonitor = new RoomMonitor_1.RoomMonitor();
         Logger_1.logger.info('OpenServer', 'Servidor inicializado', {

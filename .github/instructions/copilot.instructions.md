@@ -32,7 +32,7 @@ Forneca contexto do projeto e diretrizes de codificacao que a IA deve seguir ao 
 - Use estrutura modularizada e descentralizada.
 - Evite criar documentacao para pequenas mudancas; priorize atualizar docs ja existentes.
 - Sempre adicione ao final de cada codigo a assinatura ASCII padrao, conforme a linguagem do arquivo:
-
+- comandos haxball prefixo é "!" comandos discord é slash-command
   __  ____ ____ _  _ 
  / _\/ ___) ___) )( \
 /    \___ \___ ) \/ (

@@ -3,6 +3,7 @@
 const { announce, whisper, isAdminPresent, displayAdminMessage } = require('./cirs-messages.cjs');
 const room = globalThis.room;
 const { sleep, pointDistance, ballWarning } = require('./utils.cjs');
+const { processCommand } = require('./commands.cjs'); // IMPORTA COMANDOS GLOBAIS
 const {
   positions,
   activeFormation_red,
@@ -101,6 +102,36 @@ room.onPlayerJoin = function (player) {
   whisper('██ ║    	    ██║██╔══██╗╚════██║ ', player.id, 0x61ddff, 'bold', 0);
   whisper(' ██████╗██║██║     ██║███████║ ', player.id, 0x61ddff, 'bold', 0);
   whisper('Nosso discord: https://discord.gg/mWzatsxjTA', player.id, 0x61e7ff, 'bold', 0);
+
+  // Verifica se jogador tem conta cadastrada
+  try {
+    const getAuthDb = require('../../dist/database/auth-client').getAuthDb;
+    const db = getAuthDb();
+    const account = db.getAccountByNick(player.name);
+
+    if (account) {
+      // Conta encontrada - pede login
+      whisper('', player.id, null, null, 0);
+      whisper('✓ Conta encontrada!', player.id, 0x00ff00, 'bold', 1);
+      whisper('Use !login <senha> para autenticar', player.id, 0xffaa00, 'bold', 1);
+      whisper(
+        `Seu ranking: ${account.ranking} | Pontos: ${account.points}`,
+        player.id,
+        0xaaaaaa,
+        'small',
+        1
+      );
+    } else {
+      // Conta nao encontrada - sugere registro
+      whisper('', player.id, null, null, 0);
+      whisper('Voce ainda nao tem uma conta CIRS', player.id, 0xffaa00, 'normal', 1);
+      whisper('Registre-se no Discord com /register', player.id, 0xaaaaaa, 'small', 1);
+      whisper('Digite !help para ver comandos', player.id, 0xaaaaaa, 'small', 1);
+    }
+  } catch (error) {
+    console.error('[CIRS] Erro ao verificar conta:', error.message);
+    whisper('Digite !help para ver comandos disponiveis', player.id, 0xaaaaaa, 'small', 1);
+  }
 
   displayAdminMessage();
 };
@@ -323,6 +354,11 @@ room.onPlayerChat = function (player, message) {
   // normalize input
   if (typeof message !== 'string') return false;
   message = message.trim();
+
+  // PROCESSA COMANDOS GLOBAIS PRIMEIRO (commands.cjs)
+  const commandHandled = processCommand(room, player, message);
+  if (commandHandled) return false;
+
   // determine if its a command that starts with '!'
   const isCommandPrompt = message.startsWith('!');
   const incoming = isCommandPrompt ? message.substr(1).trim() : message; // remove leading '!'
@@ -677,10 +713,18 @@ room.onPlayerChat = function (player, message) {
 
 function displayHelp(id, selection) {
   if (selection == null) {
+    whisper('═══ COMANDOS DA SALA ═══', id, 0x55aaff, 'bold');
     whisper(
-      'Commands: @@[mensagens no privado de alguém, ex: @@urugay[mensagem]], !rs, !rr, !bb, !powershot, !ps, !admin, !setpassword, !clearpassword, !super, !clearbans, !swap, t [team chat msg], !court, !court [hexcolor], !court reset',
+      'Comandos gerais: !help, !afk, !bb, !admin, !clearbans, !swap, !court, t [team chat]',
       id,
-      null,
+      0xaaaaaa,
+      'small'
+    );
+    whisper('Mensagem privada: @@[nick][mensagem], ex: @@urugay ola!', id, 0xaaaaaa, 'small');
+    whisper(
+      'Comandos de autenticacao: /help (digite /help para ver lista completa)',
+      id,
+      0xff9900,
       'small'
     );
   }

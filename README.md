@@ -74,29 +74,62 @@ Veja **[QUICK_START.md](QUICK_START.md)** para mais detalhes de como usar sem np
 ```json
 {
   "server": {
+    "execPath": "./haxball.js",
+    "maxMemoryUsage": 4096,
     "proxyEnabled": false,
     "proxyServers": []
   },
   "panel": {
+    "discordToken": "seu-token-discord-aqui",
+    "discordPrefix": "!",
+    "guildId": "1234567890123456789",
+    "mastersDiscordId": ["123456789012345678"],
+    "adminChannelId": "111111111111111111",
+    "generalChannelId": "222222222222222222",
     "bots": [
       {
         "name": "futsal",
         "displayName": "Futsal Room",
-        "path": "./bots/futsal.js"
+        "path": "./bots/futsal-example.js"
       },
       {
-        "name": "soccer",
-        "displayName": "Soccer Room",
-        "path": "./bots/soccer.js"
+        "name": "x3",
+        "displayName": "X3 Room",
+        "path": "./bots/x3-bot.js"
       }
     ],
-    "discordToken": "seu-token-discord-aqui",
-    "discordPrefix": "!",
-    "mastersDiscordId": ["seu-id-discord-aqui"],
-    "maxRooms": 2
+    "customSettings": {
+      "default": {
+        "reserved.haxball.maxPlayers": 16,
+        "reserved.haxball.public": true,
+        "reserved.haxball.geo": {
+          "code": "br",
+          "lat": -23.5505,
+          "lon": -46.6333
+        }
+      }
+    },
+    "maxRooms": 10,
+    "webMonitor": {
+      "port": 3000,
+      "host": "localhost"
+    }
   }
 }
 ```
+
+**Novidade v6.1.0 - Separacao de Canais Discord:**
+
+- **adminChannelId** (opcional): Canal exclusivo para comandos administrativos
+
+  - Apenas usuarios em `mastersDiscordId` podem usar
+  - Comandos: `/help`, `/open`, `/close`, `/reload`, `/info`, `/meminfo`, `/metrics`, `/exit`
+
+- **generalChannelId** (opcional): Canal publico para comandos gerais
+  - Todos os usuarios podem usar
+  - Comandos: `/register`, `/linkdiscord`, `/profile`, `/ranking`, `/top`, `/authhelp`
+
+Se os canais NAO forem configurados, comandos funcionam em qualquer canal (com restricoes de permissao).
 
 ### 2. Configurar Discord Bot
 
@@ -111,11 +144,20 @@ Veja **[QUICK_START.md](QUICK_START.md)** para mais detalhes de como usar sem np
      - ✅ MESSAGE CONTENT INTENT
    - Clique "Save Changes"
 6. Va para "OAuth2" → "URL Generator"
-   - Selecione scopes: `bot`
-   - Selecione permissoes: `Send Messages`, `Embed Links`
+   - Selecione scopes: `bot` + `applications.commands`
+   - Selecione permissoes: `Send Messages`, `Embed Links`, `Use Slash Commands`
    - Copie a URL gerada e abra em um navegador para convidar o bot seu servidor Discord
 
-### 3. Iniciar Servidor
+### 3. Obter IDs dos Canais (Opcional)
+
+Para separar canais de admin e geral:
+
+1. Ative **Developer Mode** no Discord: Settings > Advanced > Developer Mode
+2. Clique com botao direito no **canal admin** → Copy Channel ID
+3. Clique com botao direito no **canal geral** → Copy Channel ID
+4. Cole os IDs em `adminChannelId` e `generalChannelId` no config.json
+
+### 4. Iniciar Servidor
 
 ```bash
 haxball-server open config.json
@@ -128,9 +170,23 @@ haxball-server open ./config.json
 haxball-server open  # Procura por config.json no CWD
 ```
 
-### 4. Usar Comandos Discord
+### 5. Usar Comandos Discord
 
-Use `!help` (ou seu prefixo) no Discord para ver comandos disponiveis.
+Use `/help` no Discord para ver todos os comandos disponiveis (Slash Commands).
+
+**Comandos Admin** (apenas masters, canal admin se configurado):
+
+- `/open <bot> <token>` - Abrir sala
+- `/close <pid>` - Fechar sala
+- `/info` - Informacoes das salas
+- `/metrics` - Metricas do servidor
+
+**Comandos Autenticacao** (todos usuarios, canal geral se configurado):
+
+- `/register <nick> <senha>` - Criar conta (resposta privada)
+- `/linkdiscord <nick> <senha>` - Vincular Discord (resposta privada)
+- `/profile [nick]` - Ver perfil
+- `/top` - Top jogadores
 
 ## ⚙️ Configuracao Avancada
 
@@ -141,6 +197,8 @@ Define comportamento do servidor Haxball.
 ```json
 {
   "server": {
+    "execPath": "./haxball.js",
+    "maxMemoryUsage": 4096,
     "proxyEnabled": false,
     "proxyServers": ["127.0.0.1:8000", "127.0.0.1:8001"]
   }

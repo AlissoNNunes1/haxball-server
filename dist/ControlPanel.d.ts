@@ -7,6 +7,9 @@ export declare class ControlPanel {
     private prefix;
     private token;
     private mastersDiscordId;
+    private adminChannelId?;
+    private generalChannelId?;
+    private guildId?;
     private maxRooms?;
     private bots;
     private customSettings;
@@ -15,6 +18,7 @@ export declare class ControlPanel {
     private monitor;
     private esmRoomsCache;
     private panelConfig;
+    private authCommands;
     constructor(server: Server, config: PanelConfig, fileName?: string | undefined);
     private transformSetting;
     private loadCustomSettings;
@@ -22,5 +26,15 @@ export declare class ControlPanel {
     private loadEsmRooms;
     private logError;
     private getRoomNameList;
+    private handleSlashCommand;
+    private handleHelpSlash;
+    private handleInfoSlash;
+    private handleMemInfoSlash;
+    private handleMetricsSlash;
+    private handleOpenSlash;
+    private handleCloseSlash;
+    private handleReloadSlash;
+    private handleExitSlash;
+    private handleTokenLinkSlash;
     private command;
 }

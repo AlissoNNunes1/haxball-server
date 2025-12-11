@@ -4,8 +4,12 @@ import { WebMonitor } from '../debugging/WebMonitor';
 import { Server } from '../Server';
 import { logger } from '../utils/Logger';
 
+import { initAuthDb } from '../database/auth-client';
 import { initDb } from '../database/client';
 import { loadConfig } from '../utils/loadConfig';
+
+// Importa modulos de auth para garantir compilacao (usados por bots externos)
+import '../auth/index';
 
 /**
  * Abre um servidor Haxball com base em arquivo de configuracao
@@ -23,6 +27,12 @@ export async function openServer(file?: string): Promise<void> {
   try {
     const config = await loadConfig(file);
     const db = initDb();
+    const authDb = initAuthDb();
+
+    // Cria tabelas de autenticacao se nao existirem
+    authDb.createAuthTables();
+    logger.info('OpenServer', 'Banco de dados de autenticacao inicializado');
+
     const server = new Server(config.server, db);
     const roomMonitor = new RoomMonitor();
 

@@ -18,6 +18,53 @@ export class RoomAuthHandler {
    * Registra handlers de autenticacao na sala
    */
   registerHandlers(room: any) {
+    // Handler de entrada: verifica se nick esta cadastrado
+    const originalOnPlayerJoin = room.onPlayerJoin;
+    room.onPlayerJoin = (player: any) => {
+      // Chama handler original se existir
+      if (originalOnPlayerJoin) {
+        originalOnPlayerJoin(player);
+      }
+
+      // Verifica se nick esta cadastrado
+      const account = this.db.getAccountByNick(player.name);
+
+      if (account) {
+        // Nick cadastrado - solicita login
+        room.sendAnnouncement(
+          `Bem-vindo de volta, ${player.name}!`,
+          player.id,
+          0x00ff00,
+          'bold',
+          2
+        );
+        room.sendAnnouncement(
+          'Sua conta foi encontrada! Use /login <senha> para autenticar.',
+          player.id,
+          0xffaa00,
+          'normal',
+          1
+        );
+        room.sendAnnouncement(
+          `Ranking atual: ${account.ranking} | Pontos: ${account.points}`,
+          player.id,
+          0xaaaaaa,
+          'small',
+          1
+        );
+      } else {
+        // Nick nao cadastrado - sugestao de registro
+        room.sendAnnouncement(`Ola, ${player.name}!`, player.id, 0xffaa00, 'bold', 2);
+        room.sendAnnouncement(
+          'Voce ainda nao tem uma conta CIRS. Registre-se no Discord com !register',
+          player.id,
+          0xaaaaaa,
+          'normal',
+          1
+        );
+      }
+    };
+
     room.onPlayerChat = (player: any, message: string) => {
       // Processa comandos de autenticacao
       if (message.startsWith('/login ')) {
@@ -63,14 +110,28 @@ export class RoomAuthHandler {
     const password = args.slice(1).join(' ');
     const haxballNick = player.name;
 
+    // Verifica se nick esta cadastrado primeiro
+    const account = this.db.getAccountByNick(haxballNick);
+    if (!account) {
+      room.sendAnnouncement(
+        '❌ Nick nao cadastrado! Registre-se no Discord com !register',
+        player.id,
+        0xff0000,
+        'bold',
+        2
+      );
+      return;
+    }
+
     try {
       const result = await this.authService.login({ haxballNick, password }, this.db);
 
       if (result.success && result.account) {
         this.authenticatedPlayers.set(player.id, result.account.id);
 
+        // Mensagem de sucesso
         room.sendAnnouncement(
-          `[AUTH] Login realizado com sucesso! Bem-vindo, ${result.account.haxballNick}!`,
+          '✓ SENHA CORRETA! Login realizado com sucesso!',
           player.id,
           0x00ff00,
           'bold',
@@ -78,25 +139,60 @@ export class RoomAuthHandler {
         );
 
         room.sendAnnouncement(
-          `[AUTH] Pontos: ${result.account.points} | Ranking: ${result.account.ranking} | Moedas: ${result.account.coins}`,
+          `Bem-vindo, ${result.account.haxballNick}!`,
           player.id,
           0x00ff00,
+          'bold',
+          1
+        );
+
+        room.sendAnnouncement(
+          `Pontos: ${result.account.points} | Ranking: ${result.account.ranking} | Moedas: ${result.account.coins}`,
+          player.id,
+          0x55ff55,
+          'normal',
+          1
+        );
+
+        // Atualiza tag do jogador com Elo
+        const eloTag = `[${result.account.ranking}]`;
+        room.setPlayerAdmin(player.id, false); // Remove admin se tiver
+
+        // Envia mensagem global sobre o login
+        room.sendAnnouncement(
+          `${eloTag} ${player.name} autenticou-se com sucesso!`,
+          null,
+          0xaaffaa,
           'normal',
           1
         );
       } else {
+        // Senha incorreta
         room.sendAnnouncement(
-          `[AUTH] Falha no login: ${result.message}`,
+          '❌ SENHA INCORRETA! Tente novamente.',
           player.id,
           0xff0000,
           'bold',
           2
         );
+
+        // Mensagem adicional com dica
+        if (result.message?.includes('bloqueada')) {
+          room.sendAnnouncement(result.message, player.id, 0xff5555, 'normal', 1);
+        } else {
+          room.sendAnnouncement(
+            'Verifique sua senha e tente novamente. Esqueceu? Contate um admin no Discord.',
+            player.id,
+            0xff9900,
+            'small',
+            1
+          );
+        }
       }
     } catch (error) {
       console.error('Erro ao fazer login na sala:', error);
       room.sendAnnouncement(
-        '[AUTH] Erro interno ao fazer login. Tente novamente.',
+        '❌ Erro interno ao fazer login. Tente novamente.',
         player.id,
         0xff0000,
         'bold',
@@ -291,6 +387,134 @@ export class RoomAuthHandler {
    */
   authenticatePlayer(playerId: number, accountId: number) {
     this.authenticatedPlayers.set(playerId, accountId);
+  }
+
+  /**
+   * Retorna nome formatado com Elo do jogador (se autenticado)
+   * @returns Nome com tag [Elo] se autenticado, nome original caso contrario
+   */
+  getPlayerDisplayName(playerId: number, playerName: string): string {
+    const account = this.getAccount(playerId);
+    if (!account) return playerName;
+    return `[${account.ranking}] ${playerName}`;
+  }
+
+  /**
+   * Retorna Elo do jogador (se autenticado)
+   * @returns Elo ou null se nao autenticado
+   */
+  getPlayerElo(playerId: number): number | null {
+    const account = this.getAccount(playerId);
+    return account ? account.ranking : null;
+  }
+
+  /**
+   * Login simplificado para uso em commands.cjs
+   */
+  async login(player: any, password: string): Promise<any> {
+    const haxballNick = player.name;
+    const account = this.db.getAccountByNick(haxballNick);
+
+    if (!account) {
+      return { success: false, message: 'Nick nao cadastrado' };
+    }
+
+    try {
+      const result = await this.authService.login({ haxballNick, password }, this.db);
+
+      if (result.success && result.account) {
+        this.authenticatedPlayers.set(player.id, result.account.id);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      return { success: false, message: 'Erro interno' };
+    }
+  }
+
+  /**
+   * Logout simplificado
+   */
+  logout(player: any) {
+    this.authenticatedPlayers.delete(player.id);
+  }
+
+  /**
+   * Busca perfil publico de jogador por nick
+   */
+  async getProfile(haxballNick: string): Promise<any> {
+    try {
+      return await this.authService.getPublicProfile(haxballNick, this.db);
+    } catch (error) {
+      console.error('Erro ao buscar perfil:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Busca stats do jogador autenticado
+   */
+  async getPlayerStats(playerId: number): Promise<any> {
+    const account = this.getAccount(playerId);
+    if (!account) return null;
+
+    return {
+      ranking: account.ranking,
+      points: account.points,
+      coins: account.coins,
+      wins: account.wins || 0,
+      losses: account.losses || 0,
+      draws: account.draws || 0,
+      goals: account.goals || 0,
+      assists: account.assists || 0,
+      saves: account.saves || 0,
+    };
+  }
+
+  /**
+   * Busca posicao no ranking de um jogador
+   */
+  async getRanking(haxballNick: string): Promise<any> {
+    try {
+      const account = this.db.getAccountByNick(haxballNick);
+      if (!account) return null;
+
+      // Busca posicao no ranking
+      const allAccounts = this.db.getAllAccounts();
+      const sorted = allAccounts.sort((a: any, b: any) => b.ranking - a.ranking);
+
+      const position = sorted.findIndex((a: any) => a.id === account.id) + 1;
+
+      return {
+        position,
+        ranking: account.ranking,
+        points: account.points,
+      };
+    } catch (error) {
+      console.error('Erro ao buscar ranking:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Busca top 10 jogadores
+   */
+  async getTop10(): Promise<any[]> {
+    try {
+      const allAccounts = this.db.getAllAccounts();
+      return allAccounts
+        .sort((a: any, b: any) => b.ranking - a.ranking)
+        .slice(0, 10)
+        .map((acc: any) => ({
+          haxballNick: acc.haxballNick,
+          ranking: acc.ranking,
+          points: acc.points,
+        }));
+    } catch (error) {
+      console.error('Erro ao buscar top 10:', error);
+      return [];
+    }
   }
 }
 

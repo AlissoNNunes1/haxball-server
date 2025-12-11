@@ -13,9 +13,7 @@ const {
   gameTime,
 } = require('../shared/config/variables.cjs');
 
-// Import handlers
-require('../shared/config/cirs-handlers.cjs');
-
+// Cria a sala PRIMEIRO antes de definir handlers
 if (typeof HBInit === 'function' && typeof room === 'undefined') {
   room = HBInit({
     roomName: roomName,
@@ -31,6 +29,9 @@ if (typeof HBInit === 'function' && typeof room === 'undefined') {
   room.setScoreLimit(0);
   room.setTimeLimit(gameTime);
 }
+
+// DEPOIS importa handlers (ja inclui commands.cjs com autenticacao)
+require('../shared/config/cirs-handlers.cjs');
 
 //   __  ____ ____ _  _
 //  / _\/ ___) ___) )( \

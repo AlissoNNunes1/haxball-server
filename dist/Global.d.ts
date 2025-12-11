@@ -86,6 +86,9 @@ export interface PanelConfig {
         enableEsmRooms?: boolean;
     };
     mastersDiscordId: string[];
+    adminChannelId?: string;
+    generalChannelId?: string;
+    guildId?: string;
     customSettings?: CustomSettingsList;
     maxRooms?: number;
     webMonitor?: {

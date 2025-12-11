@@ -62,7 +62,7 @@ https://discord.com/api/oauth2/authorize?client_id=SEU_CLIENT_ID&permissions=204
 
 Substitua `SEU_CLIENT_ID` pelo ID da sua aplicacao (encontrado em **"General Information"**)
 
-## 4. Obter IDs do Servidor e Canal
+## 4. Obter IDs do Servidor e Canais
 
 ### Passo 1: Ativar Modo Desenvolvedor
 
@@ -73,54 +73,182 @@ Substitua `SEU_CLIENT_ID` pelo ID da sua aplicacao (encontrado em **"General Inf
 
 1. **Guild ID (ID do Servidor):**
 
-   - Clique com botao direito no servidor
+   - Clique com botao direito no **icone do servidor** (barra lateral esquerda)
    - Clique em **"Copy Server ID"**
+   - **IMPORTANTE:** Este ID e necessario para registro rapido de Slash Commands!
 
-2. **Channel ID (ID do Canal):**
-   - Clique com botao direito no canal onde deseja as notificacoes
+2. **Admin Channel ID (ID do Canal Admin):**
+
+   - Clique com botao direito no canal exclusivo para comandos admin
    - Clique em **"Copy Channel ID"**
+   - Este canal sera usado apenas por usuarios master para comandos administrativos
+
+3. **General Channel ID (ID do Canal Geral):**
+   - Clique com botao direito no canal publico para comandos gerais
+   - Clique em **"Copy Channel ID"**
+   - Este canal sera usado por todos os usuarios para comandos de autenticacao e consultas
 
 ## 5. Atualizar config.json
 
-Abra seu `config.json` e atualize a secao Discord:
+Abra seu `config.json` e configure o painel Discord com os canais separados:
 
 ```json
 {
-  "discord": {
-    "enabled": true,
-    "token": "seu_token_aqui",
-    "channelId": "seu_channel_id_aqui",
-    "guildId": "seu_guild_id_aqui",
-    "allowPlayerStats": true,
-    "allowScoreBroadcast": true,
-    "allowGoalNotifications": true
+  "server": {
+    "execPath": "path/to/haxball.js",
+    "maxMemoryUsage": 2048
+  },
+  "panel": {
+    "discordToken": "seu_token_aqui",
+    "discordPrefix": "!",
+    "mastersDiscordId": ["seu_discord_id_aqui"],
+    "adminChannelId": "id_do_canal_admin",
+    "generalChannelId": "id_do_canal_geral",
+    "bots": {
+      "futsal": "./bots/futsal-example.js"
+    },
+    "maxRooms": 5,
+    "webMonitor": {
+      "port": 3000,
+      "host": "localhost"
+    }
   }
 }
 ```
 
-Substitua:
+### Configuracao dos Canais
 
-- `seu_token_aqui` → Token copiado na etapa 1
-- `seu_channel_id_aqui` → Channel ID copiado na etapa 4
-- `seu_guild_id_aqui` → Guild ID copiado na etapa 4
+- **adminChannelId** (opcional): Canal exclusivo para comandos administrativos
 
-## 6. Funcionalidades Discord Disponiveis
+  - Apenas usuarios em `mastersDiscordId` podem usar
+  - Comandos: `/help`, `/open`, `/close`, `/reload`, `/info`, `/meminfo`, `/metrics`, `/exit`
+  - Se nao configurado, comandos admin funcionam em qualquer canal
 
-### Com `allowPlayerStats: true`
+- **generalChannelId** (opcional): Canal publico para comandos gerais
+  - Todos os usuarios podem usar
+  - Comandos: `/register`, `/linkdiscord`, `/profile`, `/ranking`, `/top`, `/authhelp`
+  - Se nao configurado, comandos funcionam em qualquer canal
 
-- Notificacoes quando jogadores entram/saem
-- Exibicao de estatisticas de jogadores
-- Lista de jogadores online
+### Exemplo Completo
 
-### Com `allowScoreBroadcast: true`
+```json
+{
+  "server": {
+    "execPath": "./haxball.js",
+    "maxMemoryUsage": 4096,
+    "proxyEnabled": false
+  },
+  "panel": {
+    "discordToken": "MTIzNDU2Nzg5MDEyMzQ1Njc4.ABcdef.XYZ123",
+    "discordPrefix": "!",
+    "guildId": "1234567890123456789",
+    "mastersDiscordId": ["123456789012345678", "987654321098765432"],
+    "adminChannelId": "111111111111111111",
+    "generalChannelId": "222222222222222222",
+    "bots": [
+      {
+        "name": "futsal",
+        "path": "./bots/futsal-example.js",
+        "displayName": "Futsal Bot"
+      },
+      {
+        "name": "x3",
+        "path": "./bots/x3-bot.js",
+        "displayName": "X3 Bot"
+      }
+    ],
+    "customSettings": {
+      "default": {
+        "reserved.haxball.maxPlayers": 16,
+        "reserved.haxball.public": true,
+        "reserved.haxball.geo": {
+          "code": "br",
+          "lat": -23.5505,
+          "lon": -46.6333
+        }
+      }
+    },
+    "maxRooms": 10,
+    "webMonitor": {
+      "port": 3000,
+      "host": "0.0.0.0"
+    }
+  }
+}
+```
 
-- Notificacoes de gols marcados
-- Placar atualizado em tempo real
-- Notificacao de fim de partida
+### Configuracao dos Canais
 
-### Com `allowGoalNotifications: true`
+- **guildId** (RECOMENDADO): ID do servidor Discord
 
-- Mensagens especiais quando gols sao marcados
+  - **CRITICO**: Sem este campo, comandos sao registrados globalmente e podem levar **ate 1 hora** para aparecer
+  - **COM guildId**: Comandos aparecem **instantaneamente** no servidor
+  - Como obter: Clique direito no icone do servidor → Copy Server ID
+
+- **adminChannelId** (opcional): Canal exclusivo para comandos administrativos
+
+  - Apenas usuarios em `mastersDiscordId` podem usar
+  - Comandos: `/help`, `/open`, `/close`, `/reload`, `/info`, `/meminfo`, `/metrics`, `/exit`
+  - Se nao configurado, comandos admin funcionam em qualquer canal
+
+- **generalChannelId** (opcional): Canal publico para comandos gerais
+  - Todos os usuarios podem usar
+  - Comandos: `/register`, `/linkdiscord`, `/profile`, `/ranking`, `/top`, `/authhelp`
+  - Se nao configurado, comandos funcionam em qualquer canal
+
+## 6. Comportamento dos Canais
+
+### Canal Admin (adminChannelId)
+
+Quando configurado, todos os comandos administrativos **DEVEM** ser executados neste canal:
+
+- ✅ `/help` - Lista comandos admin
+- ✅ `/open <bot> <token>` - Abre sala
+- ✅ `/close <pid>` - Fecha sala
+- ✅ `/reload` - Recarrega config
+- ✅ `/info` - Informacoes das salas
+- ✅ `/meminfo` - Uso de memoria
+- ✅ `/metrics` - Metricas do servidor
+- ✅ `/exit` - Desliga servidor
+- ✅ `/tokenlink` - Link token Haxball
+
+**Restricoes:**
+
+- Apenas usuarios em `mastersDiscordId` tem acesso
+- Se tentar usar em outro canal, bot responde com mensagem ephemeral
+
+### Canal Geral (generalChannelId)
+
+Quando configurado, todos os comandos de autenticacao **DEVEM** ser executados neste canal:
+
+- ✅ `/register <nick> <senha>` - Criar conta
+- ✅ `/linkdiscord <nick> <senha>` - Vincular Discord
+- ✅ `/profile [nick]` - Ver perfil
+- ✅ `/ranking [nick]` - Ver ranking
+- ✅ `/top [criterio]` - Top jogadores
+- ✅ `/authhelp` - Ajuda autenticacao
+
+**Restricoes:**
+
+- Todos os usuarios podem usar
+- Se tentar usar em outro canal, bot responde com mensagem ephemeral
+
+### Modo Flexivel (Sem Canais Configurados)
+
+Se `adminChannelId` e `generalChannelId` **NAO** forem configurados:
+
+- Comandos admin funcionam em **qualquer canal** (apenas para masters)
+- Comandos de autenticacao funcionam em **qualquer canal** (para todos)
+
+## 7. Funcionalidades Discord Disponiveis
+
+### Slash Commands (Seguro e Moderno)
+
+Todos os comandos usam Slash Commands (`/comando`) com:
+
+- Autocompletar opcoes
+- Validacao automatica de parametros
+- Respostas ephemeral para dados sensiveis (senhas nunca aparecem publicamente)
 - Detalhes de quem marcou e assist
 
 ## 7. Testar a Integracao

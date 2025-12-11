@@ -1,3 +1,4 @@
+import '../auth/index';
 /**
  * Abre um servidor Haxball com base em arquivo de configuracao
  * Carrega configuracoes, inicializa servidor e painel Discord

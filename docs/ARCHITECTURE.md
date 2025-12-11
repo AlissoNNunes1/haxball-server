@@ -231,10 +231,12 @@ Gerenciador do Discord bot que fornece interface para controlar salas.
 **Responsabilidades:**
 
 - Autenticacao com Discord via token
-- Processamento de comandos prefixados
+- Processamento de comandos via Slash Commands (`/comando`)
+- Separacao de canais: admin e geral
 - Gerenciamento de bots (carregar scripts)
 - Monitoramento de CPU/memoria
 - Aplicacao de custom settings
+- Integracao com sistema de autenticacao
 
 **Arquitetura interna:**
 
@@ -244,27 +246,53 @@ export class ControlPanel {
   private server: Server               // Ref ao gerenciador
   private bots: Bot[]                  // Lista de bots carregados
   private customSettings: CustomSettings[] // Configuracoes herancas
+  private adminChannelId?: string      // Canal exclusivo admin
+  private generalChannelId?: string    // Canal publico geral
+  private authCommands: AuthCommands   // Comandos autenticacao
 
   constructor(server, config) { ... }
 
   private loadBots(bots) { ... }
   private loadCustomSettings(settings) { ... }
-  private command(message) { ... }
+  private handleSlashCommand(interaction) { ... }
+  private command(message) { ... }  // DEPRECATED
   private transformSetting(setting) { ... }  // Heranca de configs
   private logError(error, channel) { ... }
 }
 ```
 
-**Fluxo de Comando Discord:**
+**Fluxo de Comando Discord (Slash Commands):**
 
 ```
-Discord Message
-  └─ messageCreate event
-     └─ command(msg)
-        ├─ validar acesso (masterDiscordId)
-        ├─ parsear comando
-        ├─ executar logica
-        └─ enviar resposta via embeds
+Discord Interaction
+  └─ interactionCreate event
+     └─ handleSlashCommand(interaction)
+        ├─ identificar tipo de comando
+        │  ├─ Auth Commands (register, linkdiscord, profile, etc)
+        │  │  ├─ verificar generalChannelId (se configurado)
+        │  │  └─ authCommands.handleInteraction()
+        │  └─ Admin Commands (open, close, info, etc)
+        │     ├─ verificar masterDiscordId
+        │     ├─ verificar adminChannelId (se configurado)
+        │     └─ executar comando admin
+        └─ enviar resposta via interaction.reply()
+```
+
+**Separacao de Canais:**
+
+```
+adminChannelId (opcional)
+  └─ Comandos admin: /help, /open, /close, /reload, /info, /meminfo, /metrics, /exit
+     └─ Apenas masters (mastersDiscordId)
+     └─ Se configurado, comandos DEVEM ser usados neste canal
+
+generalChannelId (opcional)
+  └─ Comandos auth: /register, /linkdiscord, /profile, /ranking, /top, /authhelp
+     └─ Todos os usuarios
+     └─ Se configurado, comandos DEVEM ser usados neste canal
+
+Sem canais configurados
+  └─ Comandos funcionam em qualquer canal (com restricoes de permissao)
 ```
 
 **Classe Bot interna:**

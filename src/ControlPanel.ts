@@ -1,6 +1,7 @@
 // Full rewrite: create a single clean ControlPanel implementation
 // Full rewrite: create a single clean ControlPanel implementation
 import * as Discord from 'discord.js';
+import { MessageFlags } from 'discord.js';
 import os from 'node-os-utils';
 import path from 'path';
 import process from 'process';
@@ -9,6 +10,8 @@ import { pathToFileURL } from 'url';
 import { Bot } from './Bot';
 import { CustomSettings, CustomSettingsList, PanelConfig } from './Global';
 import { Server } from './Server';
+import { AuthCommands } from './auth/AuthCommands';
+import { registerSlashCommands } from './commands/registerSlashCommands';
 import { RoomMonitor } from './debugging/RoomMonitor';
 
 import { loadConfig } from './utils/loadConfig';
@@ -19,6 +22,9 @@ export class ControlPanel {
   private prefix: string;
   private token: string;
   private mastersDiscordId: string[] = [];
+  private adminChannelId?: string;
+  private generalChannelId?: string;
+  private guildId?: string;
   private maxRooms?: number;
 
   private bots: Bot[] = [];
@@ -30,12 +36,16 @@ export class ControlPanel {
   private monitor: RoomMonitor;
   private esmRoomsCache: { name: string; module: any }[] = [];
   private panelConfig: PanelConfig;
+  private authCommands: AuthCommands;
 
   constructor(private server: Server, config: PanelConfig, private fileName?: string) {
     this.panelConfig = config;
     this.prefix = config.discordPrefix;
     this.token = config.discordToken;
     this.mastersDiscordId = config.mastersDiscordId ?? [];
+    this.adminChannelId = config.adminChannelId;
+    this.generalChannelId = config.generalChannelId;
+    this.guildId = config.guildId;
     this.maxRooms = config.maxRooms;
 
     this.mem = os.mem;
@@ -64,8 +74,39 @@ export class ControlPanel {
       );
     }
 
-    this.client.on('ready', () => {
+    this.client.on('ready', async () => {
       log('DISCORD', `Logged in as ${this.client.user?.tag}!`);
+
+      // Registra Slash Commands
+      if (this.client.user) {
+        const clientId = this.client.user.id;
+        // Use guildId para teste rapido (instantaneo), ou undefined para global (ate 1h)
+        const guildId = this.guildId;
+
+        if (guildId) {
+          log('DISCORD', `Registrando comandos no servidor ${guildId} (rapido)`);
+        } else {
+          log('DISCORD', 'Registrando comandos globalmente (pode levar ate 1 hora)');
+        }
+
+        await registerSlashCommands(this.token, clientId, guildId);
+      }
+    });
+
+    this.client.on('interactionCreate', async (interaction) => {
+      if (!interaction.isChatInputCommand()) return;
+
+      try {
+        await this.handleSlashCommand(interaction);
+      } catch (e) {
+        console.error('Error handling slash command:', e);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'Ocorreu um erro ao processar o comando.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+      }
     });
 
     this.client.on('messageCreate', async (msg) => {
@@ -77,6 +118,11 @@ export class ControlPanel {
         else log('DISCORD', `Error handling command: ${e}`);
       }
     });
+
+    // Inicializa sistema de autenticacao
+    this.authCommands = new AuthCommands();
+    this.authCommands.startSessionCleanup();
+    log('AUTH', 'Sistema de autenticacao inicializado');
 
     if (this.token) void this.client.login(this.token);
   }
@@ -207,10 +253,296 @@ export class ControlPanel {
     return rooms.join('\n');
   }
 
+  private async handleSlashCommand(
+    interaction: Discord.ChatInputCommandInteraction
+  ): Promise<void> {
+    const commandName = interaction.commandName;
+
+    // Comandos de autenticacao (sem necessidade de master check)
+    if (
+      ['register', 'linkdiscord', 'profile', 'ranking', 'top', 'authhelp'].includes(commandName)
+    ) {
+      // Verifica canal geral se configurado
+      if (this.generalChannelId && interaction.channelId !== this.generalChannelId) {
+        await interaction.reply({
+          content: `Comandos de autenticacao devem ser usados no canal <#${this.generalChannelId}>.`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+      await this.authCommands.handleInteraction(interaction);
+      return;
+    }
+
+    // Verifica permissao master para comandos admin
+    if (!this.mastersDiscordId.includes(interaction.user.id)) {
+      await interaction.reply({
+        content: 'Sem permissao. Apenas masters podem usar comandos admin.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Verifica canal admin se configurado
+    if (this.adminChannelId && interaction.channelId !== this.adminChannelId) {
+      await interaction.reply({
+        content: `Comandos admin devem ser usados no canal <#${this.adminChannelId}>.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Comandos admin
+    switch (commandName) {
+      case 'help':
+        await this.handleHelpSlash(interaction);
+        break;
+      case 'info':
+        await this.handleInfoSlash(interaction);
+        break;
+      case 'meminfo':
+        await this.handleMemInfoSlash(interaction);
+        break;
+      case 'metrics':
+        await this.handleMetricsSlash(interaction);
+        break;
+      case 'open':
+        await this.handleOpenSlash(interaction);
+        break;
+      case 'close':
+        await this.handleCloseSlash(interaction);
+        break;
+      case 'reload':
+        await this.handleReloadSlash(interaction);
+        break;
+      case 'exit':
+        await this.handleExitSlash(interaction);
+        break;
+      case 'tokenlink':
+        await this.handleTokenLinkSlash(interaction);
+        break;
+      default:
+        await interaction.reply({
+          content: `Comando desconhecido: ${commandName}`,
+          flags: MessageFlags.Ephemeral,
+        });
+    }
+  }
+
+  private async handleHelpSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const channelInfo: string[] = [];
+    if (this.adminChannelId) {
+      channelInfo.push(`**Canal Admin:** <#${this.adminChannelId}> (comandos admin)`);
+    }
+    if (this.generalChannelId) {
+      channelInfo.push(`**Canal Geral:** <#${this.generalChannelId}> (comandos auth)`);
+    }
+
+    const embed = new Discord.EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Comandos Admin Disponiveis')
+      .setDescription(
+        [
+          channelInfo.length > 0 ? channelInfo.join('\n') + '\n' : '',
+          '`/help` - Lista comandos admin',
+          '`/info` - Informacoes sobre salas abertas',
+          '`/meminfo` - Uso de memoria',
+          '`/metrics` - Metricas do servidor',
+          '`/open <bot> <token> [setting]` - Abre sala com bot',
+          '`/close <pid|all>` - Fecha sala(s)',
+          '`/reload` - Recarrega configuracao',
+          '`/exit` - Desliga o bot',
+          '`/tokenlink` - Gera link para token Haxball',
+          '',
+          '**Comandos de Autenticacao:**',
+          '`/authhelp` - Lista todos os comandos de auth',
+          '`/register <nick> <senha>` - Cria conta',
+          '`/linkdiscord <nick> <senha>` - Vincula Discord',
+          '`/profile [nick]` - Ver perfil',
+          '`/ranking [nick]` - Ver ranking (alias de profile)',
+          '`/top [criterio]` - Top jogadores',
+        ].join('\n')
+      )
+      .setTimestamp(Date.now());
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleInfoSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const roomList = await this.getRoomNameList();
+    const embed = new Discord.EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Salas Abertas')
+      .setDescription(roomList)
+      .setTimestamp(Date.now());
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleMemInfoSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const memUsage = process.memoryUsage();
+    const embed = new Discord.EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Uso de Memoria')
+      .addFields([
+        { name: 'RSS', value: `${(memUsage.rss / 1024 / 1024).toFixed(2)} MB`, inline: true },
+        {
+          name: 'Heap Total',
+          value: `${(memUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`,
+          inline: true,
+        },
+        {
+          name: 'Heap Usado',
+          value: `${(memUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+          inline: true,
+        },
+      ])
+      .setTimestamp(Date.now());
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleMetricsSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const allMetrics = this.monitor.getAllMetrics();
+    const totalRooms = allMetrics.length;
+    const activeRooms = allMetrics.filter((m) => m.playerCount > 0).length;
+    const totalPlayers = allMetrics.reduce((sum, m) => sum + m.playerCount, 0);
+
+    const embed = new Discord.EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Metricas do Servidor')
+      .addFields([
+        { name: 'Total de Salas', value: `${totalRooms}`, inline: true },
+        { name: 'Salas Ativas', value: `${activeRooms}`, inline: true },
+        { name: 'Total de Jogadores', value: `${totalPlayers}`, inline: true },
+      ])
+      .setTimestamp(Date.now());
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  private async handleOpenSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const botName = interaction.options.getString('bot', true);
+    const token = interaction.options.getString('token', true);
+    const setting = interaction.options.getString('setting') || 'default';
+
+    const bot = this.bots.find((b) => b.name === botName);
+    if (!bot) {
+      await interaction.reply({
+        content: `Bot '${botName}' nao encontrado.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    try {
+      const customSettings =
+        this.customSettings && this.customSettings[setting]
+          ? this.customSettings[setting]
+          : undefined;
+      const script = await bot.read();
+      const browser = await bot.run(this.server, script, [token], customSettings);
+
+      if (!browser) {
+        await interaction.editReply({ content: 'Erro ao abrir sala: servidor retornou null' });
+        return;
+      }
+
+      const embed = new Discord.EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('Sala Aberta')
+        .setDescription(`Sala ${browser.link} aberta com sucesso!\nPID: ${browser.pid}`)
+        .setTimestamp(Date.now());
+      await interaction.editReply({ embeds: [embed] });
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      await interaction.editReply({ content: `Erro ao abrir sala: ${errorMsg}` });
+    }
+  }
+
+  private async handleCloseSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const pidStr = interaction.options.getString('pid', true);
+
+    if (pidStr.toLowerCase() === 'all') {
+      const count = this.server.browsers.length;
+      await this.server.closeAll();
+      await interaction.reply({ content: `${count} sala(s) fechada(s).` });
+      return;
+    }
+
+    const pid = parseInt(pidStr, 10);
+    if (isNaN(pid)) {
+      await interaction.reply({ content: 'PID invalido.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    const found = this.server.browsers.find((b) => b.pid === pid);
+    if (!found) {
+      await interaction.reply({
+        content: `Sala com PID ${pid} nao encontrada.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await this.server.close(pid);
+    await interaction.reply({ content: `Sala ${pid} fechada.` });
+  }
+
+  private async handleReloadSlash(interaction: Discord.ChatInputCommandInteraction) {
+    if (!this.fileName) {
+      await interaction.reply({
+        content: 'Nenhum arquivo de config definido para reload.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    try {
+      const newConf = await loadConfig(this.fileName);
+      if (newConf.panel) {
+        this.panelConfig = newConf.panel;
+        this.loadBots(newConf.panel.bots);
+        if (newConf.panel.customSettings) {
+          this.loadCustomSettings(newConf.panel.customSettings);
+        }
+      }
+      await interaction.reply({ content: 'Configuracao recarregada com sucesso.' });
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      await interaction.reply({
+        content: `Erro ao recarregar: ${errorMsg}`,
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+  }
+
+  private async handleExitSlash(interaction: Discord.ChatInputCommandInteraction) {
+    await interaction.reply({ content: 'Desligando...' });
+    await this.server.closeAll();
+    process.exit(0);
+  }
+
+  private async handleTokenLinkSlash(interaction: Discord.ChatInputCommandInteraction) {
+    const embed = new Discord.EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Gerar Token Haxball')
+      .setDescription('Acesse: https://www.haxball.com/headlesstoken')
+      .setTimestamp(Date.now());
+    await interaction.reply({ embeds: [embed] });
+  }
+
   private async command(msg: Discord.Message): Promise<void> {
     if (!msg.channel || !('send' in msg.channel)) return;
     const channel = msg.channel as Discord.TextChannel;
     if (!msg.content.startsWith(this.prefix)) return;
+
+    // Verifica canal correto para comandos (deprecated)
+    const isAdminUser = this.mastersDiscordId.includes(msg.author.id);
+    if (isAdminUser && this.adminChannelId && msg.channelId !== this.adminChannelId) {
+      return; // Ignora comandos admin fora do canal admin
+    }
+    if (!isAdminUser && this.generalChannelId && msg.channelId !== this.generalChannelId) {
+      return; // Ignora comandos gerais fora do canal geral
+    }
 
     const args = msg.content.slice(this.prefix.length).trim().split(' ').filter(Boolean);
     const text = msg.content
@@ -224,20 +556,44 @@ export class ControlPanel {
     if (!this.mastersDiscordId.includes(msg.author.id)) return;
 
     if (command === 'help') {
+      const channelInfo: string[] = [];
+      if (this.adminChannelId) {
+        channelInfo.push(`**Canal Admin:** <#${this.adminChannelId}>`);
+      }
+      if (this.generalChannelId) {
+        channelInfo.push(`**Canal Geral:** <#${this.generalChannelId}>`);
+      }
+
       embed
-        .setTitle('Help')
-        .setDescription('Haxball Server Control Panel commands')
+        .setTitle('Help - CIRS Haxball Server')
+        .setDescription(
+          '⚠️ **AVISO**: Comandos com prefixo (!) estao DEPRECATED. Use Slash Commands (/) para maior seguranca.\n\n' +
+            (channelInfo.length > 0 ? channelInfo.join('\n') + '\n' : '')
+        )
         .addFields(
-          { name: 'help', value: 'Command list.', inline: true },
-          { name: 'info', value: 'Server info.', inline: true },
-          { name: 'meminfo', value: 'CPU and memory info.', inline: true },
-          { name: 'metrics', value: 'Show room metrics.', inline: true },
-          { name: 'open', value: 'Open a room.', inline: true },
-          { name: 'esm-rooms', value: 'List ESM room modules available', inline: true },
-          { name: 'close', value: 'Close a room.', inline: true },
-          { name: 'reload', value: 'Reload the bot configuration.', inline: true },
-          { name: 'exit', value: 'Close the server.', inline: true },
-          { name: 'tokenlink', value: 'Haxball Headless Token page.', inline: true }
+          { name: '\u200B', value: '**Comandos de Admin** (use /comando)', inline: false },
+          { name: '!help', value: 'Lista de comandos ➜ `/help`', inline: true },
+          { name: '!info', value: 'Informacoes do servidor ➜ `/info`', inline: true },
+          { name: '!meminfo', value: 'Uso de CPU e memoria ➜ `/meminfo`', inline: true },
+          { name: '!metrics', value: 'Metricas das salas ➜ `/metrics`', inline: true },
+          { name: '!open', value: 'Abrir uma sala ➜ `/open`', inline: true },
+          { name: '!close', value: 'Fechar uma sala ➜ `/close`', inline: true },
+          { name: '!esm-rooms', value: 'Listar modulos de sala', inline: true },
+          { name: '!reload', value: 'Recarregar configuracao ➜ `/reload`', inline: true },
+          { name: '!exit', value: 'Desligar servidor ➜ `/exit`', inline: true },
+          { name: '!tokenlink', value: 'Link para token Haxball ➜ `/tokenlink`', inline: true },
+          {
+            name: '\u200B',
+            value: '**Comandos de Autenticacao** ⚠️ DEPRECATED - USE `/authhelp`',
+            inline: false,
+          },
+          {
+            name: '⚠️ IMPORTANTE',
+            value:
+              '`!register` e `!linkdiscord` expoe senhas publicamente!\nUSE `/register` e `/linkdiscord` (respostas privadas)',
+            inline: false,
+          },
+          { name: '!authhelp', value: 'Ajuda de autenticacao ➜ `/authhelp`', inline: true }
         );
       await msg.channel.send({ embeds: [embed] });
       return;
@@ -392,19 +748,17 @@ export class ControlPanel {
     if (command === 'info') {
       const roomList = await this.getRoomNameList();
       const esmRooms = await this.loadEsmRooms();
-      embed
-        .setTitle('Information')
-        .addFields(
-          { name: 'Open rooms', value: roomList },
-          { name: 'Bot list', value: this.bots.map((b) => b.display || b.name).join('\n') },
-          { name: 'ESM rooms', value: esmRooms.map((r) => r.name).join('\n') || 'None' },
-          {
-            name: 'Custom settings list',
-            value: this.customSettings
-              ? Object.keys(this.customSettings).join('\n')
-              : 'No custom settings have been specified.',
-          }
-        );
+      embed.setTitle('Information').addFields(
+        { name: 'Open rooms', value: roomList },
+        { name: 'Bot list', value: this.bots.map((b) => b.display || b.name).join('\n') },
+        { name: 'ESM rooms', value: esmRooms.map((r) => r.name).join('\n') || 'None' },
+        {
+          name: 'Custom settings list',
+          value: this.customSettings
+            ? Object.keys(this.customSettings).join('\n')
+            : 'No custom settings have been specified.',
+        }
+      );
       await msg.channel.send({ embeds: [embed] });
       return;
     }
@@ -417,26 +771,24 @@ export class ControlPanel {
       const message = await msg.channel.send({ embeds: [embedLoading] });
       const memInfo = await this.mem.info();
       const cpuUsage = await this.cpu.usage();
-      embed
-        .setTitle('Information')
-        .addFields(
-          { name: 'CPUs', value: String(this.cpu.count()), inline: true },
-          { name: 'CPU usage', value: cpuUsage + '%', inline: true },
-          { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true },
-          {
-            name: 'Memory',
-            value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(
-              2
-            )} GB (${memInfo.freeMemPercentage}% livre)`,
-            inline: true,
-          },
-          { name: 'OS', value: String(await os.os.oos()), inline: true },
-          {
-            name: 'Machine Uptime',
-            value: new Date(os.os.uptime() * 1000).toISOString().substr(11, 8),
-            inline: true,
-          }
-        );
+      embed.setTitle('Information').addFields(
+        { name: 'CPUs', value: String(this.cpu.count()), inline: true },
+        { name: 'CPU usage', value: cpuUsage + '%', inline: true },
+        { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true },
+        {
+          name: 'Memory',
+          value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(
+            2
+          )} GB (${memInfo.freeMemPercentage}% livre)`,
+          inline: true,
+        },
+        { name: 'OS', value: String(await os.os.oos()), inline: true },
+        {
+          name: 'Machine Uptime',
+          value: new Date(os.os.uptime() * 1000).toISOString().substr(11, 8),
+          inline: true,
+        }
+      );
       const serverMem = process.memoryUsage();
       const serverCPUUsage = `Server Memory: ${(serverMem.heapUsed / 1024 / 1024).toFixed(2)} MB\n`;
       const roomMessage =

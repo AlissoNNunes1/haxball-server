@@ -1,0 +1,489 @@
+/**
+ * Comandos globais para todas as salas Haxball
+ * Inclui comandos de autenticacao e comandos gerais
+ *
+ * Para usar em um bot:
+ * const { processCommand } = require('./shared/config/commands.cjs');
+ *
+ * No onPlayerChat:
+ * const handled = processCommand(room, player, message);
+ * if (handled) return false;
+ */
+
+// Importa RoomAuthHandler para comandos de autenticacao
+let RoomAuthHandler;
+let authHandler;
+
+try {
+  const authModule = require('../../dist/auth/RoomAuthHandler');
+  RoomAuthHandler = authModule.RoomAuthHandler;
+  authHandler = new RoomAuthHandler();
+  console.log('[COMMANDS] Sistema de autenticacao carregado');
+} catch (error) {
+  console.error('[COMMANDS] Erro ao carregar RoomAuthHandler:', error.message);
+  console.log('[COMMANDS] Comandos de autenticacao desabilitados');
+}
+
+/**
+ * Processa comandos globais
+ * @param {object} room - Instancia da sala Haxball
+ * @param {object} player - Jogador que enviou o comando
+ * @param {string} message - Mensagem completa
+ * @returns {boolean} true se comando foi processado, false caso contrario
+ */
+function processCommand(room, player, message) {
+  if (typeof message !== 'string') return false;
+
+  message = message.trim();
+
+  // TODOS os comandos Haxball usam ! (autenticacao + gerais)
+  if (message.startsWith('!')) {
+    const cmd = message.split(' ')[0].toLowerCase();
+
+    // Comandos de autenticacao
+    if (cmd === '!login') {
+      handleLogin(room, player, message);
+      return true;
+    }
+    if (cmd === '!logout') {
+      handleLogout(room, player);
+      return true;
+    }
+    if (cmd === '!profile') {
+      handleProfile(room, player, message);
+      return true;
+    }
+    if (cmd === '!stats') {
+      handleStats(room, player);
+      return true;
+    }
+    if (cmd === '!ranking') {
+      handleRanking(room, player, message);
+      return true;
+    }
+    if (cmd === '!top') {
+      handleTop(room, player);
+      return true;
+    }
+
+    // Comandos gerais
+    return processGeneralCommand(room, player, message);
+  }
+
+  return false;
+}
+
+/**
+ * Processa comandos de autenticacao com !
+ */
+function processAuthCommand(room, player, message) {
+  // Funcao mantida por compatibilidade, mas agora processCommand chama diretamente
+  return false;
+}
+
+/**
+ * Processa comandos gerais com !
+ */
+function processGeneralCommand(room, player, message) {
+  const args = message.substring(1).trim().split(/\s+/);
+  const cmd = args[0].toLowerCase();
+
+  // !help ou !ajuda - mostra TODOS os comandos
+  if (cmd === 'help' || cmd === 'ajuda') {
+    handleGeneralHelp(room, player);
+    return true;
+  }
+
+  // !afk
+  if (cmd === 'afk') {
+    handleAFK(room, player);
+    return true;
+  }
+
+  // !bb ou !gk (volta pro gol)
+  if (cmd === 'bb' || cmd === 'gk') {
+    handleBackToGoal(room, player);
+    return true;
+  }
+
+  return false;
+}
+
+// ========== COMANDOS DE AUTENTICACAO ==========
+
+async function handleLogin(room, player, message) {
+  const args = message.split(' ');
+  if (args.length < 2) {
+    room.sendAnnouncement('[AUTH] Uso: !login <senha>', player.id, 0xff9900, 'bold', 2);
+    return;
+  }
+
+  const password = args.slice(1).join(' ');
+
+  try {
+    const result = await authHandler.login(player, password);
+
+    if (result.success) {
+      room.sendAnnouncement(
+        '✓ SENHA CORRETA! Login realizado com sucesso!',
+        player.id,
+        0x00ff00,
+        'bold',
+        2
+      );
+
+      if (result.account) {
+        room.sendAnnouncement(
+          `Bem-vindo, ${result.account.haxballNick}!`,
+          player.id,
+          0x00ff00,
+          'bold',
+          1
+        );
+
+        room.sendAnnouncement(
+          `Pontos: ${result.account.points} | Ranking: ${result.account.ranking} | Moedas: ${result.account.coins}`,
+          player.id,
+          0x55ff55,
+          'normal',
+          1
+        );
+
+        // Mensagem global
+        const eloTag = `[${result.account.ranking}]`;
+        room.sendAnnouncement(
+          `${eloTag} ${player.name} autenticou-se com sucesso!`,
+          null,
+          0xaaffaa,
+          'normal',
+          1
+        );
+      }
+    } else {
+      room.sendAnnouncement('❌ SENHA INCORRETA! Tente novamente.', player.id, 0xff0000, 'bold', 2);
+
+      room.sendAnnouncement(
+        'Verifique sua senha e tente novamente. Esqueceu? Contate um admin no Discord.',
+        player.id,
+        0xff9900,
+        'small',
+        1
+      );
+    }
+  } catch (error) {
+    console.error('[COMMANDS] Erro ao fazer login:', error);
+    room.sendAnnouncement(
+      '❌ Erro ao fazer login. Tente novamente.',
+      player.id,
+      0xff0000,
+      'bold',
+      2
+    );
+  }
+}
+
+function handleLogout(room, player) {
+  try {
+    authHandler.logout(player);
+    room.sendAnnouncement('✓ Logout realizado com sucesso!', player.id, 0x00ff00, 'bold', 2);
+  } catch (error) {
+    console.error('[COMMANDS] Erro ao fazer logout:', error);
+  }
+}
+
+async function handleProfile(room, player, message) {
+  const args = message.split(' ');
+  const targetNick = args.length > 1 ? args.slice(1).join(' ') : player.name;
+
+  try {
+    const profile = await authHandler.getProfile(targetNick);
+
+    if (profile) {
+      room.sendAnnouncement(
+        `═══ Perfil de ${profile.haxballNick} ═══`,
+        player.id,
+        0x55aaff,
+        'bold',
+        2
+      );
+      room.sendAnnouncement(
+        `Ranking: ${profile.ranking} | Pontos: ${profile.points}`,
+        player.id,
+        0xaaaaaa,
+        'normal',
+        1
+      );
+      room.sendAnnouncement(
+        `Vitorias: ${profile.wins} | Derrotas: ${profile.losses} | Empates: ${profile.draws}`,
+        player.id,
+        0xaaaaaa,
+        'normal',
+        1
+      );
+      room.sendAnnouncement(
+        `Gols: ${profile.goals} | Assistencias: ${profile.assists}`,
+        player.id,
+        0xaaaaaa,
+        'normal',
+        1
+      );
+    } else {
+      room.sendAnnouncement(
+        `Perfil de ${targetNick} nao encontrado.`,
+        player.id,
+        0xff9900,
+        'normal',
+        1
+      );
+    }
+  } catch (error) {
+    console.error('[COMMANDS] Erro ao buscar perfil:', error);
+    room.sendAnnouncement('❌ Erro ao buscar perfil.', player.id, 0xff0000, 'normal', 1);
+  }
+}
+
+async function handleStats(room, player) {
+  try {
+    const isAuth = authHandler.isAuthenticated(player.id);
+
+    if (!isAuth) {
+      room.sendAnnouncement(
+        'Voce precisa fazer login primeiro! Use: !login <senha>',
+        player.id,
+        0xff9900,
+        'bold',
+        2
+      );
+      return;
+    }
+
+    const stats = await authHandler.getPlayerStats(player.id);
+
+    if (stats) {
+      room.sendAnnouncement(`═══ Suas Estatisticas ═══`, player.id, 0x55aaff, 'bold', 2);
+      room.sendAnnouncement(
+        `Ranking: ${stats.ranking} | Pontos: ${stats.points} | Moedas: ${stats.coins}`,
+        player.id,
+        0xaaaaaa,
+        'normal',
+        1
+      );
+      room.sendAnnouncement(
+        `Partidas: ${stats.wins + stats.losses + stats.draws} | V: ${stats.wins} | D: ${
+          stats.losses
+        } | E: ${stats.draws}`,
+        player.id,
+        0xaaaaaa,
+        'normal',
+        1
+      );
+      room.sendAnnouncement(
+        `Gols: ${stats.goals} | Assistencias: ${stats.assists} | Defesas: ${stats.saves}`,
+        player.id,
+        0xaaaaaa,
+        'normal',
+        1
+      );
+    }
+  } catch (error) {
+    console.error('[COMMANDS] Erro ao buscar stats:', error);
+  }
+}
+
+async function handleRanking(room, player, message) {
+  const args = message.split(' ');
+  const targetNick = args.length > 1 ? args.slice(1).join(' ') : player.name;
+
+  try {
+    const ranking = await authHandler.getRanking(targetNick);
+
+    if (ranking) {
+      room.sendAnnouncement(
+        `${targetNick} - Ranking: ${ranking.position}º | Elo: ${ranking.ranking} | Pontos: ${ranking.points}`,
+        player.id,
+        0x55aaff,
+        'bold',
+        2
+      );
+    } else {
+      room.sendAnnouncement(
+        `Jogador ${targetNick} nao encontrado no ranking.`,
+        player.id,
+        0xff9900,
+        'normal',
+        1
+      );
+    }
+  } catch (error) {
+    console.error('[COMMANDS] Erro ao buscar ranking:', error);
+  }
+}
+
+async function handleTop(room, player) {
+  try {
+    const top10 = await authHandler.getTop10();
+
+    if (top10 && top10.length > 0) {
+      room.sendAnnouncement(`═══ TOP 10 JOGADORES ═══`, player.id, 0xffaa00, 'bold', 2);
+
+      top10.forEach((p, index) => {
+        const medal =
+          index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`;
+        room.sendAnnouncement(
+          `${medal} ${p.haxballNick} - Ranking: ${p.ranking} | Pontos: ${p.points}`,
+          player.id,
+          0xaaaaaa,
+          'normal',
+          1
+        );
+      });
+    } else {
+      room.sendAnnouncement('Ranking vazio no momento.', player.id, 0xff9900, 'normal', 1);
+    }
+  } catch (error) {
+    console.error('[COMMANDS] Erro ao buscar top 10:', error);
+  }
+}
+
+function handleAuthHelp(room, player) {
+  room.sendAnnouncement('═══ COMANDOS DE AUTENTICACAO ═══', player.id, 0x55aaff, 'bold', 2);
+  room.sendAnnouncement(
+    '/login <senha> - Fazer login na sua conta',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement('/logout - Desconectar da sua conta', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement(
+    '/profile [nick] - Ver perfil de jogador',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement(
+    '/stats - Ver suas estatisticas (precisa estar logado)',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement(
+    '/ranking [nick] - Ver posicao no ranking',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement('/top - Ver top 10 jogadores', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement(
+    'Para registrar uma conta, use !register no Discord',
+    player.id,
+    0xff9900,
+    'small',
+    1
+  );
+}
+
+// ========== COMANDOS GERAIS ==========
+
+function handleGeneralHelp(room, player) {
+  room.sendAnnouncement('═══ COMANDOS DISPONIVEIS ═══', player.id, 0x55aaff, 'bold', 2);
+
+  // Comandos de autenticacao
+  room.sendAnnouncement('--- Autenticacao ---', player.id, 0xffaa00, 'bold', 1);
+  room.sendAnnouncement(
+    '!login <senha> - Fazer login na sua conta',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement('!logout - Desconectar da sua conta', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement(
+    '!profile [nick] - Ver perfil de jogador',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement(
+    '!stats - Ver suas estatisticas (precisa estar logado)',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement(
+    '!ranking [nick] - Ver posicao no ranking',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement('!top - Ver top 10 jogadores', player.id, 0xaaaaaa, 'normal', 1);
+
+  // Comandos gerais
+  room.sendAnnouncement('--- Comandos Gerais ---', player.id, 0xffaa00, 'bold', 1);
+  room.sendAnnouncement('!help - Mostra esta lista de comandos', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement('!afk - Ir para espectadores (AFK)', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement('!bb ou !gk - Voltar para o gol', player.id, 0xaaaaaa, 'normal', 1);
+
+  room.sendAnnouncement(
+    'Para registrar uma conta, use /register no Discord',
+    player.id,
+    0xff9900,
+    'small',
+    1
+  );
+}
+
+function handleAFK(room, player) {
+  if (player.team !== 0) {
+    room.setPlayerTeam(player.id, 0);
+    room.sendAnnouncement(`${player.name} esta AFK`, null, 0xaaaaaa, 'normal', 1);
+  } else {
+    room.sendAnnouncement('Voce ja esta nos espectadores.', player.id, 0xff9900, 'normal', 1);
+  }
+}
+
+function handleBackToGoal(room, player) {
+  if (player.team === 0) {
+    room.sendAnnouncement(
+      'Voce precisa estar em um time para usar este comando.',
+      player.id,
+      0xff9900,
+      'normal',
+      1
+    );
+    return;
+  }
+
+  // Tenta mover jogador para posicao de goleiro
+  // Isso depende do mapa, ajuste conforme necessario
+  const ballPos = room.getBallPosition();
+
+  if (player.team === 1) {
+    // Time vermelho - gol esquerdo
+    room.setPlayerDiscProperties(player.id, { x: -700, y: 0 });
+  } else if (player.team === 2) {
+    // Time azul - gol direito
+    room.setPlayerDiscProperties(player.id, { x: 700, y: 0 });
+  }
+
+  room.sendAnnouncement(`${player.name} voltou para o gol!`, null, 0xaaffaa, 'normal', 1);
+}
+
+// ========== EXPORTACAO ==========
+
+module.exports = {
+  processCommand,
+  processAuthCommand,
+  processGeneralCommand,
+};
+
+//   __  ____ ____ _  _
+// / _\/ ___) ___) )( \
+//    \___ \___ ) \/ (
+// \_/\_(____(____|____/
