@@ -44,7 +44,9 @@ const { RoomAuthHandler } = require('../src/auth/RoomAuthHandler');
 
 // Dentro da funcao init ou setup
 function init() {
-  const room = HBInit({ /* config */ });
+  const room = HBInit({
+    /* config */
+  });
 
   // Criar handler de autenticacao
   const authHandler = new RoomAuthHandler();
@@ -238,7 +240,7 @@ Se voce ja tem usuarios na tabela `users`, migre para `player_accounts`:
 ```sql
 -- Script de migracao manual (executar no SQLite)
 INSERT INTO player_accounts (discord_id, haxball_nick, password_hash, salt, points, ranking, coins)
-SELECT 
+SELECT
   discord_id,
   name as haxball_nick,
   'RESET_REQUIRED' as password_hash,
@@ -248,8 +250,8 @@ SELECT
   0 as coins
 FROM users
 WHERE discord_id NOT IN (
-  SELECT discord_id 
-  FROM player_accounts 
+  SELECT discord_id
+  FROM player_accounts
   WHERE discord_id IS NOT NULL
 );
 ```
@@ -298,7 +300,7 @@ const authService = new AuthService({
 
 Para mais detalhes, consulte `docs/ACCOUNTS.md`.
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

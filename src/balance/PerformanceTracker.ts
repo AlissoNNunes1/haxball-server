@@ -1,4 +1,4 @@
-import { PerformanceData, RecentPerformance, Position } from './types';
+import { PerformanceData, Position, RecentPerformance } from './types';
 
 /**
  * Rastreador de performance e forma recente
@@ -86,10 +86,7 @@ export class PerformanceTracker {
    * @param position Posicao considerada
    * @returns Analise de forma recente
    */
-  analyzeRecentForm(
-    performances: PerformanceData[],
-    position: Position
-  ): RecentPerformance {
+  analyzeRecentForm(performances: PerformanceData[], position: Position): RecentPerformance {
     if (performances.length === 0) {
       return {
         averageScore: 0,
@@ -103,9 +100,7 @@ export class PerformanceTracker {
     const recentGames = performances.slice(0, this.RECENT_GAMES_WINDOW);
 
     // Calcula scores de cada partida
-    const scores = recentGames.map((perf) =>
-      this.calculatePerformanceScore(perf, position)
-    );
+    const scores = recentGames.map((perf) => this.calculatePerformanceScore(perf, position));
 
     // Media de performance
     const averageScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
@@ -200,7 +195,10 @@ export class PerformanceTracker {
    * Determina se jogador esta em sequencia positiva (streak)
    * Considera sequencia de vitorias ou boas performances
    */
-  detectStreak(performances: PerformanceData[], position: Position): {
+  detectStreak(
+    performances: PerformanceData[],
+    position: Position
+  ): {
     hasStreak: boolean;
     streakLength: number;
     type: 'win' | 'performance' | 'none';
@@ -234,10 +232,7 @@ export class PerformanceTracker {
   /**
    * Conta elementos consecutivos que satisfazem condicao
    */
-  private countConsecutive<T>(
-    array: T[],
-    predicate: (item: T) => boolean
-  ): number {
+  private countConsecutive<T>(array: T[], predicate: (item: T) => boolean): number {
     let count = 0;
     for (const item of array) {
       if (predicate(item)) {

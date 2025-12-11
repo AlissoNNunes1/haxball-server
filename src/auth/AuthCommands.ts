@@ -1,6 +1,6 @@
 import * as Discord from 'discord.js';
 import { AuthService } from '../auth/AuthService';
-import { getAuthDb, initAuthDb } from '../database/auth-client';
+import { initAuthDb } from '../database/auth-client';
 
 /**
  * Gerencia comandos Discord relacionados a autenticacao e contas
@@ -82,10 +82,7 @@ export class AuthCommands {
     const discordId = msg.author.id;
 
     try {
-      const result = await this.authService.register(
-        { haxballNick, password, discordId },
-        this.db
-      );
+      const result = await this.authService.register({ haxballNick, password, discordId }, this.db);
 
       if (result.success) {
         embed
@@ -101,10 +98,7 @@ export class AuthCommands {
             }
           );
       } else {
-        embed
-          .setTitle('Erro ao Criar Conta')
-          .setDescription(result.message)
-          .setColor('#ff0000');
+        embed.setTitle('Erro ao Criar Conta').setDescription(result.message).setColor('#ff0000');
       }
     } catch (error) {
       embed
@@ -121,7 +115,11 @@ export class AuthCommands {
    * Comando: !linkdiscord <nick> <senha>
    * Vincula Discord a conta existente
    */
-  private async handleLinkDiscord(args: string[], msg: Discord.Message, channel: Discord.TextChannel) {
+  private async handleLinkDiscord(
+    args: string[],
+    msg: Discord.Message,
+    channel: Discord.TextChannel
+  ) {
     const embed = new Discord.EmbedBuilder().setColor('#0099ff').setTimestamp(Date.now());
 
     if (args.length < 2) {
@@ -270,10 +268,12 @@ export class AuthCommands {
           .setDescription(`Nao existe conta com o nick ${haxballNick}.`)
           .setColor('#ff9900');
       } else {
-        embed.setTitle(`Ranking: ${account.haxballNick}`).addFields(
-          { name: 'Ranking Geral', value: account.ranking.toString(), inline: true },
-          { name: 'Pontos', value: account.points.toString(), inline: true }
-        );
+        embed
+          .setTitle(`Ranking: ${account.haxballNick}`)
+          .addFields(
+            { name: 'Ranking Geral', value: account.ranking.toString(), inline: true },
+            { name: 'Pontos', value: account.points.toString(), inline: true }
+          );
 
         // Busca ratings por posicao se existir
         const ratings = this.db.sqlite

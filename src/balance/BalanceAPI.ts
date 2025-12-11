@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import { BalanceService } from './BalanceService';
 import { BalanceAlgorithm } from './BalanceAlgorithm';
+import { BalanceService } from './BalanceService';
 import { Position } from './types';
 
 /**

@@ -276,7 +276,11 @@ async function checkOffside(player, isKick) {
         game.outStatus = 'offside';
         game.ballOutPositionX = ballPosition.x;
         game.ballOutPositionY = ballPosition.y;
-        room.sendAnnouncement(`Impedimento! ${player.name} está em posição de impedimento.`, null, 0xff0000);
+        room.sendAnnouncement(
+          `Impedimento! ${player.name} está em posição de impedimento.`,
+          null,
+          0xff0000
+        );
         await sleep(2000);
         room.setBallPosition({ x: game.ballOutPositionX, y: game.ballOutPositionY });
         room.setPlayerPosition(player.id, playerPosition.x - 100, playerPosition.y);
@@ -302,7 +306,11 @@ async function checkOffside(player, isKick) {
         game.outStatus = 'offside';
         game.ballOutPositionX = ballPosition.x;
         game.ballOutPositionY = ballPosition.y;
-        room.sendAnnouncement(`Impedimento! ${player.name} está em posição de impedimento.`, null, 0xff0000);
+        room.sendAnnouncement(
+          `Impedimento! ${player.name} está em posição de impedimento.`,
+          null,
+          0xff0000
+        );
         await sleep(2000);
         room.setBallPosition({ x: game.ballOutPositionX, y: game.ballOutPositionY });
         room.setPlayerPosition(player.id, playerPosition.x + 100, playerPosition.y);
@@ -360,7 +368,7 @@ module.exports = {
   removePlayerPosition,
 };
 
-//   __  ____ ____ _  _ 
+//   __  ____ ____ _  _
 //  / _\/ ___) ___) )( \
 // /    \___ \___ ) \/ (
 // \_/\_(____(____|____/

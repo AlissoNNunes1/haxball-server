@@ -1,25 +1,24 @@
 import { Database } from 'better-sqlite3';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { eq, desc, and, gte, lte, sql } from 'drizzle-orm';
+import { BalanceService } from '../balance/BalanceService';
+import { matchEvents, stats } from '../database/schema-auth';
 import {
   advancedStats,
-  playerPositions,
   heatmapData,
+  playerPositions,
   playerStatsAggregate,
 } from '../database/schema-stats';
-import { stats, matchEvents } from '../database/schema-auth';
+import { StatsCalculator } from './StatsCalculator';
 import {
-  BasicMatchStats,
   AdvancedMatchStats,
-  PlayerStatsAggregate,
-  Position2D,
+  BasicMatchStats,
   HeatmapData,
   MatchEvent,
+  PlayerStatsAggregate,
+  Position2D,
   StatsFilter,
-  StatsQueryResult,
 } from './types';
-import { StatsCalculator } from './StatsCalculator';
-import { BalanceService } from '../balance/BalanceService';
 
 /**
  * Servico de estatisticas com integracao a banco e outros sistemas
@@ -30,11 +29,7 @@ export class StatsService {
   private calculator: StatsCalculator;
   private balanceService?: BalanceService;
 
-  constructor(
-    database: Database,
-    calculator: StatsCalculator,
-    balanceService?: BalanceService
-  ) {
+  constructor(database: Database, calculator: StatsCalculator, balanceService?: BalanceService) {
     this.db = drizzle(database);
     this.calculator = calculator;
     this.balanceService = balanceService;
@@ -297,7 +292,10 @@ export class StatsService {
   async updatePlayerAggregate(accountId: number): Promise<void> {
     // Busca todas as stats do jogador
     const basicStats = await this.getBasicStats({ accountIds: [accountId], limit: 10000 });
-    const advancedStatsData = await this.getAdvancedStats({ accountIds: [accountId], limit: 10000 });
+    const advancedStatsData = await this.getAdvancedStats({
+      accountIds: [accountId],
+      limit: 10000,
+    });
 
     if (basicStats.length === 0) return;
 
@@ -482,12 +480,7 @@ export class StatsService {
         await this.savePositions(basicStats[0].matchId, accountId, pos);
 
         // Gera e salva heatmap
-        const heatmap = this.calculator.calculateHeatmap(
-          accountId,
-          basicStats[0].matchId,
-          pos,
-          20
-        );
+        const heatmap = this.calculator.calculateHeatmap(accountId, basicStats[0].matchId, pos, 20);
         await this.saveHeatmap(heatmap);
       }
     }

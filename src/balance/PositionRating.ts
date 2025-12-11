@@ -1,5 +1,5 @@
-import { Position, EloRating, PerformanceData, RecentPerformance } from './types';
 import { EloCalculator } from './EloCalculator';
+import { EloRating, PerformanceData, Position, RecentPerformance } from './types';
 
 /**
  * Gerenciador de ratings por posicao
@@ -46,9 +46,8 @@ export class PositionRating {
       { position: Position.ATA, value: rating.ata },
     ];
 
-    return ratings.reduce((best, current) =>
-      current.value > best.value ? current : best
-    ).position;
+    return ratings.reduce((best, current) => (current.value > best.value ? current : best))
+      .position;
   }
 
   /**
@@ -114,10 +113,7 @@ export class PositionRating {
    * @param recentPerformances Performances recentes
    * @returns Confianca entre 0 e 1
    */
-  calculateRatingConfidence(
-    gamesPlayed: number,
-    recentPerformances?: PerformanceData[]
-  ): number {
+  calculateRatingConfidence(gamesPlayed: number, recentPerformances?: PerformanceData[]): number {
     // Confianca base: aumenta com numero de jogos (assintota em 100 jogos)
     const gameConfidence = Math.min(1, gamesPlayed / 100);
 
@@ -133,7 +129,7 @@ export class PositionRating {
     const consistency = Math.max(0, 1 - variance * 2); // Variance esperada ~0.5
 
     // Combina confiancas
-    const confidence = (gameConfidence * 0.7 + consistency * 0.3);
+    const confidence = gameConfidence * 0.7 + consistency * 0.3;
     return Math.round(confidence * 100) / 100;
   }
 
@@ -142,10 +138,7 @@ export class PositionRating {
    * Reduz rating efetivo quando jogador nao esta na sua posicao ideal
    * @returns Fator multiplicador entre 0.8 e 1.0
    */
-  calculateOffPositionPenalty(
-    rating: EloRating,
-    assignedPosition: Position
-  ): number {
+  calculateOffPositionPenalty(rating: EloRating, assignedPosition: Position): number {
     const bestPosition = this.getBestPosition(rating);
     if (assignedPosition === bestPosition) return 1.0;
 
@@ -193,11 +186,7 @@ export class PositionRating {
    * Retorna diferenca de rating considerando especializacao
    * @returns Numero positivo se playerA > playerB
    */
-  comparePlayersForPosition(
-    ratingA: EloRating,
-    ratingB: EloRating,
-    position: Position
-  ): number {
+  comparePlayersForPosition(ratingA: EloRating, ratingB: EloRating, position: Position): number {
     const effectiveA = this.getEffectiveRating(ratingA, position);
     const effectiveB = this.getEffectiveRating(ratingB, position);
 

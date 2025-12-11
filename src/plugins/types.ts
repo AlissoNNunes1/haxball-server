@@ -1,5 +1,5 @@
-import { Server } from '../Server';
 import { EventEmitter } from 'events';
+import { Server } from '../Server';
 
 /**
  * Interface para plugins do sistema
@@ -124,10 +124,7 @@ export interface PluginStorage {
 /**
  * Handler de comando customizado
  */
-export type CommandHandler = (
-  args: string[],
-  context: CommandContext
-) => void | Promise<void>;
+export type CommandHandler = (args: string[], context: CommandContext) => void | Promise<void>;
 
 /**
  * Contexto de comando Discord

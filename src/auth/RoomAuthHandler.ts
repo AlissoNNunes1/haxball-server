@@ -1,5 +1,5 @@
-import { AuthService } from './AuthService';
 import { getAuthDb } from '../database/auth-client';
+import { AuthService } from './AuthService';
 
 /**
  * Gerencia autenticacao e comandos dentro das salas Haxball
@@ -56,13 +56,7 @@ export class RoomAuthHandler {
   private async handleLogin(room: any, player: any, message: string) {
     const args = message.split(' ');
     if (args.length < 2) {
-      room.sendAnnouncement(
-        '[AUTH] Uso: /login <senha>',
-        player.id,
-        0xff9900,
-        'bold',
-        2
-      );
+      room.sendAnnouncement('[AUTH] Uso: /login <senha>', player.id, 0xff9900, 'bold', 2);
       return;
     }
 
@@ -118,24 +112,12 @@ export class RoomAuthHandler {
     const accountId = this.authenticatedPlayers.get(player.id);
 
     if (!accountId) {
-      room.sendAnnouncement(
-        '[AUTH] Voce nao esta autenticado.',
-        player.id,
-        0xff9900,
-        'normal',
-        1
-      );
+      room.sendAnnouncement('[AUTH] Voce nao esta autenticado.', player.id, 0xff9900, 'normal', 1);
       return;
     }
 
     this.authenticatedPlayers.delete(player.id);
-    room.sendAnnouncement(
-      '[AUTH] Logout realizado com sucesso.',
-      player.id,
-      0x00ff00,
-      'normal',
-      1
-    );
+    room.sendAnnouncement('[AUTH] Logout realizado com sucesso.', player.id, 0x00ff00, 'normal', 1);
   }
 
   /**
@@ -183,13 +165,7 @@ export class RoomAuthHandler {
         year: 'numeric',
       }).format(profile.createdAt);
 
-      room.sendAnnouncement(
-        `[PERFIL] ${profile.haxballNick}`,
-        player.id,
-        0x00aaff,
-        'bold',
-        2
-      );
+      room.sendAnnouncement(`[PERFIL] ${profile.haxballNick}`, player.id, 0x00aaff, 'bold', 2);
       room.sendAnnouncement(
         `Pontos: ${profile.points} | Ranking: ${profile.ranking} | Moedas: ${profile.coins}`,
         player.id,
@@ -197,22 +173,10 @@ export class RoomAuthHandler {
         'normal',
         1
       );
-      room.sendAnnouncement(
-        `Membro desde: ${memberSince}`,
-        player.id,
-        0x00aaff,
-        'normal',
-        1
-      );
+      room.sendAnnouncement(`Membro desde: ${memberSince}`, player.id, 0x00aaff, 'normal', 1);
     } catch (error) {
       console.error('Erro ao buscar perfil na sala:', error);
-      room.sendAnnouncement(
-        '[AUTH] Erro ao buscar perfil.',
-        player.id,
-        0xff0000,
-        'normal',
-        1
-      );
+      room.sendAnnouncement('[AUTH] Erro ao buscar perfil.', player.id, 0xff0000, 'normal', 1);
     }
   }
 
@@ -242,13 +206,7 @@ export class RoomAuthHandler {
         .prepare('SELECT * FROM player_ratings WHERE account_id = ? LIMIT 1')
         .get(accountId) as any;
 
-      room.sendAnnouncement(
-        `[STATS] ${account.haxballNick}`,
-        player.id,
-        0x00aaff,
-        'bold',
-        2
-      );
+      room.sendAnnouncement(`[STATS] ${account.haxballNick}`, player.id, 0x00aaff, 'bold', 2);
 
       if (ratings) {
         room.sendAnnouncement(
@@ -259,7 +217,9 @@ export class RoomAuthHandler {
           1
         );
         room.sendAnnouncement(
-          `GK: ${ratings.gk.toFixed(0)} | DEF: ${ratings.def.toFixed(0)} | MID: ${ratings.mid.toFixed(0)} | ATA: ${ratings.ata.toFixed(0)}`,
+          `GK: ${ratings.gk.toFixed(0)} | DEF: ${ratings.def.toFixed(
+            0
+          )} | MID: ${ratings.mid.toFixed(0)} | ATA: ${ratings.ata.toFixed(0)}`,
           player.id,
           0x00aaff,
           'normal',

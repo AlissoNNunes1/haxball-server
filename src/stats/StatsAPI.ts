@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { StatsService } from './StatsService';
-import { StatsCalculator } from './StatsCalculator';
+import { Request, Response, Router } from 'express';
 import { AuthService } from '../auth/AuthService';
+import { StatsCalculator } from './StatsCalculator';
+import { StatsService } from './StatsService';
 import { StatsFilter } from './types';
 
 /**
@@ -14,11 +14,7 @@ export class StatsAPI {
   private calculator: StatsCalculator;
   private authService: AuthService;
 
-  constructor(
-    statsService: StatsService,
-    calculator: StatsCalculator,
-    authService: AuthService
-  ) {
+  constructor(statsService: StatsService, calculator: StatsCalculator, authService: AuthService) {
     this.router = Router();
     this.statsService = statsService;
     this.calculator = calculator;
@@ -45,10 +41,7 @@ export class StatsAPI {
     this.router.get('/player/:accountId/matches', this.getPlayerMatches.bind(this));
 
     // GET /stats/player/:accountId/heatmap/:matchId - Heatmap de partida
-    this.router.get(
-      '/player/:accountId/heatmap/:matchId',
-      this.getPlayerHeatmap.bind(this)
-    );
+    this.router.get('/player/:accountId/heatmap/:matchId', this.getPlayerHeatmap.bind(this));
 
     // GET /stats/match/:matchId - Stats de partida
     this.router.get('/match/:matchId', this.getMatchStats.bind(this));
@@ -250,9 +243,7 @@ export class StatsAPI {
       }
 
       if (req.query.matchIds) {
-        filter.matchIds = (req.query.matchIds as string)
-          .split(',')
-          .map((id) => parseInt(id, 10));
+        filter.matchIds = (req.query.matchIds as string).split(',').map((id) => parseInt(id, 10));
       }
 
       if (req.query.minGoals) {
@@ -308,9 +299,7 @@ export class StatsAPI {
       }
 
       // Calcula ratings
-      const ratings = recentStats.map((stat) =>
-        this.calculator.calculatePerformanceRating(stat)
-      );
+      const ratings = recentStats.map((stat) => this.calculator.calculatePerformanceRating(stat));
 
       // Calcula tendencia
       const trend = this.calculator.calculatePerformanceTrend(ratings);

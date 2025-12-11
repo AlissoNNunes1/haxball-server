@@ -1,18 +1,17 @@
 import { EventEmitter } from 'events';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import {
-  Plugin,
-  PluginContext,
-  PluginManifest,
-  PluginLoadResult,
-  PluginLogger,
-  PluginStorage,
-  CommandHandler,
-  TaskHandle,
-} from './types';
 import { Server } from '../Server';
 import { log } from '../utils/log';
+import {
+  CommandHandler,
+  Plugin,
+  PluginContext,
+  PluginLoadResult,
+  PluginLogger,
+  PluginManifest,
+  PluginStorage,
+} from './types';
 
 /**
  * Gerenciador de plugins

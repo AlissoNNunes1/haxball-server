@@ -51,10 +51,7 @@ export class EloCalculator {
     // Apos provisional: K diminui gradualmente
     const veteranGames = gamesPlayed - this.config.provisionalGames;
     const reduction = Math.min(veteranGames / 100, 0.5); // Max 50% de reducao
-    return Math.max(
-      this.config.minKFactor,
-      this.config.baseKFactor * (1 - reduction)
-    );
+    return Math.max(this.config.minKFactor, this.config.baseKFactor * (1 - reduction));
   }
 
   /**
@@ -64,29 +61,22 @@ export class EloCalculator {
    * @param gamesPlayed Numero de jogos ja disputados
    * @returns Novo rating
    */
-  calculateNewRating(
-    result: MatchResult,
-    currentRating: number,
-    gamesPlayed: number
-  ): number {
+  calculateNewRating(result: MatchResult, currentRating: number, gamesPlayed: number): number {
     // Calcula probabilidade esperada de vitoria
-    const expectedScore = this.calculateWinProbability(
-      result.teamRating,
-      result.opponentRating
-    );
+    const expectedScore = this.calculateWinProbability(result.teamRating, result.opponentRating);
 
     // Score real (1 = vitoria, 0 = derrota)
     const actualScore = result.won ? 1 : 0;
 
     // Ajuste por performance individual
-    const performanceAdjustment = 
+    const performanceAdjustment =
       (result.personalPerformance - 0.5) * this.config.performanceWeight;
 
     // K-factor dinamico
     const kFactor = this.calculateKFactor(gamesPlayed);
 
     // Calcula mudanca de rating
-    const ratingChange = kFactor * ((actualScore - expectedScore) + performanceAdjustment);
+    const ratingChange = kFactor * (actualScore - expectedScore + performanceAdjustment);
 
     // Aplica mudanca e garante limites
     let newRating = currentRating + ratingChange;
@@ -112,7 +102,7 @@ export class EloCalculator {
     // Atualiza rating da posicao especifica
     const positionGames = gamesPlayed[result.position] || 0;
     const positionKey = result.position.toLowerCase() as keyof EloRating;
-    
+
     if (typeof newRating[positionKey] === 'number') {
       newRating[positionKey] = this.calculateNewRating(
         result,
@@ -197,7 +187,12 @@ export class EloCalculator {
 
     const positionKey = position.toLowerCase() as keyof EloRating;
     const sum = playerRatings.reduce((acc, rating) => {
-      return acc + (typeof rating[positionKey] === 'number' ? rating[positionKey] as number : this.config.initialRating);
+      return (
+        acc +
+        (typeof rating[positionKey] === 'number'
+          ? (rating[positionKey] as number)
+          : this.config.initialRating)
+      );
     }, 0);
 
     return Math.round(sum / playerRatings.length);

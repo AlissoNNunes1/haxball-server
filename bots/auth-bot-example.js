@@ -1,6 +1,6 @@
 /**
  * Exemplo de Bot Haxball com Sistema de Autenticacao CIRS
- * 
+ *
  * Funcionalidades:
  * - Login com /login <senha>
  * - Auto-login via Discord vinculado
@@ -46,13 +46,7 @@ module.exports = {
     room.onPlayerJoin = (player) => {
       console.log(`[AUTH-BOT] Jogador entrou: ${player.name} (ID: ${player.id})`);
 
-      room.sendAnnouncement(
-        `Bem-vindo, ${player.name}!`,
-        player.id,
-        0x00ff00,
-        'bold',
-        2
-      );
+      room.sendAnnouncement(`Bem-vindo, ${player.name}!`, player.id, 0x00ff00, 'bold', 2);
 
       room.sendAnnouncement(
         'Use /login <senha> para autenticar e ter acesso a recursos exclusivos.',
@@ -197,13 +191,7 @@ module.exports = {
       const teamName = team === 1 ? 'Red' : 'Blue';
       const score = `${scores.red} - ${scores.blue}`;
 
-      room.sendAnnouncement(
-        `GOL! Time ${teamName}! Placar: ${score}`,
-        null,
-        0xffff00,
-        'bold',
-        2
-      );
+      room.sendAnnouncement(`GOL! Time ${teamName}! Placar: ${score}`, null, 0xffff00, 'bold', 2);
 
       // Recompensa jogadores do time que fez gol
       // DESCOMENTE quando integrado:
@@ -223,13 +211,7 @@ module.exports = {
       const winner = scores.red > scores.blue ? 'Red' : 'Blue';
       const winnerTeam = scores.red > scores.blue ? 1 : 2;
 
-      room.sendAnnouncement(
-        `Fim de jogo! Time ${winner} venceu!`,
-        null,
-        0x00ff00,
-        'bold',
-        2
-      );
+      room.sendAnnouncement(`Fim de jogo! Time ${winner} venceu!`, null, 0x00ff00, 'bold', 2);
 
       // Recompensa time vencedor
       // DESCOMENTE quando integrado:

@@ -113,25 +113,25 @@ export interface PlayerStatsAggregate {
   totalLosses: number;
   totalDraws: number;
   winRate: number;
-  
+
   // Stats basicas
   totalGoals: number;
   totalAssists: number;
   totalSaves: number;
   totalOwnGoals: number;
-  
+
   // Medias
   avgGoalsPerMatch: number;
   avgAssistsPerMatch: number;
   avgSavesPerMatch: number;
-  
+
   // Stats avancadas (opcionais)
   totalPasses?: number;
   passAccuracy?: number;
   totalInterceptions?: number;
   totalDistanceCovered?: number;
   avgSpeed?: number;
-  
+
   // Periodo
   firstMatchDate: Date;
   lastMatchDate: Date;

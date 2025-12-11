@@ -3,7 +3,6 @@ import {
   AuthConfig,
   AuthResult,
   LoginData,
-  PlayerAccount,
   PlayerSession,
   PublicPlayerProfile,
   RegisterData,
@@ -316,7 +315,12 @@ export class AuthService {
   /**
    * Vincula Discord ID a conta existente
    */
-  async linkDiscord(haxballNick: string, password: string, discordId: string, db: any): Promise<AuthResult> {
+  async linkDiscord(
+    haxballNick: string,
+    password: string,
+    discordId: string,
+    db: any
+  ): Promise<AuthResult> {
     // Autentica primeiro
     const loginResult = await this.login({ haxballNick, password }, db);
     if (!loginResult.success || !loginResult.account) {

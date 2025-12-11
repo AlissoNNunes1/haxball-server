@@ -85,6 +85,7 @@ e este projeto adere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html
 ### Technical Details
 
 - **Novos arquivos**:
+
   - `src/plugins/types.ts` (200+ linhas)
   - `src/plugins/PluginManager.ts` (350+ linhas)
   - `src/events/GlobalEventBus.ts` (180+ linhas)
@@ -94,6 +95,7 @@ e este projeto adere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   - `docs/README.md` (500+ linhas)
 
 - **Performance**:
+
   - Plugins carregados dinamicamente (sem reinicio para hot-reload)
   - Storage em arquivo JSON (rapido para pequenos volumes)
   - Event bus com max 100 listeners para escalabilidade

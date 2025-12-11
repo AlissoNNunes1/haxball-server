@@ -39,12 +39,12 @@ Plugin Ativo
 
 ```typescript
 export default class MyPlugin implements Plugin {
-  name = 'my-plugin';           // Nome unico
-  version = '1.0.0';            // Versao semantica
-  description = 'Descricao';    // Opcional
-  author = 'Seu Nome';          // Opcional
-  dependencies = [];            // Plugins necessarios
-  
+  name = 'my-plugin'; // Nome unico
+  version = '1.0.0'; // Versao semantica
+  description = 'Descricao'; // Opcional
+  author = 'Seu Nome'; // Opcional
+  dependencies = []; // Plugins necessarios
+
   async init(context: PluginContext): Promise<void> {
     // Inicializacao do plugin
   }
@@ -481,7 +481,7 @@ async cleanup(): Promise<void> {
   if (this.connection) {
     await this.connection.close();
   }
-  
+
   if (this.timer) {
     clearInterval(this.timer);
   }
@@ -500,7 +500,7 @@ async getData(key: string): Promise<any> {
   if (this.cache.has(key)) {
     return this.cache.get(key);
   }
-  
+
   // Se nao, carrega do storage
   const data = await this.context.storage.get(key);
   this.cache.set(key, data);
@@ -532,13 +532,13 @@ async onCommand(cmd: string, args: string[], ctx: any): Promise<void> {
     await ctx.reply('Uso: !comando <argumento>');
     return;
   }
-  
+
   const value = parseInt(args[0], 10);
   if (isNaN(value)) {
     await ctx.reply('Argumento deve ser numero');
     return;
   }
-  
+
   // Logica...
 }
 ```
@@ -588,12 +588,12 @@ Coleta e exporta metricas para Prometheus:
 async init(context: PluginContext): Promise<void> {
   const express = require('express');
   const app = express();
-  
+
   app.get('/metrics', (req, res) => {
     const metricas = this.coletarMetricas();
     res.send(this.formatarPrometheus(metricas));
   });
-  
+
   app.listen(9090);
 }
 ```
@@ -606,9 +606,9 @@ Auto-kick jogadores com ping alto:
 async onPlayerJoin(player: PlayerInfo, room: RoomInfo): Promise<void> {
   // Aguarda 10s
   await new Promise(resolve => setTimeout(resolve, 10000));
-  
+
   const ping = await this.getPing(player.id, room.pid);
-  
+
   if (ping > 200) {
     await this.kickPlayer(player.id, room.pid, 'Ping muito alto');
     this.context.logger.info(`Kickado ${player.name} (ping ${ping}ms)`);
@@ -625,7 +625,7 @@ import { AuthService } from '../../src/auth/AuthService';
 
 async init(context: PluginContext): Promise<void> {
   const authService = new AuthService(db);
-  
+
   context.events.on('auth:event', async (event) => {
     if (event.type === 'register') {
       const account = await authService.getAccountById(event.accountId!);
@@ -746,7 +746,7 @@ Para duvidas sobre desenvolvimento de plugins:
 3. Leia codigo-fonte em `src/plugins/`
 4. Abra issue no repositorio
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

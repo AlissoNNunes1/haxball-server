@@ -1,5 +1,5 @@
 import { EloCalculator } from '../../src/balance/EloCalculator';
-import { Position, MatchResult, EloRating } from '../../src/balance/types';
+import { EloRating, MatchResult, Position } from '../../src/balance/types';
 
 describe('EloCalculator', () => {
   let calculator: EloCalculator;
@@ -192,7 +192,9 @@ describe('EloCalculator', () => {
       };
 
       const newRating = calculator.updateRatings(currentRating, result, gamesPlayed);
-      const expectedOverall = Math.round((newRating.gk + newRating.def + newRating.mid + newRating.ata) / 4);
+      const expectedOverall = Math.round(
+        (newRating.gk + newRating.def + newRating.mid + newRating.ata) / 4
+      );
 
       expect(newRating.overall).toBe(expectedOverall);
     });

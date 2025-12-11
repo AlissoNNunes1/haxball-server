@@ -1,6 +1,6 @@
-import { Message, EmbedBuilder } from 'discord.js';
-import { BalanceService } from './BalanceService';
+import { EmbedBuilder, Message } from 'discord.js';
 import { BalanceAlgorithm } from './BalanceAlgorithm';
+import { BalanceService } from './BalanceService';
 import { Position } from './types';
 
 /**
@@ -184,10 +184,7 @@ export class BalanceCommands {
       .setTitle(`Top ${limit} - ${position}`)
       .setDescription(
         topPlayers
-          .map(
-            (p, i) =>
-              `${i + 1}. **${p.nick}** - ${p.rating} (${p.gamesPlayed} jogos)`
-          )
+          .map((p, i) => `${i + 1}. **${p.nick}** - ${p.rating} (${p.gamesPlayed} jogos)`)
           .join('\n')
       );
 
@@ -242,7 +239,9 @@ export class BalanceCommands {
     const embed = new EmbedBuilder()
       .setColor('#FFA500')
       .setTitle('Decay Aplicado')
-      .setDescription(`${decayedCount} jogadores inativos por ${days}+ dias tiveram decay aplicado`);
+      .setDescription(
+        `${decayedCount} jogadores inativos por ${days}+ dias tiveram decay aplicado`
+      );
 
     await message.reply({ embeds: [embed] });
   }

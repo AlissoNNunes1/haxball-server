@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import * as schema from './schema-auth';
 import { PlayerAccount } from '../auth/types';
+import * as schema from './schema-auth';
 
 let authDbClient: any = null;
 
@@ -213,10 +213,7 @@ export function initAuthDb(path = './haxball.sqlite') {
   /**
    * Busca tentativas de login recentes
    */
-  wrapper.getRecentLoginAttempts = function (
-    haxballNick: string,
-    minutesAgo: number
-  ): number {
+  wrapper.getRecentLoginAttempts = function (haxballNick: string, minutesAgo: number): number {
     const stmt = sqlite.prepare(`
       SELECT COUNT(*) as count
       FROM login_attempts

@@ -1,5 +1,5 @@
 import { AuthService } from '../../src/auth/AuthService';
-import { RegisterData, LoginData } from '../../src/auth/types';
+import { LoginData, RegisterData } from '../../src/auth/types';
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -129,9 +129,7 @@ describe('AuthService', () => {
       mockDb.createSession.mockResolvedValue(1);
 
       // Mock password verification (simplificado para teste)
-      jest
-        .spyOn(authService as any, 'verifyPassword')
-        .mockReturnValue(true);
+      jest.spyOn(authService as any, 'verifyPassword').mockReturnValue(true);
 
       const result = await authService.login(loginData, mockDb);
 
@@ -173,9 +171,7 @@ describe('AuthService', () => {
       mockDb.getAccountByNick.mockResolvedValue(mockAccount);
       mockDb.getRecentLoginAttempts.mockResolvedValue(0);
 
-      jest
-        .spyOn(authService as any, 'verifyPassword')
-        .mockReturnValue(false);
+      jest.spyOn(authService as any, 'verifyPassword').mockReturnValue(false);
 
       const result = await authService.login(loginData, mockDb);
 

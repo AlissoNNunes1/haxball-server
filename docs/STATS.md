@@ -767,7 +767,7 @@ Endpoints disponiveis:
 - [ ] Backups incrementais de stats
 - [ ] Machine learning para prever vitoria (requer dataset grande)
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

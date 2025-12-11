@@ -5,9 +5,11 @@ Indice completo da documentacao do projeto.
 ## Documentos Principais
 
 ### [ARCHITECTURE.md](./ARCHITECTURE.md)
+
 Arquitetura geral do sistema, diagramas de componentes e fluxos principais.
 
 **Topicos:**
+
 - Visao geral da arquitetura
 - Componentes principais (Server, ControlPanel, Monitors)
 - Fluxo de abertura de sala
@@ -15,21 +17,26 @@ Arquitetura geral do sistema, diagramas de componentes e fluxos principais.
 - Integracao com haxball.js
 
 ### [roadmap.md](./roadmap.md)
+
 Planejamento de fases de desenvolvimento e progresso.
 
 **Fases Completadas:**
+
 - Fase 9: Sistema de Autenticacao
 - Fase 10: Sistema de Balanceamento Elo
 - Fase 11: Sistema de Estatisticas
 - Fase 12: Sistema de Plugins (em progresso)
 
 **Proximas Fases:**
+
 - Fase 13+: Web Dashboard, ML Balance, Achievements
 
 ### [BOT_COMPATIBILITY.md](./BOT_COMPATIBILITY.md)
+
 Guia de compatibilidade de scripts de bot com VM sandbox.
 
 **Topicos:**
+
 - Limitacoes do sandbox VM
 - APIs disponiveis para bots
 - Problemas comuns e solucoes
@@ -38,9 +45,11 @@ Guia de compatibilidade de scripts de bot com VM sandbox.
 ## Documentacao de Sistemas
 
 ### [STATS.md](./STATS.md)
+
 Sistema completo de estatisticas (Fase 11).
 
 **Topicos:**
+
 - Arquitetura de coleta e calculo
 - API REST de consulta
 - Comandos Discord
@@ -50,9 +59,11 @@ Sistema completo de estatisticas (Fase 11).
 - Heatmaps e posicionamento
 
 ### [PLUGINS.md](./PLUGINS.md)
+
 Sistema modular de plugins (Fase 12).
 
 **Topicos:**
+
 - Arquitetura de plugins
 - Plugin Interface e lifecycle hooks
 - PluginContext API (logger, storage, commands, events)
@@ -66,9 +77,11 @@ Sistema modular de plugins (Fase 12).
 Documentacao oficial da API Haxball Headless.
 
 ### [headless.md](./haxball_documentation/headless.md)
+
 API principal do Haxball Headless.
 
 **Topicos:**
+
 - HBInit e configuracao de sala
 - Objetos Room, Player, Disc
 - Eventos (onPlayerJoin, onPlayerLeave, onTeamGoal, etc)
@@ -76,26 +89,32 @@ API principal do Haxball Headless.
 - Fisica e customizacao
 
 ### [haxball_stadium.md](./haxball_documentation/haxball_stadium.md)
+
 Formato de mapas (.hbs) do Haxball.
 
 **Topicos:**
+
 - Estrutura JSON de mapas
 - Vertices, segmentos, discos
 - Propriedades fisicas
 - Traits e customizacao
 
 ### [collisions.md](./haxball_documentation/collisions.md)
+
 Sistema de colisao do Haxball.
 
 **Topicos:**
+
 - Fisica de colisoes
 - Grupos de colisao (collision masks)
 - Interacoes entre objetos
 
 ### [chat_commands.md](./haxball_documentation/chat_commands.md)
+
 Comandos nativos de chat do Haxball.
 
 ### [replays.md](./haxball_documentation/replays.md)
+
 Sistema de gravacao e replay.
 
 ## Guias Rapidos
@@ -122,6 +141,7 @@ Ver [PLUGINS.md](./PLUGINS.md) para detalhes.
 ### Consultar Stats
 
 **Discord:**
+
 ```
 !stats @jogador
 !mystats
@@ -130,6 +150,7 @@ Ver [PLUGINS.md](./PLUGINS.md) para detalhes.
 ```
 
 **API REST:**
+
 ```bash
 curl http://localhost:3000/api/stats/player/123
 curl http://localhost:3000/api/stats/leaderboard?metric=goals
@@ -157,21 +178,21 @@ src/
   main.ts                     # CLI entry point
   Server.ts                   # Haxball server core
   ControlPanel.ts             # Discord bot
-  
+
   commands/
     openServer.ts             # Comando open
     connect.ts                # Comando connect
-  
+
   auth/                       # Fase 9: Autenticacao
     types.ts
     AuthService.ts
     AuthCommands.ts
-  
+
   balance/                    # Fase 10: Balanceamento
     types.ts
     EloBalanceService.ts
     BalanceCommands.ts
-  
+
   stats/                      # Fase 11: Estatisticas
     types.ts
     StatsCollector.ts
@@ -180,23 +201,23 @@ src/
     StatsCacheService.ts
     StatsCommands.ts
     StatsAPI.ts
-  
+
   plugins/                    # Fase 12: Plugins
     types.ts
     PluginManager.ts
-  
+
   events/                     # Fase 12: Event Bus
     GlobalEventBus.ts
-  
+
   database/
     schema.ts
     schema-stats.ts
-  
+
   debugging/
     RoomMonitor.ts
     WebMonitor.ts
     DebuggingServer.ts
-  
+
   utils/
     log.ts
     Logger.ts
@@ -418,7 +439,7 @@ Ver [CONTRIBUTING.md](../CONTRIBUTING.md) para guidelines.
 
 Consulte [LICENSE](../LICENSE).
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

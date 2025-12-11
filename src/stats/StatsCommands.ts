@@ -1,7 +1,7 @@
-import { Message, EmbedBuilder } from 'discord.js';
-import { StatsService } from './StatsService';
-import { StatsCalculator } from './StatsCalculator';
+import { EmbedBuilder, Message } from 'discord.js';
 import { AuthService } from '../auth/AuthService';
+import { StatsCalculator } from './StatsCalculator';
+import { StatsService } from './StatsService';
 
 /**
  * Comandos Discord para estatisticas
@@ -12,11 +12,7 @@ export class StatsCommands {
   private calculator: StatsCalculator;
   private authService: AuthService;
 
-  constructor(
-    statsService: StatsService,
-    calculator: StatsCalculator,
-    authService: AuthService
-  ) {
+  constructor(statsService: StatsService, calculator: StatsCalculator, authService: AuthService) {
     this.statsService = statsService;
     this.calculator = calculator;
     this.authService = authService;
@@ -171,42 +167,58 @@ export class StatsCommands {
       .addFields(
         {
           name: 'Partidas',
-          value: `${agg1.totalMatches} vs ${agg2.totalMatches} (${this.formatDiff(comparison.totalMatches)})`,
+          value: `${agg1.totalMatches} vs ${agg2.totalMatches} (${this.formatDiff(
+            comparison.totalMatches
+          )})`,
           inline: false,
         },
         {
           name: 'Taxa de Vitoria',
-          value: `${(agg1.winRate * 100).toFixed(1)}% vs ${(agg2.winRate * 100).toFixed(1)}% (${this.formatDiff(comparison.winRate * 100, true)}%)`,
+          value: `${(agg1.winRate * 100).toFixed(1)}% vs ${(agg2.winRate * 100).toFixed(
+            1
+          )}% (${this.formatDiff(comparison.winRate * 100, true)}%)`,
           inline: false,
         },
         {
           name: 'Gols Totais',
-          value: `${agg1.totalGoals} vs ${agg2.totalGoals} (${this.formatDiff(comparison.totalGoals)})`,
+          value: `${agg1.totalGoals} vs ${agg2.totalGoals} (${this.formatDiff(
+            comparison.totalGoals
+          )})`,
           inline: true,
         },
         {
           name: 'Assistencias Totais',
-          value: `${agg1.totalAssists} vs ${agg2.totalAssists} (${this.formatDiff(comparison.totalAssists)})`,
+          value: `${agg1.totalAssists} vs ${agg2.totalAssists} (${this.formatDiff(
+            comparison.totalAssists
+          )})`,
           inline: true,
         },
         {
           name: 'Defesas Totais',
-          value: `${agg1.totalSaves} vs ${agg2.totalSaves} (${this.formatDiff(comparison.totalSaves)})`,
+          value: `${agg1.totalSaves} vs ${agg2.totalSaves} (${this.formatDiff(
+            comparison.totalSaves
+          )})`,
           inline: true,
         },
         {
           name: 'Media de Gols',
-          value: `${agg1.avgGoalsPerMatch.toFixed(2)} vs ${agg2.avgGoalsPerMatch.toFixed(2)} (${this.formatDiff(comparison.avgGoalsPerMatch, true)})`,
+          value: `${agg1.avgGoalsPerMatch.toFixed(2)} vs ${agg2.avgGoalsPerMatch.toFixed(
+            2
+          )} (${this.formatDiff(comparison.avgGoalsPerMatch, true)})`,
           inline: true,
         },
         {
           name: 'Media de Assistencias',
-          value: `${agg1.avgAssistsPerMatch.toFixed(2)} vs ${agg2.avgAssistsPerMatch.toFixed(2)} (${this.formatDiff(comparison.avgAssistsPerMatch, true)})`,
+          value: `${agg1.avgAssistsPerMatch.toFixed(2)} vs ${agg2.avgAssistsPerMatch.toFixed(
+            2
+          )} (${this.formatDiff(comparison.avgAssistsPerMatch, true)})`,
           inline: true,
         },
         {
           name: 'Media de Defesas',
-          value: `${agg1.avgSavesPerMatch.toFixed(2)} vs ${agg2.avgSavesPerMatch.toFixed(2)} (${this.formatDiff(comparison.avgSavesPerMatch, true)})`,
+          value: `${agg1.avgSavesPerMatch.toFixed(2)} vs ${agg2.avgSavesPerMatch.toFixed(
+            2
+          )} (${this.formatDiff(comparison.avgSavesPerMatch, true)})`,
           inline: true,
         }
       );
@@ -214,7 +226,9 @@ export class StatsCommands {
     if (agg1.passAccuracy !== undefined && agg2.passAccuracy !== undefined) {
       embed.addFields({
         name: 'Precisao de Passe',
-        value: `${(agg1.passAccuracy * 100).toFixed(1)}% vs ${(agg2.passAccuracy * 100).toFixed(1)}% (${this.formatDiff((comparison.passAccuracy || 0) * 100, true)}%)`,
+        value: `${(agg1.passAccuracy * 100).toFixed(1)}% vs ${(agg2.passAccuracy * 100).toFixed(
+          1
+        )}% (${this.formatDiff((comparison.passAccuracy || 0) * 100, true)}%)`,
         inline: true,
       });
     }
@@ -276,9 +290,7 @@ export class StatsCommands {
         title = 'Mais Partidas';
         break;
       default:
-        await message.reply(
-          'Metrica invalida. Use: goals, assists, saves, winrate ou matches'
-        );
+        await message.reply('Metrica invalida. Use: goals, assists, saves, winrate ou matches');
         return;
     }
 
@@ -305,13 +317,17 @@ export class StatsCommands {
           value = `${player.totalGoals} gols (${player.avgGoalsPerMatch.toFixed(2)}/partida)`;
           break;
         case 'assists':
-          value = `${player.totalAssists} assists (${player.avgAssistsPerMatch.toFixed(2)}/partida)`;
+          value = `${player.totalAssists} assists (${player.avgAssistsPerMatch.toFixed(
+            2
+          )}/partida)`;
           break;
         case 'saves':
           value = `${player.totalSaves} defesas (${player.avgSavesPerMatch.toFixed(2)}/partida)`;
           break;
         case 'winrate':
-          value = `${(player.winRate * 100).toFixed(1)}% (${player.totalWins}/${player.totalMatches})`;
+          value = `${(player.winRate * 100).toFixed(1)}% (${player.totalWins}/${
+            player.totalMatches
+          })`;
           break;
         case 'matches':
           value = `${player.totalMatches} partidas (${player.totalWins}V ${player.totalLosses}D)`;
@@ -367,9 +383,7 @@ export class StatsCommands {
     }
 
     // Monta embed
-    const embed = new EmbedBuilder()
-      .setTitle(`Ultimas partidas: ${playerName}`)
-      .setColor(0x00aaff);
+    const embed = new EmbedBuilder().setTitle(`Ultimas partidas: ${playerName}`).setColor(0x00aaff);
 
     for (const stat of recentStats) {
       const result = stat.won ? 'V' : 'D';
@@ -377,7 +391,9 @@ export class StatsCommands {
 
       embed.addFields({
         name: `Match #${stat.matchId} [${result}] Time ${teamColor}`,
-        value: `Gols: ${stat.goals} | Assists: ${stat.assists} | Defesas: ${stat.saves}\nPasses: ${stat.passesCompleted}/${stat.passes} | Distancia: ${(stat.distanceCovered / 1000).toFixed(2)}km`,
+        value: `Gols: ${stat.goals} | Assists: ${stat.assists} | Defesas: ${stat.saves}\nPasses: ${
+          stat.passesCompleted
+        }/${stat.passes} | Distancia: ${(stat.distanceCovered / 1000).toFixed(2)}km`,
         inline: false,
       });
     }

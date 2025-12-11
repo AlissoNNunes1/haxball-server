@@ -1,9 +1,9 @@
 import {
-  BasicMatchStats,
   AdvancedMatchStats,
-  Position2D,
-  MatchEvent,
+  BasicMatchStats,
   EventType,
+  MatchEvent,
+  Position2D,
   StatsCollectionConfig,
 } from './types';
 
@@ -44,10 +44,7 @@ export class StatsCollector {
   /**
    * Inicializa jogador no sistema de stats
    */
-  initializePlayer(
-    accountId: number,
-    team: 'red' | 'blue' | 'spectator'
-  ): void {
+  initializePlayer(accountId: number, team: 'red' | 'blue' | 'spectator'): void {
     const basicStats: BasicMatchStats = {
       accountId,
       matchId: this.matchId,
@@ -294,11 +291,11 @@ export class StatsCollector {
       if (currentSpeed > stats.topSpeed) {
         stats.topSpeed = currentSpeed;
       }
-      
+
       // Calcula media movel de velocidade
       const samples = stats.touches || 1;
       stats.averageSpeed = (stats.averageSpeed * samples + currentSpeed) / (samples + 1);
-      
+
       this.advancedStats.set(accountId, stats);
     }
   }
@@ -372,9 +369,7 @@ export class StatsCollector {
    * Inicia amostragem automatica de posicoes
    * Deve ser chamada com funcao que retorna posicoes atuais
    */
-  startPositionSampling(
-    getPositions: () => Map<number, { x: number; y: number }>
-  ): void {
+  startPositionSampling(getPositions: () => Map<number, { x: number; y: number }>): void {
     if (!this.config.enablePositionTracking) return;
 
     const intervalMs = 1000 / this.config.positionSamplingRate;

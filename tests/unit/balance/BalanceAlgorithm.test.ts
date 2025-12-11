@@ -1,8 +1,8 @@
 import { BalanceAlgorithm } from '../../src/balance/BalanceAlgorithm';
-import { PositionRating } from '../../src/balance/PositionRating';
-import { PerformanceTracker } from '../../src/balance/PerformanceTracker';
 import { EloCalculator } from '../../src/balance/EloCalculator';
-import { PlayerForBalance, Position, EloRating } from '../../src/balance/types';
+import { PerformanceTracker } from '../../src/balance/PerformanceTracker';
+import { PositionRating } from '../../src/balance/PositionRating';
+import { PlayerForBalance, Position } from '../../src/balance/types';
 
 describe('BalanceAlgorithm', () => {
   let algorithm: BalanceAlgorithm;
@@ -112,7 +112,9 @@ describe('BalanceAlgorithm', () => {
       const team1Ratings = result.team1.players.map((p) => p.rating.overall);
       const team2Ratings = result.team2.players.map((p) => p.rating.overall);
 
-      expect(Math.abs(team1Ratings.reduce((a, b) => a + b, 0) - team2Ratings.reduce((a, b) => a + b, 0))).toBeLessThan(300);
+      expect(
+        Math.abs(team1Ratings.reduce((a, b) => a + b, 0) - team2Ratings.reduce((a, b) => a + b, 0))
+      ).toBeLessThan(300);
     });
   });
 

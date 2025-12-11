@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { AuthService } from '../auth/AuthService';
-import { getAuthDb, initAuthDb } from '../database/auth-client';
+import { initAuthDb } from '../database/auth-client';
 
 /**
  * API REST para sistema de autenticacao e contas CIRS

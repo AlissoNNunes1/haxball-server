@@ -1,12 +1,6 @@
-import {
-  PlayerForBalance,
-  BalancedTeam,
-  BalanceResult,
-  BalanceConfig,
-  Position,
-} from './types';
-import { PositionRating } from './PositionRating';
 import { PerformanceTracker } from './PerformanceTracker';
+import { PositionRating } from './PositionRating';
+import { BalanceConfig, BalanceResult, PlayerForBalance, Position } from './types';
 
 /**
  * Algoritmo de balanceamento de times
@@ -319,10 +313,10 @@ export class BalanceAlgorithm {
   /**
    * Mutacao: troca dois jogadores de time aleatoriamente
    */
-  private mutate(individual: {
+  private mutate(individual: { team1: PlayerForBalance[]; team2: PlayerForBalance[] }): {
     team1: PlayerForBalance[];
     team2: PlayerForBalance[];
-  }): { team1: PlayerForBalance[]; team2: PlayerForBalance[] } {
+  } {
     const team1Index = Math.floor(Math.random() * individual.team1.length);
     const team2Index = Math.floor(Math.random() * individual.team2.length);
 
@@ -415,11 +409,7 @@ export class BalanceAlgorithm {
    * Rebalanceia times trocando jogadores especificos
    * Util para ajustes manuais
    */
-  rebalanceWithSwap(
-    result: BalanceResult,
-    player1Id: number,
-    player2Id: number
-  ): BalanceResult {
+  rebalanceWithSwap(result: BalanceResult, player1Id: number, player2Id: number): BalanceResult {
     const team1 = [...result.team1.players];
     const team2 = [...result.team2.players];
 

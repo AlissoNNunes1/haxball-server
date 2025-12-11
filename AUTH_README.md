@@ -15,6 +15,7 @@ Sistema unificado de contas para jogadores Haxball que permite:
 ### 1. Jogador: Criar Conta
 
 **Via Discord:**
+
 ```
 !register MeuNick minhaSenha123
 ```
@@ -30,6 +31,7 @@ Sistema unificado de contas para jogadores Haxball que permite:
 ### 3. Jogador: Ver Stats
 
 **Na sala:**
+
 ```
 /profile          -> Ver seu perfil
 /profile OutroNick -> Ver perfil de outro jogador
@@ -37,6 +39,7 @@ Sistema unificado de contas para jogadores Haxball que permite:
 ```
 
 **No Discord:**
+
 ```
 !profile          -> Ver seu perfil
 !ranking          -> Ver seu ranking
@@ -57,15 +60,15 @@ Discord Bot           Sala Haxball        API REST
 
 ## Arquivos Principais
 
-| Arquivo | Proposito |
-|---------|-----------|
-| `src/auth/AuthService.ts` | Logica de autenticacao |
-| `src/auth/AuthCommands.ts` | Comandos Discord |
-| `src/auth/RoomAuthHandler.ts` | Autenticacao na sala |
-| `src/auth/AuthAPI.ts` | API REST |
-| `src/database/auth-client.ts` | Acesso ao banco |
-| `docs/ACCOUNTS.md` | Documentacao completa |
-| `docs/AUTH_INTEGRATION.md` | Guia de integracao |
+| Arquivo                       | Proposito              |
+| ----------------------------- | ---------------------- |
+| `src/auth/AuthService.ts`     | Logica de autenticacao |
+| `src/auth/AuthCommands.ts`    | Comandos Discord       |
+| `src/auth/RoomAuthHandler.ts` | Autenticacao na sala   |
+| `src/auth/AuthAPI.ts`         | API REST               |
+| `src/database/auth-client.ts` | Acesso ao banco        |
+| `docs/ACCOUNTS.md`            | Documentacao completa  |
+| `docs/AUTH_INTEGRATION.md`    | Guia de integracao     |
 
 ## Integracao Rapida
 
@@ -131,7 +134,7 @@ Para duvidas ou problemas:
 
 **Versao:** 5.1.0 (Fase 9 Completa)
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

@@ -1,9 +1,9 @@
 import {
-  BasicMatchStats,
   AdvancedMatchStats,
+  BasicMatchStats,
+  HeatmapData,
   PlayerStatsAggregate,
   Position2D,
-  HeatmapData,
 } from './types';
 
 /**
@@ -103,9 +103,8 @@ export class StatsCalculator {
 
       // Calcula media de velocidade
       const speeds = advancedStats.map((s) => s.averageSpeed).filter((s) => s > 0);
-      const avgSpeed = speeds.length > 0
-        ? speeds.reduce((sum, s) => sum + s, 0) / speeds.length
-        : 0;
+      const avgSpeed =
+        speeds.length > 0 ? speeds.reduce((sum, s) => sum + s, 0) / speeds.length : 0;
 
       aggregate.totalPasses = totalPasses;
       aggregate.passAccuracy = this.calculatePassAccuracy(totalPassesCompleted, totalPasses);
@@ -267,7 +266,7 @@ export class StatsCalculator {
   calculatePossessionTime(touches: number, timeInGame: number): number {
     // Estimativa: cada toque = ~1 segundo de posse
     const estimatedPossession = touches * 1.0;
-    
+
     // Limita ao tempo em jogo
     return Math.min(estimatedPossession, timeInGame);
   }

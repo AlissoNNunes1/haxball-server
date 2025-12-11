@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, RoomInfo, PlayerInfo } from '../../src/plugins/types';
+import { PlayerInfo, Plugin, PluginContext, RoomInfo } from '../../src/plugins/types';
 
 /**
  * Plugin de exemplo - Stats Simples

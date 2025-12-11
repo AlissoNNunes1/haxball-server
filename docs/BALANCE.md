@@ -47,6 +47,7 @@ Nova Rating = Rating Atual + K × (Score Real - Score Esperado)
 ```
 
 Onde:
+
 - **K**: Fator dinamico baseado em experiencia
 - **Score Real**: 1 (vitoria) ou 0 (derrota)
 - **Score Esperado**: Probabilidade de vitoria
@@ -58,6 +59,7 @@ P(A vence B) = 1 / (1 + 10^((RatingB - RatingA) / 400))
 ```
 
 **Exemplos**:
+
 - Ratings iguais (1000 vs 1000): 50% de chance
 - Diferenca de 200 pontos (1200 vs 1000): 76% de chance
 - Diferenca de 400 pontos (1400 vs 1000): 91% de chance
@@ -73,6 +75,7 @@ K = 32 × (1 - min(jogos / 100, 0.5))
 ```
 
 **Comportamento**:
+
 - Jogadores novos: K = 64 (aprendizado rapido)
 - Apos 20 jogos: K = 32 (estabilidade)
 - Veteranos (100+ jogos): K = 16 (rating confiavel)
@@ -85,12 +88,12 @@ Ajuste = (Performance - 0.5) × 0.3
 
 **Pesos por Posicao**:
 
-| Metrica | GK | DEF | MID | ATA |
-|---------|-----|-----|-----|-----|
-| Gols | 10% | 15% | 25% | 50% |
+| Metrica      | GK  | DEF | MID | ATA |
+| ------------ | --- | --- | --- | --- |
+| Gols         | 10% | 15% | 25% | 50% |
 | Assistencias | 10% | 20% | 35% | 30% |
-| Clean Sheet | 60% | 45% | 15% | 5% |
-| Posse | 20% | 20% | 25% | 15% |
+| Clean Sheet  | 60% | 45% | 15% | 5%  |
+| Posse        | 20% | 20% | 25% | 15% |
 
 ### Decay Temporal
 
@@ -101,6 +104,7 @@ Rating Decayed = Rating × 0.995^(dias - 30)
 ```
 
 **Configuracao**:
+
 - Periodo de graca: 30 dias
 - Taxa de decay: 0.5% por dia apos periodo
 - Rating minimo: 100 (protegido)
@@ -110,6 +114,7 @@ Rating Decayed = Rating × 0.995^(dias - 30)
 ## Ratings por Posicao
 
 Cada jogador possui 5 ratings:
+
 - **Overall**: Media das 4 posicoes
 - **GK** (Goleiro): Especializacao em defesa
 - **DEF** (Defensor): Especializacao em marcacao
@@ -123,15 +128,19 @@ Rating Efetivo = Rating Base × Fator Especializacao × Fator Forma × Fator Off
 ```
 
 **Fator de Especializacao**:
+
 ```
 Fator = 1 + min(0.5, (Rating Posicao / Media Outras - 1) × 0.5)
 ```
+
 Range: 1.0 (versatil) a 1.5 (especialista)
 
 **Fator Off-Position**:
+
 ```
 Penalty = max(0.8, Rating Atribuido / Rating Melhor Posicao)
 ```
+
 Penalty maximo: 20% se fora da melhor posicao
 
 ---
@@ -152,6 +161,7 @@ Penalty maximo: 20% se fora da melhor posicao
 ```
 
 **Vantagens**:
+
 - Rapido (milissegundos)
 - Resultados consistentes
 - Simples de entender
@@ -171,6 +181,7 @@ Fitness = Diferenca Rating + Penalty Posicoes × 50
 ```
 
 **Processo**:
+
 1. Gera populacao aleatoria
 2. Avalia fitness de cada configuracao
 3. Seleciona melhores (50%)
@@ -178,6 +189,7 @@ Fitness = Diferenca Rating + Penalty Posicoes × 50
 5. Repete ate convergencia
 
 **Vantagens**:
+
 - Otimizacao global
 - Considera distribuicao de posicoes
 - Fairness score alto (90+)
@@ -190,6 +202,7 @@ Fitness = Diferenca Rating + Penalty Posicoes × 50
 
 **Janela**: Ultimos 10 jogos  
 **Metricas**:
+
 - **Average Score**: Score medio normalizado (0-1)
 - **Trend**: Tendencia (improving / stable / declining)
 - **Consistency**: Inverso do desvio padrao
@@ -202,6 +215,7 @@ Fator Forma = 1.0 + ajustes
 ```
 
 **Ajustes**:
+
 - Score alto (>0.7): +5%
 - Score baixo (<0.3): -5%
 - Tendencia positiva: +3%
@@ -224,6 +238,7 @@ Bonus de momentum: +5% por jogo (max 30%)
 ### Tabelas Utilizadas
 
 #### player_ratings
+
 ```sql
 CREATE TABLE player_ratings (
   id INTEGER PRIMARY KEY,
@@ -238,6 +253,7 @@ CREATE TABLE player_ratings (
 ```
 
 #### stats
+
 ```sql
 CREATE TABLE stats (
   id INTEGER PRIMARY KEY,
@@ -257,11 +273,7 @@ CREATE TABLE stats (
 const rating = await balanceService.getPlayerRating(accountId);
 
 // Atualizar apos partida
-const eloChange = await balanceService.recordMatchResult(
-  accountId,
-  matchResult,
-  performance
-);
+const eloChange = await balanceService.recordMatchResult(accountId, matchResult, performance);
 
 // Aplicar decay
 const decayed = await balanceService.applyDecayToInactivePlayers(30);
@@ -275,6 +287,7 @@ const top = await balanceService.getTopPlayersByPosition(Position.MID, 10);
 ## Comandos Discord
 
 ### balance
+
 Balanceia jogadores em dois times.
 
 ```
@@ -282,11 +295,13 @@ Balanceia jogadores em dois times.
 ```
 
 **Exemplo**:
+
 ```
 !balance Player1 Player2 Player3 Player4 genetic
 ```
 
 **Resposta**:
+
 ```
 Time 1 (Rating: 1150)
 Player1 - GK (1200)
@@ -301,6 +316,7 @@ Justica: 95/100
 ```
 
 ### rating
+
 Mostra rating do jogador.
 
 ```
@@ -308,11 +324,13 @@ Mostra rating do jogador.
 ```
 
 **Exemplo**:
+
 ```
 !rating Player1 mid
 ```
 
 ### topelo
+
 Ranking dos melhores jogadores.
 
 ```
@@ -320,11 +338,13 @@ Ranking dos melhores jogadores.
 ```
 
 **Exemplo**:
+
 ```
 !topelo ata 10
 ```
 
 ### stats
+
 Estatisticas globais do sistema.
 
 ```
@@ -332,6 +352,7 @@ Estatisticas globais do sistema.
 ```
 
 ### decay
+
 Aplica decay em inativos (admin only).
 
 ```
@@ -345,9 +366,11 @@ Aplica decay em inativos (admin only).
 ### Endpoints
 
 #### GET /api/balance/health
+
 Health check da API.
 
 **Response**:
+
 ```json
 {
   "status": "ok",
@@ -357,9 +380,11 @@ Health check da API.
 ```
 
 #### GET /api/balance/rating/:accountId
+
 Retorna rating completo do jogador.
 
 **Response**:
+
 ```json
 {
   "accountId": 1,
@@ -375,9 +400,11 @@ Retorna rating completo do jogador.
 ```
 
 #### GET /api/balance/top/:position?limit=10
+
 Top jogadores por posicao.
 
 **Response**:
+
 ```json
 {
   "position": "MID",
@@ -394,9 +421,11 @@ Top jogadores por posicao.
 ```
 
 #### POST /api/balance/teams
+
 Balanceia times.
 
 **Request**:
+
 ```json
 {
   "accountIds": [1, 2, 3, 4],
@@ -405,6 +434,7 @@ Balanceia times.
 ```
 
 **Response**:
+
 ```json
 {
   "team1": {
@@ -422,9 +452,11 @@ Balanceia times.
 ```
 
 #### GET /api/balance/stats
+
 Estatisticas globais.
 
 **Response**:
+
 ```json
 {
   "totalPlayers": 250,
@@ -486,11 +518,7 @@ const performance: PerformanceData = {
 };
 
 // Atualiza rating
-const eloChange = await balanceService.recordMatchResult(
-  accountId,
-  matchResult,
-  performance
-);
+const eloChange = await balanceService.recordMatchResult(accountId, matchResult, performance);
 
 console.log(`Rating ${eloChange.position}: ${eloChange.oldRating} -> ${eloChange.newRating}`);
 ```
@@ -608,20 +636,24 @@ Total: 33 testes unitarios
 ### Performance
 
 **Balanceamento Greedy** (4 jogadores):
+
 - Tempo medio: 2-5ms
 - Memoria: <1MB
 
 **Balanceamento Genetico** (8 jogadores):
+
 - Tempo medio: 50-100ms
 - Memoria: 2-5MB
 
 ### Qualidade
 
 **Fairness Score Medio**:
+
 - Greedy: 85-92/100
 - Genetico: 92-98/100
 
 **Diferenca de Rating**:
+
 - Greedy: 20-80 pontos
 - Genetico: 5-30 pontos
 
@@ -630,18 +662,21 @@ Total: 33 testes unitarios
 ## Roadmap
 
 ### Fase 10.1 - Melhorias
+
 - [ ] Suporte a times desbalanceados (3v4, 2v3)
 - [ ] Multiplos sistemas de rating (competitivo/casual)
 - [ ] Predicao de resultado de partida
 - [ ] Graficos de evolucao de rating
 
 ### Fase 10.2 - Otimizacoes
+
 - [ ] Cache de ratings frequentes
 - [ ] Balanceamento pre-calculado
 - [ ] Algoritmo heurístico hibrido
 - [ ] Paralelizacao do algoritmo genetico
 
 ### Fase 10.3 - Analytics
+
 - [ ] Dashboard de estatisticas
 - [ ] Analise de meta (posicoes mais fortes)
 - [ ] Deteccao de smurfs
@@ -652,18 +687,22 @@ Total: 33 testes unitarios
 ## Troubleshooting
 
 ### Rating nao atualiza
+
 **Causa**: Falta de link entre match_id e stats  
 **Solucao**: Garantir que stats.match_id existe antes de recordMatchResult
 
 ### Balanceamento injusto
+
 **Causa**: Dados de performance insuficientes  
 **Solucao**: Aumentar RECENT_GAMES_WINDOW ou desabilitar considerRecentForm
 
 ### Decay muito agressivo
+
 **Causa**: decayRate muito baixo  
 **Solucao**: Ajustar decayRate para 0.998 ou aumentar decayDays
 
 ### Algoritmo genetico lento
+
 **Causa**: POPULATION_SIZE ou GENERATIONS altos  
 **Solucao**: Reduzir para 50/30 ou usar estrategia greedy
 

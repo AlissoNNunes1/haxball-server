@@ -1,4 +1,4 @@
-import { StatsCacheEntry, PlayerStatsAggregate, HeatmapData } from './types';
+import { HeatmapData, PlayerStatsAggregate, StatsCacheEntry } from './types';
 
 /**
  * Sistema de cache em memoria para estatisticas
@@ -76,12 +76,7 @@ export class StatsCacheService {
   /**
    * Armazena heatmap no cache
    */
-  setHeatmap(
-    matchId: number,
-    accountId: number,
-    heatmap: HeatmapData,
-    ttl?: number
-  ): void {
+  setHeatmap(matchId: number, accountId: number, heatmap: HeatmapData, ttl?: number): void {
     const key = this.makeHeatmapKey(matchId, accountId);
     const expiresAt = Date.now() + (ttl || this.defaultTTL);
 

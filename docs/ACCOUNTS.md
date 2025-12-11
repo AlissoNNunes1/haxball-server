@@ -508,7 +508,7 @@ Para migrar usuarios existentes da tabela `users` para `player_accounts`:
 ```sql
 -- Script de migracao (executar manualmente se necessario)
 INSERT INTO player_accounts (discord_id, haxball_nick, password_hash, salt, points, ranking, coins)
-SELECT 
+SELECT
   discord_id,
   name as haxball_nick,
   'PENDENTE' as password_hash,  -- Usuario precisa resetar senha
@@ -592,7 +592,7 @@ npm run test:coverage
 
 **Versao:** 5.1.0 (Fase 9 - Sistema de Contas)
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+// ** \_\_** \_**\_ \_ _
+// / _\/ \_**) **\_) )( \
+// \_** \_** ) \/ (
+// \_/\_(\_\_**(\_**\_|\_\_**/

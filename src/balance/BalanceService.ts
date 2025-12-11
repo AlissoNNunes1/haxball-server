@@ -1,24 +1,18 @@
 import { Database } from 'better-sqlite3';
+import { desc, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import {
-  playerAccounts,
-  playerRatings,
-  matches,
-  stats,
-  matchEvents,
-} from '../database/schema-auth';
-import { eq, desc, sql } from 'drizzle-orm';
-import {
-  PlayerForBalance,
-  PerformanceData,
-  EloRating,
-  Position,
-  MatchResult,
-  EloChange,
-} from './types';
+import { matches, playerAccounts, playerRatings, stats } from '../database/schema-auth';
 import { EloCalculator } from './EloCalculator';
-import { PositionRating } from './PositionRating';
 import { PerformanceTracker } from './PerformanceTracker';
+import { PositionRating } from './PositionRating';
+import {
+  EloChange,
+  EloRating,
+  MatchResult,
+  PerformanceData,
+  PlayerForBalance,
+  Position,
+} from './types';
 
 /**
  * Servico de integracao entre sistema de balance e banco de dados
@@ -108,10 +102,7 @@ export class BalanceService {
    * @param accountId ID da conta
    * @param limit Numero de partidas a buscar (padrao 10)
    */
-  async getRecentPerformances(
-    accountId: number,
-    limit: number = 10
-  ): Promise<PerformanceData[]> {
+  async getRecentPerformances(accountId: number, limit: number = 10): Promise<PerformanceData[]> {
     const result = await this.db
       .select({
         matchId: stats.matchId,
@@ -176,10 +167,7 @@ export class BalanceService {
 
     // Determina melhor posicao e calcula performance recente
     const bestPosition = this.positionRating.getBestPosition(rating);
-    const recentPerformance = this.performanceTracker.analyzeRecentForm(
-      performances,
-      bestPosition
-    );
+    const recentPerformance = this.performanceTracker.analyzeRecentForm(performances, bestPosition);
 
     return {
       id: accountId,
@@ -219,11 +207,7 @@ export class BalanceService {
     const gamesPlayed = await this.getGamesPlayedByPosition(accountId);
 
     // Calcula novo rating
-    const newRating = this.eloCalculator.updateRatings(
-      currentRating,
-      matchResult,
-      gamesPlayed
-    );
+    const newRating = this.eloCalculator.updateRatings(currentRating, matchResult, gamesPlayed);
 
     // Salva novo rating
     await this.updatePlayerRating(accountId, newRating);
@@ -309,7 +293,10 @@ export class BalanceService {
   /**
    * Busca top jogadores por rating em uma posicao
    */
-  async getTopPlayersByPosition(position: Position, limit: number = 10): Promise<
+  async getTopPlayersByPosition(
+    position: Position,
+    limit: number = 10
+  ): Promise<
     Array<{
       accountId: number;
       nick: string;
