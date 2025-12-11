@@ -11,6 +11,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Server = void 0;
 const haxball_js_1 = __importDefault(require("haxball.js"));
+const module_1 = require("module");
+const path_1 = __importDefault(require("path"));
 const log_1 = require("./utils/log");
 const Logger_1 = require("./utils/Logger");
 /**
@@ -87,7 +89,7 @@ class Server {
      * const result = await server.open(botScript, 'thr1.xxx.xxx', 'Minha Sala');
      * console.log(`Sala aberta: ${result.link}`);
      */
-    async open(script, tokens, name, settings) {
+    async open(script, tokens, name, settings, scriptPath) {
         try {
             const HBInit = await this.getHBInit();
             // Converter tokens para array se necessario
@@ -120,7 +122,7 @@ class Server {
             // Gerar PID ficticio para compatibilidade
             const pid = this.nextPid++;
             // Executa script do bot
-            this.executeBotScript(room, script, settings, this.db);
+            this.executeBotScript(room, script, settings, this.db, scriptPath);
             // Aplicar event handlers padrao
             this.setupDefaultEventHandlers(room, pid, name);
             // Armazenar instancia
@@ -305,10 +307,11 @@ class Server {
      * Executa script do bot no contexto da sala
      * @private
      * @param {any} room - Objeto de sala
-     * @param {string} script - Codigo JavaScript do bot
+     * @param {string} script - Codigo JavaScript do bot (caminho ou conteudo)
      * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
+     * @param {string} [scriptPath] - Caminho do script para require
      */
-    executeBotScript(room, script, settings, db) {
+    executeBotScript(room, script, settings, db, scriptPath) {
         try {
             // Contexto disponivel ao script
             const safeDb = db
@@ -321,49 +324,57 @@ class Server {
                     logEvent: db.logEvent?.bind(db),
                 }
                 : undefined;
-            const context = {
-                room,
-                HBInit: (_config) => {
-                    // Compatibilidade: se o script chamar HBInit, retornamos a mesma sala
-                    // Desta forma, scripts antigos que fazem var room = HBInit({...}) nao quebram
-                    // e continuam a operar sobre a sala criada pelo Server.
-                    return room;
-                },
-                customSettings: settings || {},
-                db: safeDb,
-                console: console,
-                // timer functions: allow scripts to use setTimeout/setInterval etc
-                setTimeout: globalThis.setTimeout.bind(globalThis),
-                clearTimeout: globalThis.clearTimeout.bind(globalThis),
-                setInterval: globalThis.setInterval.bind(globalThis),
-                clearInterval: globalThis.clearInterval.bind(globalThis),
-                setImmediate: globalThis.setImmediate
-                    ? globalThis.setImmediate.bind(globalThis)
-                    : undefined,
-                clearImmediate: globalThis.clearImmediate
-                    ? globalThis.clearImmediate.bind(globalThis)
-                    : undefined,
-                // additional helpful globals
-                Date: Date,
-                Promise: Promise,
-                // allow access to the Node.js global if required
-                global: globalThis,
-                // browser-like aliases
-                window: globalThis,
-                self: globalThis,
-            };
-            // Usar vm para executar com isolamento
-            const vm = require('vm');
-            vm.runInNewContext(script, context, {
-                filename: 'bot-script',
-                timeout: 5000,
-            });
-            (0, log_1.log)('SERVER', 'Script bot carregado e executado com sucesso');
+            // Se temos um caminho de script, tentar usar require diretamente
+            if (scriptPath) {
+                try {
+                    // Criar um require funcao para o diretorio do script
+                    const scriptDir = path_1.default.dirname(scriptPath);
+                    const requireFn = (0, module_1.createRequire)(path_1.default.join(scriptDir, '__placeholder__.js'));
+                    // Limpar cache se existir
+                    if (require.cache[scriptPath]) {
+                        delete require.cache[scriptPath];
+                    }
+                    // Injetar contexto global antes de carregar
+                    globalThis.room = room;
+                    globalThis.customSettings = settings || {};
+                    globalThis.db = safeDb;
+                    globalThis.HBInit = (_config) => room;
+                    // Executar o script com require nativo
+                    requireFn(scriptPath);
+                    (0, log_1.log)('SERVER', `Bot script carregado com sucesso: ${path_1.default.basename(scriptPath)}`);
+                }
+                catch (requireError) {
+                    (0, log_1.log)('SERVER', `Erro ao carregar via require, usando eval: ${requireError instanceof Error ? requireError.message : String(requireError)}`);
+                    // Injetar globais para eval
+                    globalThis.room = room;
+                    globalThis.customSettings = settings || {};
+                    globalThis.db = safeDb;
+                    globalThis.HBInit = (_config) => room;
+                    eval(script);
+                    (0, log_1.log)('SERVER', 'Bot script carregado com eval como fallback');
+                }
+            }
+            else {
+                // Fallback para eval se nao temos caminho
+                globalThis.room = room;
+                globalThis.customSettings = settings || {};
+                globalThis.db = safeDb;
+                globalThis.HBInit = (_config) => room;
+                eval(script);
+                (0, log_1.log)('SERVER', 'Bot script carregado e executado com sucesso');
+            }
         }
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
-            (0, log_1.log)('SERVER', `AVISO: Erro ao executar script bot: ${errorMsg.substring(0, 100)}`);
+            (0, log_1.log)('SERVER', `AVISO: Erro ao executar script bot: ${errorMsg}`);
             // Nao lancar erro - permitir que sala continue funcionando
+        }
+        finally {
+            // Limpar globais injetados
+            delete globalThis.room;
+            delete globalThis.customSettings;
+            delete globalThis.db;
+            delete globalThis.HBInit;
         }
     }
     /**

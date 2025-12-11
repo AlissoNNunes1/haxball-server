@@ -41,11 +41,11 @@ exports.ControlPanel = void 0;
 // Full rewrite: create a single clean ControlPanel implementation
 const Discord = __importStar(require("discord.js"));
 const node_os_utils_1 = __importDefault(require("node-os-utils"));
-const process_1 = __importDefault(require("process"));
 const path_1 = __importDefault(require("path"));
+const process_1 = __importDefault(require("process"));
 const url_1 = require("url");
-const RoomMonitor_1 = require("./debugging/RoomMonitor");
 const Bot_1 = require("./Bot");
+const RoomMonitor_1 = require("./debugging/RoomMonitor");
 const loadConfig_1 = require("./utils/loadConfig");
 const log_1 = require("./utils/log");
 class ControlPanel {
@@ -86,7 +86,10 @@ class ControlPanel {
             this.loadCustomSettings(config.customSettings);
         this.loadBots(config.bots);
         if (config.rooms && Array.isArray(config.rooms)) {
-            this.esmRoomsCache = this.esmRoomsCache.concat(config.rooms.map((r) => ({ name: r.name, module: { path: r.path, displayName: r.displayName } })));
+            this.esmRoomsCache = this.esmRoomsCache.concat(config.rooms.map((r) => ({
+                name: r.name,
+                module: { path: r.path, displayName: r.displayName },
+            })));
         }
         this.client.on('ready', () => {
             (0, log_1.log)('DISCORD', `Logged in as ${this.client.user?.tag}!`);
@@ -193,7 +196,11 @@ class ControlPanel {
     }
     async logError(e, channel) {
         const errorMessage = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
-        const embed = new Discord.EmbedBuilder().setColor('#0099ff').setTitle('Log Error').setTimestamp(Date.now()).setDescription(errorMessage);
+        const embed = new Discord.EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle('Log Error')
+            .setTimestamp(Date.now())
+            .setDescription(errorMessage);
         await channel.send({ embeds: [embed] });
     }
     async getRoomNameList() {
@@ -213,7 +220,10 @@ class ControlPanel {
         if (!msg.content.startsWith(this.prefix))
             return;
         const args = msg.content.slice(this.prefix.length).trim().split(' ').filter(Boolean);
-        const text = msg.content.slice(this.prefix.length).trim().replace(args[0] + ' ', '');
+        const text = msg.content
+            .slice(this.prefix.length)
+            .trim()
+            .replace(args[0] + ' ', '');
         const command = args.shift()?.toLowerCase();
         const embed = new Discord.EmbedBuilder().setColor('#0099ff');
         if (!this.mastersDiscordId.includes(msg.author.id))
@@ -227,7 +237,9 @@ class ControlPanel {
             return;
         }
         if (command === 'tokenlink') {
-            embed.setTitle('Headless Token').setDescription(`[Click here.](https://www.haxball.com/headlesstoken)`);
+            embed
+                .setTitle('Headless Token')
+                .setDescription(`[Click here.](https://www.haxball.com/headlesstoken)`);
             await msg.channel.send({ embeds: [embed] });
             return;
         }
@@ -253,7 +265,11 @@ class ControlPanel {
                 await msg.channel.send({ embeds: [embed] });
                 return;
             }
-            let token = text.replace(args[0] || '', '').trim().replace(/"/g, '').replace('Token obtained: ', '');
+            let token = text
+                .replace(args[0] || '', '')
+                .trim()
+                .replace(/"/g, '')
+                .replace('Token obtained: ', '');
             if (!token) {
                 embed.setDescription(`You have to define a [headless token](https://www.haxball.com/headlesstoken) as second argument: ${this.prefix}open <bot> <token>`);
                 await msg.channel.send({ embeds: [embed] });
@@ -284,7 +300,11 @@ class ControlPanel {
                         if (room)
                             this.monitor.trackRoom(res.pid, room.room, room.botName);
                     }
-                    message.edit({ embeds: [embed.setDescription(`Room running! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`)] });
+                    message.edit({
+                        embeds: [
+                            embed.setDescription(`Room running! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`),
+                        ],
+                    });
                 }
                 catch (err) {
                     message.edit({ embeds: [embed.setDescription(`Unable to open the room!\n ${err}`)] });
@@ -317,7 +337,11 @@ class ControlPanel {
                         if (room)
                             this.monitor.trackRoom(res.pid, room.room, room.botName);
                     }
-                    message.edit({ embeds: [embed.setDescription(`Room running (ESM)! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`)] });
+                    message.edit({
+                        embeds: [
+                            embed.setDescription(`Room running (ESM)! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`),
+                        ],
+                    });
                 }
                 catch (err) {
                     message.edit({ embeds: [embed.setDescription(`Unable to open the room!\n ${err}`)] });
@@ -327,18 +351,36 @@ class ControlPanel {
         if (command === 'info') {
             const roomList = await this.getRoomNameList();
             const esmRooms = await this.loadEsmRooms();
-            embed.setTitle('Information').addFields({ name: 'Open rooms', value: roomList }, { name: 'Bot list', value: this.bots.map((b) => b.display || b.name).join('\n') }, { name: 'ESM rooms', value: esmRooms.map((r) => r.name).join('\n') || 'None' }, { name: 'Custom settings list', value: this.customSettings ? Object.keys(this.customSettings).join('\n') : 'No custom settings have been specified.' });
+            embed
+                .setTitle('Information')
+                .addFields({ name: 'Open rooms', value: roomList }, { name: 'Bot list', value: this.bots.map((b) => b.display || b.name).join('\n') }, { name: 'ESM rooms', value: esmRooms.map((r) => r.name).join('\n') || 'None' }, {
+                name: 'Custom settings list',
+                value: this.customSettings
+                    ? Object.keys(this.customSettings).join('\n')
+                    : 'No custom settings have been specified.',
+            });
             await msg.channel.send({ embeds: [embed] });
             return;
         }
         if (command === 'meminfo') {
-            const embedLoading = new Discord.EmbedBuilder().setColor('#0099ff').setTitle('Information').setDescription('Loading...');
+            const embedLoading = new Discord.EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle('Information')
+                .setDescription('Loading...');
             const message = await msg.channel.send({ embeds: [embedLoading] });
             const memInfo = await this.mem.info();
             const cpuUsage = await this.cpu.usage();
             embed
                 .setTitle('Information')
-                .addFields({ name: 'CPUs', value: String(this.cpu.count()), inline: true }, { name: 'CPU usage', value: cpuUsage + '%', inline: true }, { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true }, { name: 'Memory', value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(2)} GB (${memInfo.freeMemPercentage}% livre)`, inline: true }, { name: 'OS', value: String(await node_os_utils_1.default.os.oos()), inline: true }, { name: 'Machine Uptime', value: new Date(node_os_utils_1.default.os.uptime() * 1000).toISOString().substr(11, 8), inline: true });
+                .addFields({ name: 'CPUs', value: String(this.cpu.count()), inline: true }, { name: 'CPU usage', value: cpuUsage + '%', inline: true }, { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true }, {
+                name: 'Memory',
+                value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(2)} GB (${memInfo.freeMemPercentage}% livre)`,
+                inline: true,
+            }, { name: 'OS', value: String(await node_os_utils_1.default.os.oos()), inline: true }, {
+                name: 'Machine Uptime',
+                value: new Date(node_os_utils_1.default.os.uptime() * 1000).toISOString().substr(11, 8),
+                inline: true,
+            });
             const serverMem = process_1.default.memoryUsage();
             const serverCPUUsage = `Server Memory: ${(serverMem.heapUsed / 1024 / 1024).toFixed(2)} MB\n`;
             const roomMessage = this.server.browsers.length > 0 ? `\nOpen rooms: ${this.server.browsers.length}` : '';

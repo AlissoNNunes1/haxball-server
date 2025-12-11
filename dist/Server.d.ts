@@ -83,7 +83,7 @@ export declare class Server {
      * const result = await server.open(botScript, 'thr1.xxx.xxx', 'Minha Sala');
      * console.log(`Sala aberta: ${result.link}`);
      */
-    open(script: string, tokens: string | string[], name?: string, settings?: CustomSettings): Promise<{
+    open(script: string, tokens: string | string[], name?: string, settings?: CustomSettings, scriptPath?: string): Promise<{
         link: string;
         pid: number;
         remotePort?: number;
@@ -145,8 +145,9 @@ export declare class Server {
      * Executa script do bot no contexto da sala
      * @private
      * @param {any} room - Objeto de sala
-     * @param {string} script - Codigo JavaScript do bot
+     * @param {string} script - Codigo JavaScript do bot (caminho ou conteudo)
      * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
+     * @param {string} [scriptPath] - Caminho do script para require
      */
     private executeBotScript;
     /**

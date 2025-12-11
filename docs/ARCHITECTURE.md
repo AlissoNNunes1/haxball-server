@@ -1,54 +1,59 @@
-# Arquitetura do Haxball Server v5.0.0
+# Arquitetura do Haxball Server v5.1.0
 
 ## Visao Geral
 
-O Haxball Server e uma aplicacao Node.js que funciona como gerenciador de salas Haxball headless atraves de uma interface Discord Bot ou CLI.
+O Haxball Server e uma aplicacao Node.js que funciona como gerenciador de salas Haxball headless atraves de uma interface Discord Bot ou CLI, com sistema integrado de autenticacao e contas de jogadores.
 
 Arquitetura em **camadas** com separacao clara de responsabilidades:
 
 ```
-┌─────────────────────────────────────┐
-│     Interface do Usuario            │
-│  ┌───────────────────────────────┐  │
-│  │  CLI (main.ts + commands/)    │  │
-│  │  Discord Bot (ControlPanel)   │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-               ↓
-┌─────────────────────────────────────┐
-│     Camada de Orquestracao          │
-│  ┌───────────────────────────────┐  │
-│  │  ControlPanel (Discord Logic) │  │
-│  │  openServer (Command Handler) │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-               ↓
-┌─────────────────────────────────────┐
-│     Camada de Negocio               │
-│  ┌───────────────────────────────┐  │
-│  │  Server (Room Management)     │  │
-│  │  Bot (Script Loading)         │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-               ↓
-┌─────────────────────────────────────┐
-│     Camada de Utilitarios           │
-│  ┌───────────────────────────────┐  │
-│  │  loadConfig()    - Configurar │  │
-│  │  log()           - Registrar  │  │
-│  │  escapeString()  - Formatar   │  │
-│  │  getAvailablePort() - Portas  │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-               ↓
-┌─────────────────────────────────────┐
-│     Camada de Tipos e Constantes    │
-│  ┌───────────────────────────────┐  │
-│  │  Global.ts - Interfaces,      │  │
-│  │             Tipos,            │  │
-│  │             Constantes        │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│         Interface do Usuario                    │
+│  ┌────────────────┐    ┌──────────────────┐    │
+│  │  CLI (main.ts) │    │ Discord Bot      │    │
+│  │  + commands/   │    │ (ControlPanel +  │    │
+│  │                │    │  AuthCommands)   │    │
+│  └────────────────┘    └──────────────────┘    │
+│  ┌────────────────┐    ┌──────────────────┐    │
+│  │ Sala Haxball   │    │ REST API         │    │
+│  │ (RoomAuth)     │    │ (AuthAPI)        │    │
+│  └────────────────┘    └──────────────────┘    │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│     Camada de Orquestracao                      │
+│  ┌────────────────┐    ┌──────────────────┐    │
+│  │  ControlPanel  │    │  AuthService     │    │
+│  │  (Discord)     │    │  (Core Logic)    │    │
+│  └────────────────┘    └──────────────────┘    │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│     Camada de Negocio                           │
+│  ┌────────────────┐    ┌──────────────────┐    │
+│  │  Server (Room) │    │  Bot (Scripts)   │    │
+│  │  RoomMonitor   │    │  RoomAuthHandler │    │
+│  └────────────────┘    └──────────────────┘    │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│     Camada de Persistencia                      │
+│  ┌────────────────┐    ┌──────────────────┐    │
+│  │  auth-client   │    │  database/client │    │
+│  │  (Auth DB)     │    │  (Stats DB)      │    │
+│  └────────────────┘    └──────────────────┘    │
+│  ┌───────────────────────────────────────┐     │
+│  │  SQLite (haxball.sqlite)              │     │
+│  └───────────────────────────────────────┘     │
+└─────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│     Camada de Utilitarios e Tipos               │
+│  ┌────────────────┐    ┌──────────────────┐    │
+│  │  utils/        │    │  Global.ts       │    │
+│  │  (Helpers)     │    │  auth/types.ts   │    │
+│  └────────────────┘    └──────────────────┘    │
+└─────────────────────────────────────────────────┘
 ```
 
 ## Estrutura de Diretorios
@@ -58,32 +63,54 @@ haxball-server/
 ├── src/
 │   ├── main.ts                    # Ponto de entrada, CLI parsing
 │   ├── Global.ts                  # Tipos, interfaces, constantes
-│   ├── Server.ts                  # Gerenciador de salas (deprecated)
+│   ├── Server.ts                  # Gerenciador de salas
 │   ├── ControlPanel.ts            # Painel Discord Bot
+│   ├── auth/                      # Sistema de Autenticacao (FASE 9)
+│   │   ├── types.ts               # Tipos e interfaces de auth
+│   │   ├── AuthService.ts         # Servico de autenticacao
+│   │   ├── AuthCommands.ts        # Comandos Discord de auth
+│   │   ├── RoomAuthHandler.ts     # Auth dentro das salas
+│   │   └── AuthAPI.ts             # API REST de auth
+│   ├── database/                  # Camada de Persistencia
+│   │   ├── schema.ts              # Schema original (stats)
+│   │   ├── schema-auth.ts         # Schema de autenticacao
+│   │   ├── client.ts              # Cliente DB original
+│   │   └── auth-client.ts         # Cliente DB de auth
 │   ├── commands/
 │   │   ├── openServer.ts          # Comando CLI 'open'
 │   │   └── connect.ts             # Comando CLI 'connect' (deprecated)
 │   ├── debugging/
 │   │   ├── DebuggingServer.ts     # Servidor de debugging
 │   │   ├── DebuggingInterface.ts  # Interface web
-│   │   └── DebuggingClient.ts     # Cliente de debugging
+│   │   ├── RoomMonitor.ts         # Monitor de salas
+│   │   └── WebMonitor.ts          # Monitor web
 │   └── utils/
 │       ├── log.ts                 # Funcao de logging
+│       ├── Logger.ts              # Sistema de logging
 │       ├── escapeString.ts        # Escapamento de caracteres
 │       ├── loadConfig.ts          # Carregamento de config
 │       └── getAvailablePort.ts    # Descoberta de portas
 ├── tests/
 │   ├── unit/
-│   │   ├── utils/
-│   │   │   ├── escapeString.test.ts
-│   │   │   ├── getAvailablePort.test.ts
-│   │   │   ├── loadConfig.test.ts
-│   │   │   └── log.test.ts
-│   │   └── ...
-│   └── fixtures/
+│   │   ├── auth/
+│   │   │   └── AuthService.test.ts # Testes do AuthService
+│   │   └── utils/
+│   │       ├── escapeString.test.ts
+│   │       ├── getAvailablePort.test.ts
+│   │       ├── loadConfig.test.ts
+│   │       └── log.test.ts
+│   ├── integration/
+│   │   ├── bot-compatibility.test.ts
+│   │   └── room-lifecycle.test.ts
+│   └── benchmarks/
+│       ├── memory.bench.ts
+│       └── performance.bench.ts
 ├── docs/
 │   ├── roadmap.md                 # Plano de modernizacao
-│   └── ARCHITECTURE.md            # Este arquivo
+│   ├── ARCHITECTURE.md            # Este arquivo
+│   ├── ACCOUNTS.md                # Sistema de Contas (FASE 9)
+│   ├── BOT_COMPATIBILITY.md       # Compatibilidade de bots
+│   └── haxball_documentation/     # Docs API Haxball
 ├── package.json                   # Dependencias e scripts
 ├── tsconfig.json                  # Configuracao TypeScript
 ├── jest.config.js                 # Configuracao Jest
@@ -558,10 +585,10 @@ Testes em `tests/unit/utils/` cobrem funcionalidades criticas:
 
 ## Roadmap
 
-### Fase 8 (v6.0.0) - Migracao haxball.js
+### Fase 8 (v5.0.0) - Migracao haxball.js ✅ COMPLETO
 
 ```
-Server.ts (v6.0.0)
+Server.ts (v5.0.0)
   └─ import HaxballJS from 'haxball.js'
      ├─ HBInit() para inicializar
      ├─ room = HBInit({token, ...})
@@ -569,14 +596,85 @@ Server.ts (v6.0.0)
      └─ Salas gerenciadas nativamente
 ```
 
-**Beneficios:**
+**Beneficios Realizados:**
 
 - ✅ 70-80% menos memoria por sala
 - ✅ Sem necessidade de Chrome/Chromium
 - ✅ 90% instalacao mais compacta
 - ✅ Performance superior
 
-### Fase 9+ - Sistema de Plugins
+### Fase 9 (v5.1.0) - Sistema de Contas e Autenticacao ✅ COMPLETO
+
+```
+auth/
+├── AuthService.ts           # Logica de auth (PBKDF2, tokens)
+├── AuthCommands.ts          # Comandos Discord
+├── RoomAuthHandler.ts       # Auth na sala Haxball
+├── AuthAPI.ts               # REST API
+└── types.ts                 # Interfaces
+
+database/
+├── auth-client.ts           # Cliente DB de auth
+└── schema-auth.ts           # Schema SQLite
+```
+
+**Funcionalidades Implementadas:**
+
+- ✅ Registro via Discord (!register)
+- ✅ Login na sala (/login)
+- ✅ Conta unificada (pontos, ranking, moedas)
+- ✅ API REST para consultas
+- ✅ Seguranca (PBKDF2, brute force protection)
+- ✅ Sessoes com tokens
+- ✅ Documentacao completa (docs/ACCOUNTS.md)
+
+### Fase 10 - Sistema de Balanceamento Hibrido
+
+**Objetivo:** Balanceamento inteligente usando Elo por posicao + performance recente
+
+```
+balance/
+├── EloCalculator.ts         # Calculo de Elo dinamico
+├── PositionRating.ts        # Elo por posicao (GK/DEF/MID/ATA)
+├── PerformanceTracker.ts    # Tracking de performance recente
+├── BalanceAlgorithm.ts      # Algoritmo hibrido
+└── types.ts                 # Interfaces
+```
+
+**Funcionalidades Planejadas:**
+
+- [ ] Elo geral + Elo por posicao
+- [ ] Decay temporal (jogadores inativos perdem rating)
+- [ ] Performance recente (ultimos N jogos)
+- [ ] Balanceamento automatico ao iniciar partida
+- [ ] Algoritmo expansivel (preparado para ML)
+
+### Fase 11 - Base de Estatisticas Avancadas
+
+**Objetivo:** Sistema extensivel de coleta e analise de stats
+
+```
+stats/
+├── collectors/
+│   ├── BasicStatsCollector.ts    # Gols, assists, defesas
+│   ├── AdvancedStatsCollector.ts # Toques, passes, interceptacoes
+│   └── HeatmapCollector.ts       # Mapa de calor
+├── analyzers/
+│   └── PerformanceAnalyzer.ts    # Analise de performance
+└── exporters/
+    ├── JSONExporter.ts
+    └── CSVExporter.ts
+```
+
+**Funcionalidades Planejadas:**
+
+- [ ] Stats basicas (gols, assists, defesas)
+- [ ] Stats avancadas (toques, passes, heatmap)
+- [ ] Sistema de coleta modular (collectors)
+- [ ] API para exportacao de dados
+- [ ] Preparacao para machine learning
+
+### Fase 12+ - Sistema de Plugins
 
 ```
 plugins/

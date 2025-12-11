@@ -1,4 +1,4 @@
-(async()=>{
+(async () => {
   try {
     const path = require('path');
     const { pathToFileURL } = require('url');
@@ -6,7 +6,7 @@
     console.log('Importing', p);
     const mod = await import(p);
     console.log('Loaded keys:', Object.keys(mod));
-  } catch(e) {
+  } catch (e) {
     console.error('Error:', e && e.stack ? e.stack : e);
   }
 })();

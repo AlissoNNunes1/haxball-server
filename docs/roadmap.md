@@ -1,12 +1,12 @@
 # Plano de Modernizacao e Atualizacao do Haxball Server
 
-## Status Atual - MODERNIZACAO CONCLUIDA
+## Status Atual - MODERNIZACAO CONCLUIDA + FEATURES AVANCADAS
 
-O projeto **haxball-server** foi completamente modernizado com sucesso! Todas as fases criticas foram implementadas, resultando em um projeto robusto, seguro, testado e pronto para producao.
+O projeto **haxball-server** foi completamente modernizado com sucesso! Todas as fases criticas foram implementadas, resultando em um projeto robusto, seguro, testado e pronto para producao. Agora com sistema de autenticacao e balanceamento Elo hibrido!
 
 ### Progresso Geral
 
-✅ **CONCLUIDO - v5.0.0 Released**
+✅ **CONCLUIDO - v5.2.0 Released**
 
 - ✅ Fase 1: Atualizacoes Criticas de Dependencias
 - ✅ Fase 2: Migracao Discord.js v12 → v14
@@ -16,6 +16,10 @@ O projeto **haxball-server** foi completamente modernizado com sucesso! Todas as
 - ✅ Fase 6: Implementacao de Testes
 - ✅ Fase 7: Melhorias de Codigo e Documentacao
 - ✅ Fase 8: Migracao para haxball.js (COMPLETA - Revolucionario!)
+- ✅ Fase 9: Sistema de Autenticacao e Contas (COMPLETA)
+- ✅ Fase 10: Sistema de Balanceamento Elo Hibrido (COMPLETA)
+- ✅ Fase 11: Sistema de Estatisticas Completo (COMPLETA)
+- ✅ Fase 12: Sistema de Plugins e Arquitetura Modular (COMPLETA)
 
 ### Arquitetura Moderna
 
@@ -755,36 +759,166 @@ O haxball-server foi completamente modernizado e agora e um projeto robusto, seg
 6. **Usabilidade**: Instalacao simplificada (sem Chrome)
 7. **Desenvolvimento**: Codigo moderno e bem documentado
 
-### Proximos Passos (Opcional)
 
-**Melhorias Futuras**:
+### Proximos Passos (Planejamento 2026)
 
-- [ ] Web Dashboard com React/Vue
-- [ ] Sistema de Plugins
-- [ ] Docker/Container support
+**FASE 9: Sistema de Registro, Login e Conta Unificada** ✅ COMPLETO
+
+- ✅ Registro de jogador via Discord, associando conta Discord ao nick Haxball
+- ✅ Login direto pelo Haxball usando senha (sem depender do Discord para login)
+- ✅ Conta unica CIRS: armazena pontos, ranking, moedas, stats, etc, e vale para qualquer sala da CIRS
+- ✅ API segura para autenticar, registrar e consultar dados do jogador
+- ✅ Documentacao detalhada do fluxo de registro/login e estrutura de conta (docs/ACCOUNTS.md)
+
+**FASE 10: Sistema de Balanceamento Hibrido e Estatisticas** ✅ COMPLETO
+
+- ✅ Elo geral por jogador
+- ✅ Elo por posicao (GK/DEF/MID/ATA)
+- ✅ Considerar performance recente no balanceamento
+- ✅ Arquitetura expansivel para modelos de balanceamento mais complexos (ML, heuristicas, etc)
+- ✅ Documentacao tecnica do algoritmo de balanceamento (docs/BALANCE.md)
+- ✅ Algoritmo Greedy para balanceamento rapido
+- ✅ Algoritmo Genetico para otimizacao avancada
+- ✅ Sistema de decay temporal para jogadores inativos
+- ✅ Rastreamento de forma recente e momentum
+- ✅ Comandos Discord e REST API completos
+- ✅ Testes unitarios e integracao com banco de dados
+
+**FASE 11: Sistema de Estatisticas Completo** ✅ COMPLETO
+
+- ✅ Estatisticas basicas: gols, assistencias, defesas, toques, tempo em jogo
+- ✅ Estatisticas avancadas: passes, precisao de passe, interceptacoes, desarmes, posse de bola
+- ✅ Rastreamento de posicao em tempo real (10Hz sampling)
+- ✅ Geracao de heatmaps com densidade normalizada
+- ✅ Calculo de distancia percorrida e velocidade (media/top)
+- ✅ Performance rating 0-10 baseado em metricas ponderadas
+- ✅ Agregacao de stats por jogador (totais, medias, taxa de vitoria)
+- ✅ Sistema de cache com TTL para otimizacao
+- ✅ Comandos Discord (!stats, !mystats, !compare, !top, !recent)
+- ✅ REST API completa (8 endpoints com filtros avancados)
+- ✅ Calculo de tendencia de performance (regressao linear)
+- ✅ Comparacao entre jogadores
+- ✅ Top rankings por metrica
+- ✅ Integracao com sistema de auth (Fase 9)
+- ✅ Integracao com sistema de balanceamento (Fase 10)
+- ✅ 4 novas tabelas no banco (advanced_stats, player_positions, heatmap_data, player_stats_aggregate)
+- ✅ Documentacao completa (docs/STATS.md com 650+ linhas)
+
+**FASE 12: Sistema de Plugins e Arquitetura Modular** ✅ COMPLETO
+
+- ✅ Plugin Interface com 10 lifecycle hooks (init, cleanup, onRoomOpen, onRoomClose, onPlayerJoin, onPlayerLeave, onTeamGoal, onCommand, onSystemStart, onSystemStop)
+- ✅ PluginManager com carregamento dinamico e hot-reload
+- ✅ PluginContext API isolado (logger, storage, commands, tasks, events)
+- ✅ GlobalEventBus singleton para comunicacao desacoplada
+- ✅ Storage persistente isolado por plugin (JSON files)
+- ✅ Sistema de dependencias entre plugins
+- ✅ Comandos Discord customizados por plugin
+- ✅ Task scheduling por plugin
+- ✅ Plugin de exemplo funcional (stats-example)
+- ✅ Documentacao completa (docs/PLUGINS.md com 600+ linhas)
+- ✅ Indice de documentacao consolidado (docs/README.md)
+- ✅ Integracao com todos os sistemas existentes (auth, balance, stats)
+
+**Proximas Melhorias Planejadas:**
+
+- [ ] Plugin marketplace
+- [ ] Hot reload automatico (file watcher)
+- [ ] Sandbox de seguranca para plugins de terceiros
+- [ ] Plugin dependencies via npm
+- [ ] Web UI para gerenciar plugins
+
+---
+
+**FASE 13+: Expansao e Recursos Avancados (Planejado)**
+
+**FASE 13: Web Dashboard Completo**
+
+- [ ] Interface React/Next.js moderna
+- [ ] Dashboard em tempo real de salas abertas
+- [ ] Visualizacao de stats, rankings, heatmaps
+- [ ] Gerenciamento de contas e autenticacao web
+- [ ] Admin panel para configurar servidor
+- [ ] Integracao com Discord OAuth2
+- [ ] Graficos de performance e metricas
+- [ ] Sistema de notificacoes push
+
+**FASE 14: Machine Learning para Balanceamento**
+
+- [ ] Modelo de predicao de performance de jogador
+- [ ] Balanceamento baseado em ML (TensorFlow.js/ONNX)
+- [ ] Feature engineering (winrate, forma, contexto)
+- [ ] Training pipeline automatizado
+- [ ] A/B testing de modelos
+- [ ] Explainability (SHAP values)
+- [ ] Auto-tuning de hiperparametros
+
+**FASE 15: Sistema de Achievements e Badges**
+
+- [ ] Achievements desbloqueaveis (gols, vitorias, streaks)
+- [ ] Badges customizados por conquista
+- [ ] Sistema de XP e leveling
+- [ ] Titulos e ranks cosmticos
+- [ ] Integracao com Discord roles
+- [ ] Timeline de progresso
+- [ ] Recompensas por milestones
+
+**FASE 16: Analytics e BI Avancado**
+
+- [ ] Data warehouse para historico completo
+- [ ] ETL pipeline (Airflow/Dagster)
+- [ ] Metricas agregadas (diarias, semanais, mensais)
+- [ ] Predicao de churn de jogadores
+- [ ] Analise de comportamento (clustering)
+- [ ] Dashboards executivos (Grafana/Metabase)
+- [ ] Relatorios automatizados
+- [ ] Export de dados (CSV, JSON, Parquet)
+
+**FASE 17: Infraestrutura e DevOps**
+
+- [ ] Docker/Docker Compose support
+- [ ] Kubernetes deployment (Helm charts)
+- [ ] CI/CD pipeline completo (GitHub Actions)
 - [ ] Health checks e auto-recovery
-- [ ] Metricas Prometheus
-- [ ] Database integration
-- [ ] CLI avancado para gerenciamento
+- [ ] Metricas Prometheus + Grafana
+- [ ] Logging centralizado (ELK/Loki)
+- [ ] Distributed tracing (Jaeger/Tempo)
+- [ ] Auto-scaling baseado em carga
+- [ ] Backup automatizado de banco de dados
+- [ ] Disaster recovery plan
+
+**FASE 18: Multiplayer e Federacao**
+
+- [ ] Suporte a multiplos servidores federados
+- [ ] Sincronizacao de contas entre servidores
+- [ ] Ranking global cross-server
+- [ ] Torneios inter-servidores
+- [ ] Marketplace de plugins entre servidores
+- [ ] Sistema de reputacao global
 
 ---
 
 ## Resumo Executivo
 
-O projeto **haxball-server** passou de um estado desatualizado e com vulnerabilidades criticas para uma aplicacao moderna, segura e otimizada. Todas as 8 fases do plano de modernizacao foram implementadas com sucesso, resultando em:
+O projeto **haxball-server** passou de um estado desatualizado e com vulnerabilidades criticas para uma aplicacao moderna, segura, modular e otimizada. Todas as 12 fases do plano de modernizacao foram implementadas com sucesso, resultando em:
 
 - ✅ Arquitetura moderna e escalavel
 - ✅ Seguranca maxima (sem vulnerabilidades)
 - ✅ Performance revolucionada (haxball.js)
 - ✅ Codigo type-safe e bem documentado
 - ✅ Suite de testes completa
+- ✅ Sistema de autenticacao e contas robusto
+- ✅ Sistema de balanceamento Elo hibrido avancado
+- ✅ Sistema de estatisticas completo com heatmaps e analytics
+- ✅ Arquitetura modular de plugins com hot-reload
+- ✅ Event bus global para comunicacao desacoplada
+- ✅ Documentacao consolidada e indexada
 - ✅ Pronto para producao e manutencao futura
 
-**Versao Atual**: v5.0.0 (Released)
+**Versao Atual**: v6.0.0 (Released)
 
-**Proxy Anterior**: [Roadmap Anterior - Historico]
+**Proximo Milestone**: Fase 13 (Web Dashboard Completo)
 
-O projeto esta agora em excelente condicao para manutenção e evolução continua.
+O projeto esta agora em excelente condicao para manutencao e evolucao continua com arquitetura extensivel via plugins.
 
 ---
 

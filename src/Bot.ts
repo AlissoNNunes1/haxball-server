@@ -26,7 +26,8 @@ export class Bot {
     settings?: CustomSettings
   ): Promise<{ link: string; pid: number; remotePort?: number } | null> {
     // Use Server.open as the compat layer for legacy bots
-    return server.open(script, tokens, this.display, settings);
+    const resolvedPath = path.resolve(this.filePath);
+    return server.open(script, tokens, this.display, settings, resolvedPath);
   }
 }
 

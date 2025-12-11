@@ -2,8 +2,110 @@
 
 Todas as mudancas notaveis neste projeto sao documentadas neste arquivo.
 
-O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+O formato e baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 e este projeto adere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [6.0.0] - 2025-12-10
+
+### Added - Sistema de Plugins e Arquitetura Modular (Fase 12)
+
+#### Plugin System
+
+- **Plugin Interface** com 10 lifecycle hooks:
+  - `init`, `cleanup`
+  - `onRoomOpen`, `onRoomClose`
+  - `onPlayerJoin`, `onPlayerLeave`
+  - `onTeamGoal`
+  - `onCommand`
+  - `onSystemStart`, `onSystemStop`
+- **PluginManager** com carregamento dinamico e hot-reload
+- **PluginContext API isolado** fornecido a cada plugin:
+  - Logger isolado com prefixo `[plugin-name]`
+  - Storage persistente em arquivo JSON isolado
+  - Registro de comandos Discord customizados
+  - Task scheduling para tarefas periodicas
+  - Acesso ao GlobalEventBus
+  - Acesso ao Server instance
+  - Configuracao do plugin (package.json)
+- **Sistema de dependencias entre plugins**
+- **Hot-reload** com limpeza de require cache
+
+#### Event System
+
+- **GlobalEventBus** singleton (EventEmitter) com eventos tipados:
+  - Eventos de sala: `room:open`, `room:close`
+  - Eventos de jogador: `player:join`, `player:leave`
+  - Eventos de jogo: `team:goal`, `command`
+  - Eventos de sistema: `system:start`, `system:stop`, `system:metric`, `system:error`
+  - Eventos de integracao: `auth:event`, `balance:event`, `stats:event`
+- **Comunicacao desacoplada** entre todos os subsistemas
+
+#### Documentation
+
+- **docs/PLUGINS.md** (600+ linhas):
+  - Interface do plugin e lifecycle hooks
+  - Referencia completa do PluginContext API
+  - Guia de criacao de plugins
+  - Exemplos completos e casos de uso
+  - Boas praticas e debugging
+  - Integracao com sistemas existentes
+  - Roadmap de plugins futuras
+- **docs/README.md** (500+ linhas):
+  - Indice consolidado de toda documentacao
+  - Links rapidos para todos os sistemas
+  - Guias de inicio rapido
+  - Fluxos principais ilustrados
+  - Estrutura de diretorios
+  - Integracao entre sistemas
+  - Troubleshooting comum
+
+#### Example Plugin
+
+- **plugins/stats-example**:
+  - Rastreamento de stats de salas (joins, leaves, goals, duracao, pico de jogadores)
+  - Comando Discord `!roomstats`
+  - Tarefa periodica (log a cada 60s)
+  - Escuta de eventos via GlobalEventBus
+  - Storage persistente (contador de salas totais)
+  - Todos os lifecycle hooks implementados
+
+### Changed
+
+- **Versao**: 5.0.0 → 6.0.0
+- **Roadmap atualizado** com:
+  - Fase 12 marcada como completa
+  - Fases 13-18 planejadas em detalhes:
+    - Fase 13: Web Dashboard Completo
+    - Fase 14: Machine Learning para Balanceamento
+    - Fase 15: Sistema de Achievements e Badges
+    - Fase 16: Analytics e BI Avancado
+    - Fase 17: Infraestrutura e DevOps
+    - Fase 18: Multiplayer e Federacao
+
+### Technical Details
+
+- **Novos arquivos**:
+  - `src/plugins/types.ts` (200+ linhas)
+  - `src/plugins/PluginManager.ts` (350+ linhas)
+  - `src/events/GlobalEventBus.ts` (180+ linhas)
+  - `plugins/stats-example/index.ts` (200+ linhas)
+  - `plugins/stats-example/package.json`
+  - `docs/PLUGINS.md` (600+ linhas)
+  - `docs/README.md` (500+ linhas)
+
+- **Performance**:
+  - Plugins carregados dinamicamente (sem reinicio para hot-reload)
+  - Storage em arquivo JSON (rapido para pequenos volumes)
+  - Event bus com max 100 listeners para escalabilidade
+  - Isolated contexts previnem vazamento de memoria
+
+- **Extensibilidade**:
+  - Plugins podem adicionar funcionalidades sem modificar core
+  - Event bus permite comunicacao entre sistemas sem acoplamento direto
+  - API bem definido para desenvolvimento de plugins
+  - Suporte a dependencias entre plugins
+
+---
 
 ## [5.0.0] - 2025-12-09
 

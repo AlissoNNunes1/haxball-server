@@ -1,7 +1,7 @@
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { Server } from '../../src/Server';
 import { ControlPanel } from '../../src/ControlPanel';
+import { Server } from '../../src/Server';
 import { logger } from '../../src/utils/Logger';
 
 jest.setTimeout(10000);
@@ -25,7 +25,11 @@ describe('ControlPanel ESM Integration', () => {
   });
 
   afterEach(async () => {
-    if (controlPanel && (controlPanel as any).monitor && typeof (controlPanel as any).monitor.stopPeriodicReports === 'function') {
+    if (
+      controlPanel &&
+      (controlPanel as any).monitor &&
+      typeof (controlPanel as any).monitor.stopPeriodicReports === 'function'
+    ) {
       (controlPanel as any).monitor.stopPeriodicReports();
     }
     try {
@@ -54,7 +58,9 @@ describe('ControlPanel ESM Integration', () => {
 
     controlPanel = new ControlPanel(server, panelConfig, __filename);
     // Debug: Attempt dynamic import the same way ControlPanel does
-    const modPath = pathToFileURL(path.resolve(__dirname, '..', '..', 'rooms', 'examples', 'mini-soccer.mjs')).href;
+    const modPath = pathToFileURL(
+      path.resolve(__dirname, '..', '..', 'rooms', 'examples', 'mini-soccer.mjs')
+    ).href;
     // eslint-disable-next-line no-new-func
     const dynamicImport = new Function('s', 'return import(s)');
     try {
@@ -104,7 +110,9 @@ describe('ControlPanel ESM Integration', () => {
       { name: 'mini-soccer', module: { init: jest.fn(), name: 'mini-soccer' } },
     ];
     // spy on server.openWithModule
-    const spy = jest.spyOn(server, 'openWithModule').mockResolvedValue({ pid: 15000, link: 'https://example.com' } as any);
+    const spy = jest
+      .spyOn(server, 'openWithModule')
+      .mockResolvedValue({ pid: 15000, link: 'https://example.com' } as any);
 
     // Fake message object with necessary properties
     const fakeChannel: any = {
@@ -122,7 +130,7 @@ describe('ControlPanel ESM Integration', () => {
     await (controlPanel as any).command(msg);
 
     expect(spy).toHaveBeenCalled();
-    const firstArg = (spy.mock.calls[0][0] as any);
+    const firstArg = spy.mock.calls[0][0] as any;
     expect(firstArg).toBeDefined();
     expect(typeof firstArg.init).toBe('function');
 

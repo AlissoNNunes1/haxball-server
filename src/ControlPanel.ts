@@ -2,14 +2,14 @@
 // Full rewrite: create a single clean ControlPanel implementation
 import * as Discord from 'discord.js';
 import os from 'node-os-utils';
-import process from 'process';
 import path from 'path';
+import process from 'process';
 import { pathToFileURL } from 'url';
 
+import { Bot } from './Bot';
 import { CustomSettings, CustomSettingsList, PanelConfig } from './Global';
 import { Server } from './Server';
 import { RoomMonitor } from './debugging/RoomMonitor';
-import { Bot } from './Bot';
 
 import { loadConfig } from './utils/loadConfig';
 import { log } from './utils/log';
@@ -57,7 +57,10 @@ export class ControlPanel {
 
     if (config.rooms && Array.isArray(config.rooms)) {
       this.esmRoomsCache = this.esmRoomsCache.concat(
-        config.rooms.map((r) => ({ name: r.name, module: { path: r.path, displayName: r.displayName } }))
+        config.rooms.map((r) => ({
+          name: r.name,
+          module: { path: r.path, displayName: r.displayName },
+        }))
       );
     }
 
@@ -69,7 +72,8 @@ export class ControlPanel {
       try {
         await this.command(msg);
       } catch (e) {
-        if (msg.channel && 'send' in msg.channel) this.logError(e, msg.channel as Discord.TextChannel);
+        if (msg.channel && 'send' in msg.channel)
+          this.logError(e, msg.channel as Discord.TextChannel);
         else log('DISCORD', `Error handling command: ${e}`);
       }
     });
@@ -123,7 +127,9 @@ export class ControlPanel {
   private async loadEsmRooms() {
     if (this.esmRoomsCache.length > 0) return this.esmRoomsCache;
     try {
-      const modulePath = pathToFileURL(path.resolve(__dirname, '../apps/discord-bot/index.mjs')).href;
+      const modulePath = pathToFileURL(
+        path.resolve(__dirname, '../apps/discord-bot/index.mjs')
+      ).href;
       // Use runtime dynamic import via Function to avoid TypeScript compiling to require()
       const dynamicImport = new Function('s', 'return import(s)');
       const mod = await dynamicImport(modulePath);
@@ -131,11 +137,16 @@ export class ControlPanel {
       if (typeof listFn === 'function') {
         const list = await listFn();
         if (Array.isArray(list)) {
-          this.esmRoomsCache = this.esmRoomsCache.concat(list.map((r: any) => ({ name: r.name, module: r.module || r })));
+          this.esmRoomsCache = this.esmRoomsCache.concat(
+            list.map((r: any) => ({ name: r.name, module: r.module || r }))
+          );
         }
       }
     } catch (err) {
-      log('DISCORD', `WARN: apps/discord-bot discovery failed: ${(err && (err as Error).message) || err}`);
+      log(
+        'DISCORD',
+        `WARN: apps/discord-bot discovery failed: ${(err && (err as Error).message) || err}`
+      );
     }
 
     if (this.panelConfig?.rooms && Array.isArray(this.panelConfig.rooms)) {
@@ -143,7 +154,10 @@ export class ControlPanel {
         const roomEntry = entry as { name: string; path: string; type?: string };
         try {
           const modPath = pathToFileURL(
-            path.resolve(this.fileName ? path.dirname(this.fileName) : path.resolve('.'), roomEntry.path)
+            path.resolve(
+              this.fileName ? path.dirname(this.fileName) : path.resolve('.'),
+              roomEntry.path
+            )
           ).href;
           const dynamicImport = new Function('s', 'return import(s)');
           const rmod = await dynamicImport(modPath);
@@ -171,15 +185,22 @@ export class ControlPanel {
   }
 
   private async logError(e: unknown, channel: Discord.TextChannel) {
-    const errorMessage = e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
-    const embed = new Discord.EmbedBuilder().setColor('#0099ff').setTitle('Log Error').setTimestamp(Date.now()).setDescription(errorMessage);
+    const errorMessage =
+      e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
+    const embed = new Discord.EmbedBuilder()
+      .setColor('#0099ff')
+      .setTitle('Log Error')
+      .setTimestamp(Date.now())
+      .setDescription(errorMessage);
     await channel.send({ embeds: [embed] });
   }
 
   private async getRoomNameList() {
     const rooms: string[] = [];
     for (const browser of this.server.browsers) {
-      const nameStr = `Room ${browser.link} (PID: ${browser.pid})${browser.remotePort ? ` (localhost:${browser.remotePort})` : ''}`;
+      const nameStr = `Room ${browser.link} (PID: ${browser.pid})${
+        browser.remotePort ? ` (localhost:${browser.remotePort})` : ''
+      }`;
       rooms.push(nameStr);
     }
     if (rooms.length === 0) return 'There are no open rooms!';
@@ -192,7 +213,10 @@ export class ControlPanel {
     if (!msg.content.startsWith(this.prefix)) return;
 
     const args = msg.content.slice(this.prefix.length).trim().split(' ').filter(Boolean);
-    const text = msg.content.slice(this.prefix.length).trim().replace(args[0] + ' ', '');
+    const text = msg.content
+      .slice(this.prefix.length)
+      .trim()
+      .replace(args[0] + ' ', '');
     const command = args.shift()?.toLowerCase();
 
     const embed = new Discord.EmbedBuilder().setColor('#0099ff');
@@ -220,7 +244,9 @@ export class ControlPanel {
     }
 
     if (command === 'tokenlink') {
-      embed.setTitle('Headless Token').setDescription(`[Click here.](https://www.haxball.com/headlesstoken)`);
+      embed
+        .setTitle('Headless Token')
+        .setDescription(`[Click here.](https://www.haxball.com/headlesstoken)`);
       await msg.channel.send({ embeds: [embed] });
       return;
     }
@@ -236,7 +262,9 @@ export class ControlPanel {
     if (command === 'open') {
       embed.setTitle('Open room');
       if (this.maxRooms != null && this.server.browsers.length >= this.maxRooms) {
-        embed.setDescription(`Maximum number of rooms (${this.maxRooms}) exceeded. Update configuration to change this.`);
+        embed.setDescription(
+          `Maximum number of rooms (${this.maxRooms}) exceeded. Update configuration to change this.`
+        );
         await msg.channel.send({ embeds: [embed] });
         return;
       }
@@ -246,14 +274,22 @@ export class ControlPanel {
       const esmRoom = esmRooms.find((r) => r.name === args[0]);
 
       if (!bot && !esmRoom) {
-        embed.setDescription(`This bot or room does not exist. Type ${this.prefix}info to see the list of available bots.`);
+        embed.setDescription(
+          `This bot or room does not exist. Type ${this.prefix}info to see the list of available bots.`
+        );
         await msg.channel.send({ embeds: [embed] });
         return;
       }
 
-      let token = text.replace(args[0] || '', '').trim().replace(/"/g, '').replace('Token obtained: ', '');
+      let token = text
+        .replace(args[0] || '', '')
+        .trim()
+        .replace(/"/g, '')
+        .replace('Token obtained: ', '');
       if (!token) {
-        embed.setDescription(`You have to define a [headless token](https://www.haxball.com/headlesstoken) as second argument: ${this.prefix}open <bot> <token>`);
+        embed.setDescription(
+          `You have to define a [headless token](https://www.haxball.com/headlesstoken) as second argument: ${this.prefix}open <bot> <token>`
+        );
         await msg.channel.send({ embeds: [embed] });
         return;
       }
@@ -279,12 +315,23 @@ export class ControlPanel {
       if (bot) {
         try {
           const script = await bot.read();
-          const res = await bot.run(this.server, script, [token, token.substring(0, token.lastIndexOf(' '))], settings);
+          const res = await bot.run(
+            this.server,
+            script,
+            [token, token.substring(0, token.lastIndexOf(' '))],
+            settings
+          );
           if (res?.pid) {
             const room = this.server.getRoom(res.pid);
             if (room) this.monitor.trackRoom(res.pid, room.room, room.botName);
           }
-          message.edit({ embeds: [embed.setDescription(`Room running! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`)] });
+          message.edit({
+            embeds: [
+              embed.setDescription(
+                `Room running! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`
+              ),
+            ],
+          });
         } catch (err) {
           message.edit({ embeds: [embed.setDescription(`Unable to open the room!\n ${err}`)] });
         }
@@ -296,7 +343,12 @@ export class ControlPanel {
         try {
           let mod = esmRoom.module;
           if (mod && mod.path) {
-            const modPath = pathToFileURL(path.resolve(this.fileName ? path.dirname(this.fileName) : path.resolve('.'), mod.path)).href;
+            const modPath = pathToFileURL(
+              path.resolve(
+                this.fileName ? path.dirname(this.fileName) : path.resolve('.'),
+                mod.path
+              )
+            ).href;
             const dynamicImportEval = new Function('s', 'return import(s)');
             const imported = await dynamicImportEval(modPath);
             let importedCandidate = imported?.default ?? imported;
@@ -313,13 +365,24 @@ export class ControlPanel {
             mod = importedCandidate;
           }
 
-          const res = await this.server.openWithModule(mod, [token, token.substring(0, token.lastIndexOf(' '))], esmRoom.name, settings);
+          const res = await this.server.openWithModule(
+            mod,
+            [token, token.substring(0, token.lastIndexOf(' '))],
+            esmRoom.name,
+            settings
+          );
           if (res?.pid) {
             const room = this.server.getRoom(res.pid);
             if (room) this.monitor.trackRoom(res.pid, room.room, room.botName);
           }
 
-          message.edit({ embeds: [embed.setDescription(`Room running (ESM)! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`)] });
+          message.edit({
+            embeds: [
+              embed.setDescription(
+                `Room running (ESM)! [Click here to join.](${res?.link})\nPID: ${res?.pid}\n${settingsMsg}`
+              ),
+            ],
+          });
         } catch (err) {
           message.edit({ embeds: [embed.setDescription(`Unable to open the room!\n ${err}`)] });
         }
@@ -329,18 +392,28 @@ export class ControlPanel {
     if (command === 'info') {
       const roomList = await this.getRoomNameList();
       const esmRooms = await this.loadEsmRooms();
-      embed.setTitle('Information').addFields(
-        { name: 'Open rooms', value: roomList },
-        { name: 'Bot list', value: this.bots.map((b) => b.display || b.name).join('\n') },
-        { name: 'ESM rooms', value: esmRooms.map((r) => r.name).join('\n') || 'None' },
-        { name: 'Custom settings list', value: this.customSettings ? Object.keys(this.customSettings).join('\n') : 'No custom settings have been specified.' }
-      );
+      embed
+        .setTitle('Information')
+        .addFields(
+          { name: 'Open rooms', value: roomList },
+          { name: 'Bot list', value: this.bots.map((b) => b.display || b.name).join('\n') },
+          { name: 'ESM rooms', value: esmRooms.map((r) => r.name).join('\n') || 'None' },
+          {
+            name: 'Custom settings list',
+            value: this.customSettings
+              ? Object.keys(this.customSettings).join('\n')
+              : 'No custom settings have been specified.',
+          }
+        );
       await msg.channel.send({ embeds: [embed] });
       return;
     }
 
     if (command === 'meminfo') {
-      const embedLoading = new Discord.EmbedBuilder().setColor('#0099ff').setTitle('Information').setDescription('Loading...');
+      const embedLoading = new Discord.EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('Information')
+        .setDescription('Loading...');
       const message = await msg.channel.send({ embeds: [embedLoading] });
       const memInfo = await this.mem.info();
       const cpuUsage = await this.cpu.usage();
@@ -350,13 +423,24 @@ export class ControlPanel {
           { name: 'CPUs', value: String(this.cpu.count()), inline: true },
           { name: 'CPU usage', value: cpuUsage + '%', inline: true },
           { name: 'Free CPU', value: 100 - cpuUsage + '%', inline: true },
-          { name: 'Memory', value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(2)} GB (${memInfo.freeMemPercentage}% livre)`, inline: true },
+          {
+            name: 'Memory',
+            value: `${(memInfo.usedMemMb / 1000).toFixed(2)}/${(memInfo.totalMemMb / 1000).toFixed(
+              2
+            )} GB (${memInfo.freeMemPercentage}% livre)`,
+            inline: true,
+          },
           { name: 'OS', value: String(await os.os.oos()), inline: true },
-          { name: 'Machine Uptime', value: new Date(os.os.uptime() * 1000).toISOString().substr(11, 8), inline: true }
+          {
+            name: 'Machine Uptime',
+            value: new Date(os.os.uptime() * 1000).toISOString().substr(11, 8),
+            inline: true,
+          }
         );
       const serverMem = process.memoryUsage();
       const serverCPUUsage = `Server Memory: ${(serverMem.heapUsed / 1024 / 1024).toFixed(2)} MB\n`;
-      const roomMessage = this.server.browsers.length > 0 ? `\nOpen rooms: ${this.server.browsers.length}` : '';
+      const roomMessage =
+        this.server.browsers.length > 0 ? `\nOpen rooms: ${this.server.browsers.length}` : '';
       embed.setDescription(serverCPUUsage + roomMessage + '\n');
       message.edit({ embeds: [embed] });
     }
