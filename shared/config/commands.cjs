@@ -10,6 +10,9 @@
  * if (handled) return false;
  */
 
+// Importa funcoes AFK globais
+const { setPlayerAFK, isPlayerAFK } = require('./utils.cjs');
+
 // Importa RoomAuthHandler para comandos de autenticacao
 let RoomAuthHandler;
 let authHandler;
@@ -100,9 +103,26 @@ function processGeneralCommand(room, player, message) {
     return true;
   }
 
-  // !bb ou !gk (volta pro gol)
-  if (cmd === 'bb' || cmd === 'gk') {
-    handleBackToGoal(room, player);
+  // !bb - ir para espectador
+  if (cmd === 'bb') {
+    handleGoSpectator(room, player);
+    return true;
+  }
+
+  // !admin - promocao rapida (apenas para assu)
+  if (cmd === 'admin') {
+    if (player.name && player.name.toLowerCase() === 'assu') {
+      room.setPlayerAdmin(player.id, true);
+      room.sendAnnouncement('Admin concedido.', player.id, 0x00ff00, 'bold', 1);
+    } else {
+      room.sendAnnouncement(
+        'Somente assu pode usar este comando.',
+        player.id,
+        0xff9900,
+        'normal',
+        1
+      );
+    }
     return true;
   }
 
@@ -134,12 +154,19 @@ async function handleLogin(room, player, message) {
 
       if (result.account) {
         room.sendAnnouncement(
-          `Bem-vindo, ${result.account.haxballNick}!`,
+          `Bem-vindo, [${result.account.ranking}] ${result.account.haxballNick}!`,
           player.id,
           0x00ff00,
           'bold',
           1
         );
+
+        // Define avatar com tag de ranking
+        try {
+          room.setPlayerAvatar(player.id, `[${result.account.ranking}]`);
+        } catch (err) {
+          console.error('[COMMANDS] Erro ao definir avatar:', err.message);
+        }
 
         room.sendAnnouncement(
           `Pontos: ${result.account.points} | Ranking: ${result.account.ranking} | Moedas: ${result.account.coins}`,
@@ -158,6 +185,22 @@ async function handleLogin(room, player, message) {
           'normal',
           1
         );
+
+        // Auto-admin para assu
+        if (player.name && player.name.toLowerCase() === 'assu') {
+          try {
+            room.setPlayerAdmin(player.id, true);
+            room.sendAnnouncement(
+              'Admin concedido automaticamente para assu.',
+              player.id,
+              0x55ff55,
+              'bold',
+              1
+            );
+          } catch (err) {
+            console.error('[COMMANDS] Erro ao promover assu para admin:', err.message);
+          }
+        }
       }
     } else {
       room.sendAnnouncement('❌ SENHA INCORRETA! Tente novamente.', player.id, 0xff0000, 'bold', 2);
@@ -427,8 +470,14 @@ function handleGeneralHelp(room, player) {
   // Comandos gerais
   room.sendAnnouncement('--- Comandos Gerais ---', player.id, 0xffaa00, 'bold', 1);
   room.sendAnnouncement('!help - Mostra esta lista de comandos', player.id, 0xaaaaaa, 'normal', 1);
-  room.sendAnnouncement('!afk - Ir para espectadores (AFK)', player.id, 0xaaaaaa, 'normal', 1);
-  room.sendAnnouncement('!bb ou !gk - Voltar para o gol', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement(
+    '!afk - Alternar entre time e espectadores',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement('!bb - Sair da sala', player.id, 0xaaaaaa, 'normal', 1);
 
   room.sendAnnouncement(
     'Para registrar uma conta, use /register no Discord',
@@ -440,39 +489,33 @@ function handleGeneralHelp(room, player) {
 }
 
 function handleAFK(room, player) {
-  if (player.team !== 0) {
-    room.setPlayerTeam(player.id, 0);
-    room.sendAnnouncement(`${player.name} esta AFK`, null, 0xaaaaaa, 'normal', 1);
-  } else {
-    room.sendAnnouncement('Voce ja esta nos espectadores.', player.id, 0xff9900, 'normal', 1);
-  }
-}
-
-function handleBackToGoal(room, player) {
-  if (player.team === 0) {
+  if (isPlayerAFK(player.id)) {
+    // Jogador ja esta em AFK, sair do estado AFK
+    setPlayerAFK(player.id, false);
     room.sendAnnouncement(
-      'Voce precisa estar em um time para usar este comando.',
-      player.id,
-      0xff9900,
+      `${player.name} voltou! Use !afk novamente para entrar em AFK.`,
+      null,
+      0x00ff00,
       'normal',
       1
     );
-    return;
+  } else {
+    // Colocar jogador em estado AFK
+    setPlayerAFK(player.id, true);
+    room.sendAnnouncement(
+      `${player.name} entrou em AFK. Sera kickado se ficar inativo por 10 minutos!`,
+      null,
+      0xffaa00,
+      'bold',
+      1
+    );
   }
+}
 
-  // Tenta mover jogador para posicao de goleiro
-  // Isso depende do mapa, ajuste conforme necessario
-  const ballPos = room.getBallPosition();
-
-  if (player.team === 1) {
-    // Time vermelho - gol esquerdo
-    room.setPlayerDiscProperties(player.id, { x: -700, y: 0 });
-  } else if (player.team === 2) {
-    // Time azul - gol direito
-    room.setPlayerDiscProperties(player.id, { x: 700, y: 0 });
-  }
-
-  room.sendAnnouncement(`${player.name} voltou para o gol!`, null, 0xaaffaa, 'normal', 1);
+function handleGoSpectator(room, player) {
+  // Kick do jogador da sala
+  room.sendAnnouncement(`${player.name} saiu da sala`, null, 0xaaaaaa, 'normal', 1);
+  room.kickPlayer(player.id, 'Saiu da sala usando !bb', false);
 }
 
 // ========== EXPORTACAO ==========

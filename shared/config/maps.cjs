@@ -627,8 +627,43 @@ function getRealSoccerMap(map) {
   return JSON.stringify(map);
 }
 
+// Funcao para obter mapa futsal baseado na quantidade de jogadores
+function getFutsalMap(playerCount) {
+  const fs = require('fs');
+  const path = require('path');
+
+  let mapFile;
+
+  if (playerCount <= 2) {
+    // 1x1 ou 2x2
+    mapFile = path.join(__dirname, '../maps/futsal_1x1_2x2.hbs');
+  } else if (playerCount <= 6) {
+    // 3x3 ou 4x4
+    mapFile = path.join(__dirname, '../maps/futsal_3x3_4x4.hbs');
+  } else if (playerCount <= 12) {
+    // 5x5 ou 6x6
+    mapFile = path.join(__dirname, '../maps/futsal_5x5_6x6.hbs');
+  } else if (playerCount <= 14) {
+    // 7x7
+    mapFile = path.join(__dirname, '../maps/futsal_x7.hbs');
+  } else {
+    // 8x8+
+    mapFile = path.join(__dirname, '../maps/futsal_x8+.hbs');
+  }
+
+  try {
+    const mapData = fs.readFileSync(mapFile, 'utf8');
+    return mapData;
+  } catch (error) {
+    console.error(`[MAPS] Erro ao carregar mapa: ${error.message}`);
+    // Fallback para mapa medio
+    return fs.readFileSync(path.join(__dirname, '../maps/futsal_5x5_6x6.hbs'), 'utf8');
+  }
+}
+
 module.exports = {
   getRealSoccerMap,
+  getFutsalMap,
   currentStadium,
   goalsCoord,
   penalArea,

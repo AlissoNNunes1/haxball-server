@@ -1,5 +1,144 @@
 //Modulo para utilitarios compartilhados
 
+// Sistema global de AFK
+const afkPlayers = new Map(); // { playerId: { timestamp: Date, warnings: number } }
+const AFK_TIMEOUT = 10 * 60 * 1000; // 10 minutos em ms
+
+/**
+ * Define jogador em estado AFK
+ * @param {number} playerId - ID do jogador
+ * @param {boolean} state - true para ativar AFK, false para desativar
+ */
+function setPlayerAFK(playerId, state) {
+  if (state) {
+    afkPlayers.set(playerId, { timestamp: Date.now(), warnings: 0 });
+  } else {
+    afkPlayers.delete(playerId);
+  }
+}
+
+/**
+ * Verifica se jogador esta em estado AFK
+ * @param {number} playerId - ID do jogador
+ * @returns {boolean}
+ */
+function isPlayerAFK(playerId) {
+  return afkPlayers.has(playerId);
+}
+
+/**
+ * Pega tempo em AFK (em ms)
+ * @param {number} playerId - ID do jogador
+ * @returns {number} Tempo em ms, ou 0 se nao esta AFK
+ */
+function getAFKTime(playerId) {
+  if (!afkPlayers.has(playerId)) return 0;
+  return Date.now() - afkPlayers.get(playerId).timestamp;
+}
+
+/**
+ * Verifica se jogador passou do tempo limite de AFK
+ * @param {number} playerId - ID do jogador
+ * @returns {boolean}
+ */
+function isAFKTimeout(playerId) {
+  return getAFKTime(playerId) > AFK_TIMEOUT;
+}
+
+/**
+ * Remove jogador do mapa de AFK (usado ao deixar sala)
+ * @param {number} playerId - ID do jogador
+ */
+function removeAFKPlayer(playerId) {
+  afkPlayers.delete(playerId);
+}
+
+/**
+ * Limpa todos os players AFK (usado ao resetar sala)
+ */
+function clearAFKPlayers() {
+  afkPlayers.clear();
+}
+
+/**
+ * Balanceia times de forma inteligente
+ * @param {object} room - Instancia da sala Haxball
+ * @param {boolean} useScore - Se true, considera placar da partida anterior
+ */
+function balanceTeams(room, useScore = false) {
+  const players = room.getPlayerList().filter((p) => p.id !== 0);
+
+  if (useScore) {
+    // Balance considerando placar - para redistribuicao inteligente
+    const scores = room.getScores();
+
+    if (scores && (scores.red > 0 || scores.blue > 0)) {
+      const winningTeam = scores.red > scores.blue ? 1 : 2;
+
+      // Tenta carregar ranking dos jogadores
+      const playersWithRanking = [];
+      let db = null;
+
+      try {
+        const authModule = require('./../../dist/database/auth-client');
+        db = authModule.getAuthDb();
+      } catch (e) {
+        // Database nao disponivel, usa balance simples
+      }
+
+      for (const player of players.filter((p) => p.team !== 0)) {
+        try {
+          const account = db ? db.getAccountByNick(player.name) : null;
+          playersWithRanking.push({
+            id: player.id,
+            name: player.name,
+            team: player.team,
+            points: account ? account.points : 0,
+            wasWinner: player.team === winningTeam,
+          });
+        } catch (error) {
+          playersWithRanking.push({
+            id: player.id,
+            name: player.name,
+            team: player.team,
+            points: 0,
+            wasWinner: player.team === winningTeam,
+          });
+        }
+      }
+
+      // Ordena por pontos (maior primeiro)
+      playersWithRanking.sort((a, b) => b.points - a.points);
+
+      // Distribui alternadamente para equilibrar
+      playersWithRanking.forEach((p, index) => {
+        const newTeam = index % 2 === 0 ? 1 : 2;
+        if (p.team !== newTeam) {
+          room.setPlayerTeam(p.id, newTeam);
+        }
+      });
+    }
+  } else {
+    // Balance simples - coloca espectadores no time com menos jogadores
+    const redCount = players.filter((p) => p.team === 1).length;
+    const blueCount = players.filter((p) => p.team === 2).length;
+    const specCount = players.filter((p) => p.team === 0).length;
+
+    if (specCount > 0 && Math.abs(redCount - blueCount) > 0) {
+      const specs = players.filter((p) => p.team === 0);
+      for (const player of specs) {
+        if (redCount < blueCount) {
+          room.setPlayerTeam(player.id, 1);
+          break;
+        } else if (blueCount < redCount) {
+          room.setPlayerTeam(player.id, 2);
+          break;
+        }
+      }
+    }
+  }
+}
+
 function pointDistance(p1, p2) {
   var d1 = p1.x - p2.x;
   var d2 = p1.y - p2.y;
@@ -52,9 +191,16 @@ module.exports = {
   pointDistance,
   sleep,
   ballWarning,
+  setPlayerAFK,
+  isPlayerAFK,
+  getAFKTime,
+  isAFKTimeout,
+  removeAFKPlayer,
+  clearAFKPlayers,
+  balanceTeams,
 };
 
-//   __  ____ ____ _  _ 
+//   __  ____ ____ _  _
 //  / _\/ ___) ___) )( \
 // /    \___ \___ ) \/ (
 // \_/\_(____(____|____/

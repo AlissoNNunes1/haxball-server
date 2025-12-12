@@ -1,9 +1,9 @@
 //Modulo para handlers de eventos da sala CIRS Stadium
 
-const { announce, whisper, isAdminPresent, displayAdminMessage } = require('./cirs-messages.cjs');
+const { announce, whisper, isAdminPresent, displayAdminMessage } = require('./messages.cjs');
 const room = globalThis.room;
-const { sleep, pointDistance, ballWarning } = require('./utils.cjs');
-const { processCommand } = require('./commands.cjs'); // IMPORTA COMANDOS GLOBAIS
+const { sleep, pointDistance, ballWarning } = require('../../shared/config/utils.cjs');
+const { processCommand } = require('../../shared/config/commands.cjs');
 const {
   positions,
   activeFormation_red,
@@ -20,7 +20,7 @@ const {
   Game,
   checkOffside,
   shouldCheckOffside,
-} = require('./cirs-rules.cjs');
+} = require('./rules.cjs');
 const {
   getRealSoccerMap,
   currentStadium,
@@ -31,8 +31,8 @@ const {
   cornerKickCoord,
   cornerKickStrength,
   goalKickStrength,
-} = require('./maps.cjs');
-const variables = require('./variables.cjs');
+} = require('../../shared/config/maps.cjs');
+const variables = require('../../shared/config/variables.cjs');
 let {
   fieldWidth,
   fieldHeight,

@@ -1,8 +1,8 @@
 //Modulo para regras do jogo, formacoes e logica de jogo
 
 const room = globalThis.room;
-const { announce } = require('./cirs-messages.cjs');
-const { sleep } = require('./utils.cjs');
+const { announce } = require('./messages.cjs');
+const { sleep } = require('../../shared/config/utils.cjs');
 
 class Game {
   constructor() {

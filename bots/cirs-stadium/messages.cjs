@@ -1,6 +1,6 @@
 //Modulo para mensagens e utilitarios de comunicacao
 
-const { allowPublicAdmin } = require('./variables.cjs');
+const { allowPublicAdmin } = require('../../shared/config/variables.cjs');
 const room = globalThis.room;
 
 function announce(msg, targetId, color, style, sound) {
