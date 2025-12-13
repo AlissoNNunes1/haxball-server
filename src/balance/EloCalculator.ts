@@ -101,7 +101,7 @@ export class EloCalculator {
 
     // Atualiza rating da posicao especifica
     const positionGames = gamesPlayed[result.position] || 0;
-    const positionKey = result.position.toLowerCase() as keyof EloRating;
+    const positionKey = result.position.toLowerCase() as 'gk' | 'def' | 'mid' | 'ata';
 
     if (typeof newRating[positionKey] === 'number') {
       newRating[positionKey] = this.calculateNewRating(

@@ -28,7 +28,7 @@ export class AuthAPI {
     this.app.use(express.json());
 
     // CORS
-    this.app.use((req, res, next) => {
+    this.app.use((_req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
       res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -36,8 +36,8 @@ export class AuthAPI {
     });
 
     // Logger
-    this.app.use((req, res, next) => {
-      console.log(`[API] ${req.method} ${req.path}`);
+    this.app.use((_req, _res, next) => {
+      console.log(`[API] ${_req.method} ${_req.path}`);
       next();
     });
   }
@@ -47,7 +47,7 @@ export class AuthAPI {
    */
   private setupRoutes() {
     // Health check
-    this.app.get('/health', (req, res) => {
+    this.app.get('/health', (_req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
@@ -62,12 +62,12 @@ export class AuthAPI {
     this.app.post('/api/auth/logout', this.logout.bind(this));
 
     // 404
-    this.app.use((req, res) => {
+    this.app.use((_req, res) => {
       res.status(404).json({ error: 'Endpoint not found' });
     });
 
     // Error handler
-    this.app.use((err: any, req: Request, res: Response, next: any) => {
+    this.app.use((err: any, _req: Request, res: Response, _next: any) => {
       console.error('[API] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     });
@@ -77,18 +77,20 @@ export class AuthAPI {
    * GET /api/profile/:nick
    * Busca perfil publico
    */
-  private async getProfile(req: Request, res: Response) {
+  private async getProfile(req: Request, res: Response): Promise<void> {
     try {
       const { nick } = req.params;
 
       if (!nick) {
-        return res.status(400).json({ error: 'Nick is required' });
+        res.status(400).json({ error: 'Nick is required' });
+        return;
       }
 
       const profile = await this.authService.getPublicProfile(nick, this.db);
 
       if (!profile) {
-        return res.status(404).json({ error: 'Profile not found' });
+        res.status(404).json({ error: 'Profile not found' });
+        return;
       }
 
       res.json({ success: true, profile });
@@ -102,7 +104,7 @@ export class AuthAPI {
    * GET /api/ranking/top?by=ranking&limit=10
    * Busca top jogadores
    */
-  private async getTopRanking(req: Request, res: Response) {
+  private async getTopRanking(req: Request, res: Response): Promise<void> {
     try {
       const by = req.query.by === 'pontos' ? 'pontos' : 'ranking';
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
@@ -130,18 +132,20 @@ export class AuthAPI {
    * GET /api/stats/:nick
    * Busca estatisticas do jogador
    */
-  private async getStats(req: Request, res: Response) {
+  private async getStats(req: Request, res: Response): Promise<void> {
     try {
       const { nick } = req.params;
 
       if (!nick) {
-        return res.status(400).json({ error: 'Nick is required' });
+        res.status(400).json({ error: 'Nick is required' });
+        return;
       }
 
       const account = this.db.getAccountByNick(nick);
 
       if (!account) {
-        return res.status(404).json({ error: 'Account not found' });
+        res.status(404).json({ error: 'Account not found' });
+        return;
       }
 
       // Busca ratings
@@ -194,12 +198,13 @@ export class AuthAPI {
    * POST /api/auth/login
    * Autentica jogador e retorna token
    */
-  private async login(req: Request, res: Response) {
+  private async login(req: Request, res: Response): Promise<void> {
     try {
       const { haxballNick, password } = req.body;
 
       if (!haxballNick || !password) {
-        return res.status(400).json({ error: 'Nick and password are required' });
+        res.status(400).json({ error: 'Nick and password are required' });
+        return;
       }
 
       const result = await this.authService.login({ haxballNick, password }, this.db);
@@ -230,12 +235,13 @@ export class AuthAPI {
    * POST /api/auth/validate
    * Valida token de sessao
    */
-  private async validateToken(req: Request, res: Response) {
+  private async validateToken(req: Request, res: Response): Promise<void> {
     try {
       const { token } = req.body;
 
       if (!token) {
-        return res.status(400).json({ error: 'Token is required' });
+        res.status(400).json({ error: 'Token is required' });
+        return;
       }
 
       const session = await this.authService.validateToken(token, this.db);
@@ -262,12 +268,13 @@ export class AuthAPI {
    * POST /api/auth/logout
    * Invalida token de sessao
    */
-  private async logout(req: Request, res: Response) {
+  private async logout(req: Request, res: Response): Promise<void> {
     try {
       const { token } = req.body;
 
       if (!token) {
-        return res.status(400).json({ error: 'Token is required' });
+        res.status(400).json({ error: 'Token is required' });
+        return;
       }
 
       await this.authService.logout(token, this.db);

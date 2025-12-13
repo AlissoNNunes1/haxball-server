@@ -164,16 +164,36 @@ export class PluginManager {
   private createLogger(pluginName: string): PluginLogger {
     return {
       info: (message: string, ...args: any[]) => {
-        log('info', `[${pluginName}] ${message}`, ...args);
+        try {
+          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          log('info', `[${pluginName}] ${message}${extra}`);
+        } catch (_) {
+          log('info', `[${pluginName}] ${message}`);
+        }
       },
       warn: (message: string, ...args: any[]) => {
-        log('warn', `[${pluginName}] ${message}`, ...args);
+        try {
+          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          log('warn', `[${pluginName}] ${message}${extra}`);
+        } catch (_) {
+          log('warn', `[${pluginName}] ${message}`);
+        }
       },
       error: (message: string, ...args: any[]) => {
-        log('error', `[${pluginName}] ${message}`, ...args);
+        try {
+          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          log('error', `[${pluginName}] ${message}${extra}`);
+        } catch (_) {
+          log('error', `[${pluginName}] ${message}`);
+        }
       },
       debug: (message: string, ...args: any[]) => {
-        log('debug', `[${pluginName}] ${message}`, ...args);
+        try {
+          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          log('debug', `[${pluginName}] ${message}${extra}`);
+        } catch (_) {
+          log('debug', `[${pluginName}] ${message}`);
+        }
       },
     };
   }

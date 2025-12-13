@@ -409,7 +409,7 @@ export class StatsService {
    * Integracao: Atualiza rating Elo apos partida
    * Usa BalanceService se disponivel
    */
-  async updateRatingAfterMatch(matchStats: AdvancedMatchStats): Promise<void> {
+  async updateRatingAfterMatch(_matchStats: AdvancedMatchStats): Promise<void> {
     if (!this.balanceService) return;
 
     // TODO: Implementar integracao com BalanceService

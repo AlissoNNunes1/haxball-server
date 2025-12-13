@@ -12,13 +12,13 @@ export class StatsAPI {
   private router: Router;
   private statsService: StatsService;
   private calculator: StatsCalculator;
-  private authService: AuthService;
+  private _authService: AuthService;
 
   constructor(statsService: StatsService, calculator: StatsCalculator, authService: AuthService) {
     this.router = Router();
     this.statsService = statsService;
     this.calculator = calculator;
-    this.authService = authService;
+    this._authService = authService;
 
     this.setupRoutes();
   }
@@ -255,7 +255,10 @@ export class StatsAPI {
       }
 
       if (req.query.team) {
-        filter.team = req.query.team as 'red' | 'blue' | 'spectator';
+        const team = String(req.query.team);
+        if (team === 'red' || team === 'blue') {
+          filter.team = team as 'red' | 'blue';
+        }
       }
 
       if (req.query.won !== undefined) {

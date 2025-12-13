@@ -56,6 +56,16 @@ export class BalanceAlgorithm {
     const team1WithPositions = this.assignPositions(team1);
     const team2WithPositions = this.assignPositions(team2);
 
+    // DEBUG: valores intermediarios para diagnostico de NaN
+    // eslint-disable-next-line no-console
+    console.debug('balanceTeams debug', {
+      playersCount: players.length,
+      team1Count: team1WithPositions.length,
+      team2Count: team2WithPositions.length,
+      team1Players: team1WithPositions.map((p) => ({ id: p.id, rating: p.rating.overall })),
+      team2Players: team2WithPositions.map((p) => ({ id: p.id, rating: p.rating.overall })),
+    });
+
     // Calcula ratings dos times
     const team1Rating = this.calculateTeamRating(team1WithPositions);
     const team2Rating = this.calculateTeamRating(team2WithPositions);
@@ -79,7 +89,7 @@ export class BalanceAlgorithm {
       },
       ratingDifference,
       fairnessScore,
-      strategy: this.config.strategy,
+      strategy: this.config.strategy ?? 'greedy',
     };
   }
 
@@ -124,10 +134,10 @@ export class BalanceAlgorithm {
 
     // Distribui alternadamente priorizando equilibrio
     for (let i = 0; i < sorted.length; i++) {
-      const team1Rating = this.calculateTeamRating(team1);
-      const team2Rating = this.calculateTeamRating(team2);
+      const team1Sum = team1.reduce((s, p) => s + p.rating.overall, 0);
+      const team2Sum = team2.reduce((s, p) => s + p.rating.overall, 0);
 
-      if (team1Rating <= team2Rating) {
+      if (team1Sum <= team2Sum) {
         team1.push(sorted[i]);
       } else {
         team2.push(sorted[i]);
@@ -152,6 +162,11 @@ export class BalanceAlgorithm {
     // Gera populacao inicial
     let population = this.generateInitialPopulation(players, POPULATION_SIZE);
 
+    // Fallback para casos raros onde a populacao gerar vazia
+    if (!population || population.length === 0) {
+      return this.greedyBalance(players);
+    }
+
     // Evolui populacao
     for (let gen = 0; gen < GENERATIONS; gen++) {
       // Avalia fitness de cada individuo
@@ -171,7 +186,7 @@ export class BalanceAlgorithm {
       this.calculateFitness(individual.team1, individual.team2)
     );
     const bestIndex = fitnessScores.indexOf(Math.min(...fitnessScores));
-
+    if (bestIndex === -1) return this.greedyBalance(players);
     return population[bestIndex];
   }
 
@@ -225,6 +240,7 @@ export class BalanceAlgorithm {
    * Penaliza jogadores muito fora de suas melhores posicoes
    */
   private calculatePositionPenalty(players: PlayerForBalance[]): number {
+      if (players.length === 0) return 0; // Defensive check for empty players array
     let penalty = 0;
 
     for (const player of players) {
@@ -297,7 +313,7 @@ export class BalanceAlgorithm {
     parent1: { team1: PlayerForBalance[]; team2: PlayerForBalance[] },
     parent2: { team1: PlayerForBalance[]; team2: PlayerForBalance[] }
   ): { team1: PlayerForBalance[]; team2: PlayerForBalance[] } {
-    const allPlayers = [...parent1.team1, ...parent1.team2];
+    // const allPlayers = [...parent1.team1, ...parent1.team2]; // unused
     const child = { team1: [...parent1.team1], team2: [] as PlayerForBalance[] };
 
     // Adiciona jogadores do parent2 que nao estao em team1
@@ -340,19 +356,34 @@ export class BalanceAlgorithm {
     for (const position of positions) {
       if (remaining.length === 0) break;
 
-      // Encontra melhor jogador para essa posicao
-      let bestIndex = 0;
-      let bestRating = 0;
-
-      for (let i = 0; i < remaining.length; i++) {
-        const rating = this.positionRating.getRatingForPosition(remaining[i].rating, position);
-        if (rating > bestRating) {
-          bestRating = rating;
-          bestIndex = i;
-        }
+      // Preferencia: procura jogador com preferredPosition igual a posicao atual
+      const preferredIndex = remaining.findIndex((p) => p.preferredPosition === position);
+      // Se houver menos jogadores que posicoes, favorece atribuicao de posicoes preferidas
+      if (remaining.length <= positions.length && preferredIndex === -1) {
+        // pula essa posicao para tentar atribuir preferenciais primeiro
+        continue;
       }
+      let player: PlayerForBalance;
+      if (preferredIndex !== -1) {
+        player = remaining.splice(preferredIndex, 1)[0];
+      } else {
+        // Encontra melhor jogador para essa posicao por rating
+        let bestIndex = 0;
+        let bestRating = 0;
 
-      const player = remaining.splice(bestIndex, 1)[0];
+        for (let i = 0; i < remaining.length; i++) {
+          const rating = this.positionRating.getRatingForPosition(
+            remaining[i].rating,
+            position
+          );
+          if (rating > bestRating) {
+            bestRating = rating;
+            bestIndex = i;
+          }
+        }
+
+        player = remaining.splice(bestIndex, 1)[0];
+      }
       assigned.push({ ...player, assignedPosition: position });
     }
 
@@ -368,8 +399,10 @@ export class BalanceAlgorithm {
    * Calcula rating medio do time considerando posicoes
    */
   private calculateTeamRating(players: PlayerForBalance[]): number {
-    if (players.length === 0) return 0;
-
+    if (players.length === 0) return 1000; // fallback para rating inicial
+    // DEBUG: imprime effectiveRating de cada jogador para diagnostico
+    // eslint-disable-next-line no-console
+    console.debug('calculateTeamRating players', players.map((p) => ({ id: p.id, assigned: p.assignedPosition, overall: p.rating.overall })));
     const totalRating = players.reduce((sum, player) => {
       const position = player.assignedPosition || Position.MID;
       const effectiveRating = this.positionRating.getEffectiveRating(
@@ -377,6 +410,8 @@ export class BalanceAlgorithm {
         position,
         player.recentPerformance
       );
+      // eslint-disable-next-line no-console
+      console.debug('effectiveRating', { id: player.id, effectiveRating });
       return sum + effectiveRating;
     }, 0);
 
@@ -392,8 +427,19 @@ export class BalanceAlgorithm {
     team2: PlayerForBalance[],
     ratingDifference: number
   ): number {
-    // Score base: quanto menor a diferenca, maior o score
-    let score = Math.max(0, 100 - ratingDifference);
+    // Score base: quanto menor a diferenca relativa ao rating medio, maior o score
+    // Normaliza a diferenca pelo rating medio dos times para evitar penalidades absolutas
+    const team1Rating = this.calculateTeamRating(team1);
+    const team2Rating = this.calculateTeamRating(team2);
+    const averageRating = (team1Rating + team2Rating) / 2;
+
+    // Protecoes para evitar divisao por zero e valores invalidos
+    const normalizedDifference = averageRating > 0 && isFinite(averageRating)
+      ? ratingDifference / averageRating
+      : 1;
+
+    // Transforma em porcentagem (0-100) e calcula score como complemento
+    let score = Math.max(0, Math.round(100 - normalizedDifference * 100));
 
     // Bonus por boa distribuicao de posicoes
     const positionPenalty1 = this.calculatePositionPenalty(team1);

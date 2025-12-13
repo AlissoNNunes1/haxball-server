@@ -27,6 +27,6 @@
     "noImplicitThis": true,
     "alwaysStrict": true
   },
-  "files": ["src/main.ts"],
-  "include": ["public"]
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["dist", "node_modules"]
 }

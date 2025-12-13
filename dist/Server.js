@@ -326,10 +326,11 @@ class Server {
                 : undefined;
             // Se temos um caminho de script, tentar usar require diretamente
             if (scriptPath) {
+                const scriptDir = path_1.default.dirname(scriptPath);
+                let requireFn;
                 try {
                     // Criar um require funcao para o diretorio do script
-                    const scriptDir = path_1.default.dirname(scriptPath);
-                    const requireFn = (0, module_1.createRequire)(path_1.default.join(scriptDir, '__placeholder__.js'));
+                    requireFn = (0, module_1.createRequire)(path_1.default.join(scriptDir, '__placeholder__.js'));
                     // Limpar cache se existir
                     if (require.cache[scriptPath]) {
                         delete require.cache[scriptPath];
@@ -350,8 +351,25 @@ class Server {
                     globalThis.customSettings = settings || {};
                     globalThis.db = safeDb;
                     globalThis.HBInit = (_config) => room;
-                    eval(script);
-                    (0, log_1.log)('SERVER', 'Bot script carregado com eval como fallback');
+                    // Definir require especifico do diretorio do script para que require() resolva corretamente
+                    let localRequire;
+                    if (typeof requireFn !== 'undefined') {
+                        localRequire = requireFn;
+                    }
+                    try {
+                        if (localRequire) {
+                            const wrappedScript = `(function(require, module, exports){\n${script}\n})(localRequire, module, exports)`;
+                            // Avaliar com require local
+                            eval(wrappedScript);
+                        }
+                        else {
+                            eval(script);
+                        }
+                        (0, log_1.log)('SERVER', 'Bot script carregado com eval como fallback');
+                    }
+                    finally {
+                        // Nao ha mais injecoes de require global
+                    }
                 }
             }
             else {

@@ -168,7 +168,7 @@ export class StatsCommands {
         {
           name: 'Partidas',
           value: `${agg1.totalMatches} vs ${agg2.totalMatches} (${this.formatDiff(
-            comparison.totalMatches
+            agg1.totalMatches - agg2.totalMatches
           )})`,
           inline: false,
         },
@@ -182,21 +182,21 @@ export class StatsCommands {
         {
           name: 'Gols Totais',
           value: `${agg1.totalGoals} vs ${agg2.totalGoals} (${this.formatDiff(
-            comparison.totalGoals
+            agg1.totalGoals - agg2.totalGoals
           )})`,
           inline: true,
         },
         {
           name: 'Assistencias Totais',
           value: `${agg1.totalAssists} vs ${agg2.totalAssists} (${this.formatDiff(
-            comparison.totalAssists
+            agg1.totalAssists - agg2.totalAssists
           )})`,
           inline: true,
         },
         {
           name: 'Defesas Totais',
           value: `${agg1.totalSaves} vs ${agg2.totalSaves} (${this.formatDiff(
-            comparison.totalSaves
+            agg1.totalSaves - agg2.totalSaves
           )})`,
           inline: true,
         },
@@ -204,21 +204,21 @@ export class StatsCommands {
           name: 'Media de Gols',
           value: `${agg1.avgGoalsPerMatch.toFixed(2)} vs ${agg2.avgGoalsPerMatch.toFixed(
             2
-          )} (${this.formatDiff(comparison.avgGoalsPerMatch, true)})`,
+          )} (${this.formatDiff(agg1.avgGoalsPerMatch - agg2.avgGoalsPerMatch, true)})`,
           inline: true,
         },
         {
           name: 'Media de Assistencias',
           value: `${agg1.avgAssistsPerMatch.toFixed(2)} vs ${agg2.avgAssistsPerMatch.toFixed(
             2
-          )} (${this.formatDiff(comparison.avgAssistsPerMatch, true)})`,
+          )} (${this.formatDiff(agg1.avgAssistsPerMatch - agg2.avgAssistsPerMatch, true)})`,
           inline: true,
         },
         {
           name: 'Media de Defesas',
           value: `${agg1.avgSavesPerMatch.toFixed(2)} vs ${agg2.avgSavesPerMatch.toFixed(
             2
-          )} (${this.formatDiff(comparison.avgSavesPerMatch, true)})`,
+          )} (${this.formatDiff(agg1.avgSavesPerMatch - agg2.avgSavesPerMatch, true)})`,
           inline: true,
         }
       );

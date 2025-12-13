@@ -7,147 +7,96 @@ import { HeatmapData, PlayerStatsAggregate, StatsCacheEntry } from './types';
 export class StatsCacheService {
   private aggregateCache: Map<number, StatsCacheEntry<PlayerStatsAggregate>>;
   private heatmapCache: Map<string, StatsCacheEntry<HeatmapData>>;
-  private defaultTTL: number;
+  private defaultTTLMs: number;
 
-  constructor(defaultTTL: number = 300000) {
-    // 5 minutos default
+  constructor(defaultTTLMs: number = 300000) {
     this.aggregateCache = new Map();
     this.heatmapCache = new Map();
-    this.defaultTTL = defaultTTL;
-
-    // Limpa cache periodicamente
+    this.defaultTTLMs = defaultTTLMs;
     this.startCleanupInterval();
   }
 
-  /**
-   * Busca agregado no cache
-   */
   getAggregate(accountId: number): PlayerStatsAggregate | null {
     const entry = this.aggregateCache.get(accountId);
-
     if (!entry) return null;
-
-    // Verifica expiracao
-    if (Date.now() > entry.expiresAt) {
+    const expiresAt = entry.timestamp.getTime() + entry.ttl * 1000;
+    if (Date.now() > expiresAt) {
       this.aggregateCache.delete(accountId);
       return null;
     }
-
-    return entry.value;
+    return entry.data;
   }
 
-  /**
-   * Armazena agregado no cache
-   */
-  setAggregate(accountId: number, aggregate: PlayerStatsAggregate, ttl?: number): void {
-    const expiresAt = Date.now() + (ttl || this.defaultTTL);
-
-    this.aggregateCache.set(accountId, {
-      value: aggregate,
-      cachedAt: new Date(),
-      expiresAt,
-    });
+  setAggregate(accountId: number, aggregate: PlayerStatsAggregate, ttlMs?: number): void {
+    const ttlSeconds = Math.floor((ttlMs || this.defaultTTLMs) / 1000);
+    const entry: StatsCacheEntry<PlayerStatsAggregate> = {
+      data: aggregate,
+      timestamp: new Date(),
+      ttl: ttlSeconds,
+    };
+    this.aggregateCache.set(accountId, entry);
   }
 
-  /**
-   * Remove agregado do cache
-   */
   invalidateAggregate(accountId: number): void {
     this.aggregateCache.delete(accountId);
   }
 
-  /**
-   * Busca heatmap no cache
-   */
   getHeatmap(matchId: number, accountId: number): HeatmapData | null {
     const key = this.makeHeatmapKey(matchId, accountId);
     const entry = this.heatmapCache.get(key);
-
     if (!entry) return null;
-
-    if (Date.now() > entry.expiresAt) {
+    const expiresAt = entry.timestamp.getTime() + entry.ttl * 1000;
+    if (Date.now() > expiresAt) {
       this.heatmapCache.delete(key);
       return null;
     }
-
-    return entry.value;
+    return entry.data;
   }
 
-  /**
-   * Armazena heatmap no cache
-   */
-  setHeatmap(matchId: number, accountId: number, heatmap: HeatmapData, ttl?: number): void {
+  setHeatmap(matchId: number, accountId: number, heatmap: HeatmapData, ttlMs?: number): void {
     const key = this.makeHeatmapKey(matchId, accountId);
-    const expiresAt = Date.now() + (ttl || this.defaultTTL);
-
-    this.heatmapCache.set(key, {
-      value: heatmap,
-      cachedAt: new Date(),
-      expiresAt,
-    });
+    const ttlSeconds = Math.floor((ttlMs || this.defaultTTLMs) / 1000);
+    const entry: StatsCacheEntry<HeatmapData> = {
+      data: heatmap,
+      timestamp: new Date(),
+      ttl: ttlSeconds,
+    };
+    this.heatmapCache.set(key, entry);
   }
 
-  /**
-   * Remove heatmap do cache
-   */
   invalidateHeatmap(matchId: number, accountId: number): void {
     const key = this.makeHeatmapKey(matchId, accountId);
     this.heatmapCache.delete(key);
   }
 
-  /**
-   * Gera chave de heatmap
-   */
   private makeHeatmapKey(matchId: number, accountId: number): string {
     return `${matchId}:${accountId}`;
   }
 
-  /**
-   * Limpa cache expirado
-   */
   private cleanup(): void {
     const now = Date.now();
-
-    // Limpa agregados expirados
     for (const [accountId, entry] of this.aggregateCache) {
-      if (now > entry.expiresAt) {
+      if (now > entry.timestamp.getTime() + entry.ttl * 1000) {
         this.aggregateCache.delete(accountId);
       }
     }
-
-    // Limpa heatmaps expirados
     for (const [key, entry] of this.heatmapCache) {
-      if (now > entry.expiresAt) {
+      if (now > entry.timestamp.getTime() + entry.ttl * 1000) {
         this.heatmapCache.delete(key);
       }
     }
   }
 
-  /**
-   * Inicia intervalo de limpeza automatica
-   */
   private startCleanupInterval(): void {
-    setInterval(() => {
-      this.cleanup();
-    }, 60000); // Limpa a cada minuto
+    setInterval(() => this.cleanup(), 60000);
   }
 
-  /**
-   * Limpa todo o cache
-   */
   clear(): void {
     this.aggregateCache.clear();
     this.heatmapCache.clear();
   }
 
-  /**
-   * Retorna estatisticas do cache
-   */
-  getStats(): {
-    aggregates: number;
-    heatmaps: number;
-    totalEntries: number;
-  } {
+  getStats(): { aggregates: number; heatmaps: number; totalEntries: number } {
     return {
       aggregates: this.aggregateCache.size,
       heatmaps: this.heatmapCache.size,
@@ -155,45 +104,21 @@ export class StatsCacheService {
     };
   }
 
-  /**
-   * Invalida todos os caches de um jogador
-   */
   invalidatePlayer(accountId: number): void {
     this.invalidateAggregate(accountId);
-
-    // Invalida todos os heatmaps do jogador
     const keysToDelete: string[] = [];
-
     for (const key of this.heatmapCache.keys()) {
-      if (key.endsWith(`:${accountId}`)) {
-        keysToDelete.push(key);
-      }
+      if (key.endsWith(`:${accountId}`)) keysToDelete.push(key);
     }
-
-    for (const key of keysToDelete) {
-      this.heatmapCache.delete(key);
-    }
+    for (const key of keysToDelete) this.heatmapCache.delete(key);
   }
 
-  /**
-   * Invalida cache de partida (todos jogadores)
-   */
   invalidateMatch(matchId: number): void {
     const keysToDelete: string[] = [];
-
     for (const key of this.heatmapCache.keys()) {
-      if (key.startsWith(`${matchId}:`)) {
-        keysToDelete.push(key);
-      }
+      if (key.startsWith(`${matchId}:`)) keysToDelete.push(key);
     }
-
-    for (const key of keysToDelete) {
-      this.heatmapCache.delete(key);
-    }
+    for (const key of keysToDelete) this.heatmapCache.delete(key);
   }
 }
 
-//   __  ____ ____ _  _
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/

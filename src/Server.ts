@@ -11,6 +11,8 @@ import path from 'path';
 import { CustomSettings, ServerConfig } from './Global';
 import { log } from './utils/log';
 import { logger } from './utils/Logger';
+// Funcoes utilitarias de mensagens (CJS)
+const { stopCommunityAnnouncements } = require('../shared/config/messages.cjs');
 
 /**
  * Representa uma instancia de sala Haxball aberta
@@ -53,6 +55,8 @@ export interface BrowserInfo {
  */
 export class Server {
   private rooms: Map<number, RoomInstance> = new Map();
+  // Map adicional para indexar instancias por link (stable id fornecido por haxball.js)
+  private roomsByLink: Map<string, number> = new Map();
   private nextPid: number = 1000;
   private proxyServers: string[];
   private db: any | null = null;
@@ -189,6 +193,7 @@ export class Server {
       };
 
       this.rooms.set(pid, roomInstance);
+      if (roomInstance.link) this.roomsByLink.set(String(roomInstance.link), pid);
 
       log('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`);
       logger.info('Server', `Sala aberta`, { pid, name, link: roomInstance.link });
@@ -259,6 +264,8 @@ export class Server {
 
       try {
         if (typeof roomModule?.init === 'function') {
+          // Parar anuncios periodicos antes de reavaliar/init do modulo
+          try { stopCommunityAnnouncements(room); } catch (_) {}
           roomModule.init({ room, settings: settings || {}, db: this.db });
         } else {
           log('SERVER', 'Modulo de sala sem init definido');
@@ -280,6 +287,7 @@ export class Server {
       };
 
       this.rooms.set(pid, roomInstance);
+      if (roomInstance.link) this.roomsByLink.set(String(roomInstance.link), pid);
 
       log(
         'SERVER',
@@ -321,9 +329,13 @@ export class Server {
     }
 
     try {
+      // Parar qualquer anuncio periodico da comunidade para evitar timers vazando
+      try { stopCommunityAnnouncements(instance?.room); } catch (_) {}
       // haxball.js nao tem metodo close explicito
       // Remover handlers e deixar garbage collection fazer seu trabalho
       instance.eventHandlers.clear();
+      const link = instance.link;
+      if (link) this.roomsByLink.delete(String(link));
       this.rooms.delete(pid);
 
       // Tentar force garbage collection se disponivel
@@ -384,6 +396,33 @@ export class Server {
   }
 
   /**
+   * Recupera instancia da sala a partir do link (identificador estavel) se existente
+   * @param link string
+   * @returns RoomInstance | undefined
+   */
+  getRoomByLink(link: string): RoomInstance | undefined {
+    const pid = this.roomsByLink.get(String(link));
+    if (pid === undefined) return undefined;
+    return this.getRoom(pid);
+  }
+
+  /**
+   * Recupera instancia da sala a partir do objeto room do haxball.js
+   * Usa propriedades estaveis como getLink(), link, name ou room.id quando disponivel
+   * @param room any
+   */
+  getRoomByObject(room: any): RoomInstance | undefined {
+    if (!room) return undefined;
+    try {
+      const link = room.getLink?.() || room.link || room.name || room.id;
+      if (!link) return undefined;
+      return this.getRoomByLink(String(link));
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  /**
    * Retorna numero de salas abertas
    * @returns {number} Quantidade de salas
    */
@@ -407,6 +446,8 @@ export class Server {
     scriptPath?: string
   ): void {
     try {
+      // Garantir que anuncios da comunidade anteriores sejam interrompidos antes de (re)carregar o script
+      try { stopCommunityAnnouncements(room); } catch (_) {}
       // Contexto disponivel ao script
       const safeDb = db
         ? {
@@ -421,10 +462,11 @@ export class Server {
 
       // Se temos um caminho de script, tentar usar require diretamente
       if (scriptPath) {
+        const scriptDir = path.dirname(scriptPath);
+        let requireFn: NodeRequire | undefined;
         try {
           // Criar um require funcao para o diretorio do script
-          const scriptDir = path.dirname(scriptPath);
-          const requireFn = createRequire(path.join(scriptDir, '__placeholder__.js'));
+          requireFn = createRequire(path.join(scriptDir, '__placeholder__.js')) as NodeRequire;
 
           // Limpar cache se existir
           if (require.cache[scriptPath]) {
@@ -454,8 +496,25 @@ export class Server {
           (globalThis as any).db = safeDb;
           (globalThis as any).HBInit = (_config: any) => room;
 
-          eval(script);
-          log('SERVER', 'Bot script carregado com eval como fallback');
+          // Definir require especifico do diretorio do script para que require() resolva corretamente
+          let localRequire: NodeRequire | undefined;
+          if (typeof requireFn !== 'undefined') {
+            localRequire = requireFn;
+          }
+
+          try {
+            if (localRequire) {
+              const wrappedScript = `(function(require, module, exports){\n${script}\n})(localRequire, module, exports)`;
+              // Avaliar com require local
+              eval(wrappedScript);
+            } else {
+              eval(script);
+            }
+
+            log('SERVER', 'Bot script carregado com eval como fallback');
+          } finally {
+            // Nao ha mais injecoes de require global
+          }
         }
       } else {
         // Fallback para eval se nao temos caminho
@@ -494,6 +553,13 @@ export class Server {
         const originalHandler = room.onRoomLink;
         room.onRoomLink = (link: string) => {
           log('SERVER', `Sala ${pid} link atualizado: ${link}`);
+          // Atualiza indice por link para manter chave estavel
+          const inst = this.getRoom(pid);
+          if (inst) {
+            if (inst.link) this.roomsByLink.delete(String(inst.link));
+            inst.link = link;
+            if (link) this.roomsByLink.set(String(link), pid);
+          }
           if (typeof originalHandler === 'function') {
             originalHandler.call(room, link);
           }

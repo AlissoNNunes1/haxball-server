@@ -22,11 +22,13 @@ export class AuthService {
   };
 
   private activeSessions = new Map<string, PlayerSession>();
+  private db?: any;
 
-  constructor(config?: Partial<AuthConfig>) {
+  constructor(config?: Partial<AuthConfig>, db?: any) {
     if (config) {
       this.config = { ...this.config, ...config };
     }
+    if (db) this.db = db;
   }
 
   /**
@@ -310,6 +312,24 @@ export class AuthService {
       createdAt: account.createdAt,
       lastLogin: account.lastLogin,
     };
+  }
+
+  /**
+   * Helper: busca conta por nome se db estiver presente
+   */
+  async getAccountByName(name: string): Promise<any | null> {
+    if (!this.db) return null;
+    return this.db.getAccountByName(name);
+  }
+
+  async getAccountById(id: number): Promise<any | null> {
+    if (!this.db) return null;
+    return this.db.getAccountById(id);
+  }
+
+  async getAccountByDiscordId(discordId: string): Promise<any | null> {
+    if (!this.db) return null;
+    return this.db.getAccountByDiscordId(discordId);
   }
 
   /**

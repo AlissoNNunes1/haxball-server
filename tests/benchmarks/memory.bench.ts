@@ -9,7 +9,7 @@ interface MemorySample {
   external: number;
 }
 
-interface BenchmarkResult {
+interface _BenchmarkResult {
   testName: string;
   duration: number;
   memoryBefore: MemorySample;
@@ -168,7 +168,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
     });
 
     it('deve ter limite maximo de memoria para buffer', () => {
-      const allLogs: any[] = [];
+      const _allLogs: any[] = [];
 
       for (let i = 0; i < 15000; i++) {
         logger.debug('Benchmark', `Message ${i}`, { index: i });
@@ -257,7 +257,7 @@ describe('Performance Benchmarks - Memory Usage', () => {
       const samples: number[] = [];
 
       for (let cycle = 0; cycle < 5; cycle++) {
-        const before = getSample();
+        const _before = getSample();
 
         for (let i = 0; i < 500; i++) {
           logger.info('Benchmark', `Cycle ${cycle} - Log ${i}`);

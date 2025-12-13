@@ -54,7 +54,7 @@ export class BalanceAPI {
    * GET /api/balance/health
    * Health check da API
    */
-  private handleHealth(req: Request, res: Response): void {
+  private handleHealth(_req: Request, res: Response): void {
     res.json({
       status: 'ok',
       service: 'balance-api',
@@ -127,7 +127,7 @@ export class BalanceAPI {
    * GET /api/balance/stats
    * Retorna estatisticas globais do sistema
    */
-  private async handleGlobalStats(req: Request, res: Response): Promise<void> {
+  private async handleGlobalStats(_req: Request, res: Response): Promise<void> {
     try {
       const stats = await this.balanceService.getGlobalRatingStats();
       res.json(stats);
@@ -253,7 +253,7 @@ export class BalanceAPI {
    */
   private async handleApplyDecay(req: Request, res: Response): Promise<void> {
     try {
-      const { days = 30, adminToken } = req.body;
+      const { days = 30 } = req.body;
 
       // TODO: Validar adminToken
 

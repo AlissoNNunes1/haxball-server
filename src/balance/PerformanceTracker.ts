@@ -24,7 +24,7 @@ export class PerformanceTracker {
     const normalizedGoals = Math.min(1, performance.goals / 3);
     const normalizedAssists = Math.min(1, performance.assists / 3);
     const normalizedCS = performance.cleanSheet ? 1 : 0;
-    const normalizedPossession = Math.min(1, performance.possession / 70);
+    const normalizedPossession = Math.min(1, (performance.possession ?? 0) / 70);
 
     // Calcula score ponderado
     const score =
@@ -210,7 +210,7 @@ export class PerformanceTracker {
     const recentGames = performances.slice(0, this.RECENT_GAMES_WINDOW);
 
     // Detecta sequencia de vitorias
-    const winStreak = this.countConsecutive(recentGames, (perf) => perf.won);
+    const winStreak = this.countConsecutive(recentGames, (perf) => !!perf.won);
 
     // Detecta sequencia de boas performances (score > 0.7)
     const performanceStreak = this.countConsecutive(recentGames, (perf) => {

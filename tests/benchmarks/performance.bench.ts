@@ -1,15 +1,15 @@
 import { Server } from '../../src/Server';
 import { RoomMonitor } from '../../src/debugging/RoomMonitor';
-import { logger } from '../../src/utils/Logger';
+import { logger, LogLevel } from '../../src/utils/Logger';
 
-interface StartupMetrics {
+interface _StartupMetrics {
   initTime: number;
   firstRoomTime: number;
   readinessTime: number;
   totalTime: number;
 }
 
-interface CPUSample {
+interface _CPUSample {
   timestamp: number;
   user: number;
   system: number;
@@ -216,7 +216,7 @@ describe('Performance Benchmarks - Startup Time', () => {
 
       server = new Server(mockConfig);
       roomMonitor = new RoomMonitor();
-      logger.setLogLevel('INFO');
+      logger.setLogLevel(LogLevel.INFO);
 
       const readyTime = Date.now() - start;
 
@@ -281,7 +281,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
   describe('CPU Load from Operations', () => {
     it('deve medir CPU para room tracking', () => {
-      const server = new Server(mockConfig);
+      const _server = new Server(mockConfig);
       const roomMonitor = new RoomMonitor();
 
       const before = process.cpuUsage();
@@ -405,7 +405,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
       const before = process.cpuUsage();
 
-      const server = new Server(mockConfig);
+      const _server = new Server(mockConfig);
       const roomMonitor = new RoomMonitor();
 
       for (let i = 0; i < 10; i++) {

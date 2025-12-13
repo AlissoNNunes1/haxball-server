@@ -10,8 +10,8 @@
  * if (handled) return false;
  */
 
-// Importa funcoes AFK globais
-const { setPlayerAFK, isPlayerAFK } = require('./utils.cjs');
+// Importa funcoes AFK globais e utilitarios extras (tags)
+const { setPlayerAFK, isPlayerAFK, removeAFKPlayer, setPlayerTag, clearPlayerTag, getPlayerTag } = require('./utils.cjs');
 
 // Importa RoomAuthHandler para comandos de autenticacao
 let RoomAuthHandler;
@@ -161,11 +161,11 @@ async function handleLogin(room, player, message) {
           1
         );
 
-        // Define avatar com tag de ranking
+        // Define tag de ranking (nao altera avatar)
         try {
-          room.setPlayerAvatar(player.id, `[${result.account.ranking}]`);
+          setPlayerTag(room, player.id, `[${result.account.ranking}]`);
         } catch (err) {
-          console.error('[COMMANDS] Erro ao definir avatar:', err.message);
+          console.error('[COMMANDS] Erro ao definir tag:', err.message);
         }
 
         room.sendAnnouncement(
@@ -229,6 +229,12 @@ function handleLogout(room, player) {
   try {
     authHandler.logout(player);
     room.sendAnnouncement('✓ Logout realizado com sucesso!', player.id, 0x00ff00, 'bold', 2);
+    try {
+      // Limpa tag ao desconectar para evitar tags obsoletas
+      clearPlayerTag(room, player.id);
+    } catch (err) {
+      console.error('[COMMANDS] Erro ao limpar tag do player:', err.message);
+    }
   } catch (error) {
     console.error('[COMMANDS] Erro ao fazer logout:', error);
   }
@@ -491,24 +497,33 @@ function handleGeneralHelp(room, player) {
 function handleAFK(room, player) {
   if (isPlayerAFK(player.id)) {
     // Jogador ja esta em AFK, sair do estado AFK
-    setPlayerAFK(player.id, false);
-    room.sendAnnouncement(
-      `${player.name} voltou! Use !afk novamente para entrar em AFK.`,
-      null,
-      0x00ff00,
-      'normal',
-      1
-    );
+    const prevTeam = removeAFKPlayer(player.id);
+
+    // Tenta recolocar no time anterior se houver vaga
+    if (prevTeam && prevTeam !== 0) {
+      const players = room.getPlayerList();
+      const targetTeamCount = players.filter((p) => p.team === prevTeam).length;
+      const maxPerTeam = Math.ceil((room.getPlayerList().length || 16) / 2);
+
+      if (targetTeamCount < maxPerTeam) {
+        room.setPlayerTeam(player.id, prevTeam);
+        room.sendAnnouncement(`${player.name} voltou para o time ${prevTeam === 1 ? 'vermelho' : 'azul'}`, null, 0x00ff00, 'normal', 1);
+      } else {
+        room.sendAnnouncement(`${player.name} saiu do estado AFK, mas nao havia vaga no seu time.`, player.id, 0xff9900, 'normal', 1);
+      }
+    } else {
+      room.sendAnnouncement(`${player.name} saiu do estado AFK.`, player.id, 0x00ff00, 'normal', 1);
+    }
   } else {
-    // Colocar jogador em estado AFK
-    setPlayerAFK(player.id, true);
-    room.sendAnnouncement(
-      `${player.name} entrou em AFK. Sera kickado se ficar inativo por 10 minutos!`,
-      null,
-      0xffaa00,
-      'bold',
-      1
-    );
+    // Colocar jogador em estado AFK e mover para espectadores
+    const prevTeam = player.team || 0;
+    setPlayerAFK(player.id, true, prevTeam);
+    try {
+      room.setPlayerTeam(player.id, 0);
+    } catch (err) {
+      // Ignorar erro ao mover
+    }
+    room.sendAnnouncement(`${player.name} entrou em AFK. Sera kickado se ficar inativo por 10 minutos!`, null, 0xffaa00, 'bold', 1);
   }
 }
 

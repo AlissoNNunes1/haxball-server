@@ -1,5 +1,5 @@
-import { AuthService } from '../../src/auth/AuthService';
-import { LoginData, RegisterData } from '../../src/auth/types';
+import { AuthService } from '../../../src/auth/AuthService';
+import { LoginData, RegisterData } from '../../../src/auth/types';
 
 describe('AuthService', () => {
   let authService: AuthService;

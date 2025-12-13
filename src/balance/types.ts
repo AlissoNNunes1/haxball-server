@@ -29,7 +29,8 @@ export interface EloRating {
  * Resultado de partida para calculo de Elo
  */
 export interface MatchResult {
-  accountId: number;
+  matchId?: number;
+  accountId?: number;
   position: Position;
   won: boolean; // Time venceu?
   teamRating: number; // Rating medio do time
@@ -42,43 +43,48 @@ export interface MatchResult {
  */
 export interface PerformanceData {
   accountId: number;
-  matchId: number;
-  position: Position;
+  matchId?: number;
+  position?: Position;
   goals: number;
   assists: number;
-  saves: number;
-  ownGoals: number;
-  touches: number;
-  distance: number;
-  timePlayedMs: number;
-  teamScore: number;
-  opponentScore: number;
+  saves?: number;
+  ownGoals?: number;
+  touches?: number;
+  distance?: number;
+  timePlayedMs?: number;
+  teamScore?: number;
+  opponentScore?: number;
+  cleanSheet?: boolean;
+  possession?: number; // percent
+  won?: boolean;
+  matchDate?: Date;
+  performanceScore?: number; // Score ja calculado (0-1), opcional
 }
 
 /**
  * Performance recente agregada
  */
 export interface RecentPerformance {
-  accountId: number;
-  position: Position;
-  avgRating: number; // Rating medio
-  winRate: number; // Taxa de vitoria (0-1)
-  matchesPlayed: number;
-  lastMatchDate: Date;
-  form: number; // Forma atual (0-1, baseado em ultimos N jogos)
+  accountId?: number;
+  position?: Position;
+  averageScore: number; // Score medio normalizado (0-1)
+  trend: 'improving' | 'declining' | 'stable';
+  consistency: number; // 0-1
+  gamesAnalyzed: number;
+  lastMatchDate: Date | null;
 }
 
 /**
  * Jogador para balanceamento
  */
 export interface PlayerForBalance {
-  accountId: number;
-  haxballNick: string;
-  playerId: number; // ID na sala Haxball
+  id: number; // ID unico do jogador no contexto do balance
+  nick: string;
   preferredPosition?: Position;
-  currentRating: EloRating;
+  rating: EloRating; // Rating para balanceamento
   recentPerformance?: RecentPerformance;
-  decayApplied: boolean; // Se decay foi aplicado
+  decayApplied?: boolean;
+  assignedPosition?: Position;
 }
 
 /**
@@ -86,20 +92,20 @@ export interface PlayerForBalance {
  */
 export interface BalancedTeam {
   players: PlayerForBalance[];
-  avgRating: number;
-  totalRating: number;
-  positionCoverage: Partial<Record<Position, number>>; // Quantos por posicao
+  averageRating: number;
+  totalRating?: number;
+  positionCoverage?: Partial<Record<Position, number>>;
 }
 
 /**
  * Resultado do balanceamento
  */
 export interface BalanceResult {
-  redTeam: BalancedTeam;
-  blueTeam: BalancedTeam;
+  team1: BalancedTeam;
+  team2: BalancedTeam;
   ratingDifference: number;
-  fairnessScore: number; // 0-1, quanto mais proximo de 1, mais justo
-  method: string; // Metodo usado (greedy, genetic, etc)
+  fairnessScore: number; // 0-100
+  strategy: string; // Metodo usado (greedy, genetic, manual)
 }
 
 /**
@@ -122,10 +128,13 @@ export interface EloConfig {
  * Configuracao do balanceamento
  */
 export interface BalanceConfig {
-  maxRatingDifference: number; // Diferenca maxima aceitavel entre times (ex: 50)
-  preferredPositions: boolean; // Considerar posicoes preferidas
-  recentFormWeight: number; // Peso da forma recente (0-1)
-  iterations: number; // Iteracoes do algoritmo genetico (ex: 1000)
+  strategy?: 'greedy' | 'genetic' | 'manual';
+  maxRatingDifference?: number;
+  preferPositionSpecialists?: boolean;
+  considerRecentForm?: boolean;
+  formWeight?: number;
+  positionPreferenceWeight?: number;
+  iterations?: number;
 }
 
 /**
@@ -139,6 +148,7 @@ export interface EloChange {
   newRating: number;
   change: number;
   timestamp: Date;
+  reason?: string;
 }
 
 //   __  ____ ____ _  _

@@ -1,5 +1,5 @@
-import { EloCalculator } from '../../src/balance/EloCalculator';
-import { EloRating, MatchResult, Position } from '../../src/balance/types';
+import { EloCalculator } from '../../../src/balance/EloCalculator';
+import { EloRating, MatchResult, Position } from '../../../src/balance/types';
 
 describe('EloCalculator', () => {
   let calculator: EloCalculator;
@@ -56,7 +56,6 @@ describe('EloCalculator', () => {
   describe('calculateNewRating', () => {
     it('deve aumentar rating apos vitoria', () => {
       const result: MatchResult = {
-        matchId: 1,
         teamRating: 1000,
         opponentRating: 1000,
         won: true,
@@ -70,7 +69,6 @@ describe('EloCalculator', () => {
 
     it('deve diminuir rating apos derrota', () => {
       const result: MatchResult = {
-        matchId: 1,
         teamRating: 1000,
         opponentRating: 1000,
         won: false,
@@ -84,7 +82,6 @@ describe('EloCalculator', () => {
 
     it('deve aplicar bonus por boa performance individual', () => {
       const goodPerf: MatchResult = {
-        matchId: 1,
         teamRating: 1000,
         opponentRating: 1000,
         won: true,
@@ -105,7 +102,6 @@ describe('EloCalculator', () => {
 
     it('deve respeitar rating minimo', () => {
       const result: MatchResult = {
-        matchId: 1,
         teamRating: 100,
         opponentRating: 2000,
         won: false,
@@ -119,7 +115,6 @@ describe('EloCalculator', () => {
 
     it('deve respeitar rating maximo', () => {
       const result: MatchResult = {
-        matchId: 1,
         teamRating: 3000,
         opponentRating: 500,
         won: true,
@@ -144,7 +139,6 @@ describe('EloCalculator', () => {
       };
 
       const result: MatchResult = {
-        matchId: 1,
         teamRating: 1000,
         opponentRating: 1000,
         won: true,
@@ -176,7 +170,6 @@ describe('EloCalculator', () => {
       };
 
       const result: MatchResult = {
-        matchId: 1,
         teamRating: 1000,
         opponentRating: 1000,
         won: true,

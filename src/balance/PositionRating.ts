@@ -7,10 +7,9 @@ import { EloRating, PerformanceData, Position, RecentPerformance } from './types
  * Considera especializacao e versatilidade do jogador
  */
 export class PositionRating {
-  private eloCalculator: EloCalculator;
-
   constructor(eloCalculator: EloCalculator) {
-    this.eloCalculator = eloCalculator;
+    // Mantemos o parametro para possivel uso futuro; evita erro de parametro nao utilizado
+    void eloCalculator;
   }
 
   /**
@@ -78,9 +77,11 @@ export class PositionRating {
       return r !== positionRating;
     });
 
-    const avgOthers = otherRatings.reduce((sum, r) => sum + r, 0) / otherRatings.length;
+    // Defensive: se nao houver outras posicoes (todos iguais) retorna 1.0
+    if (!otherRatings.length) return 1.0;
 
-    if (avgOthers === 0) return 1.0;
+    const avgOthers = otherRatings.reduce((sum, r) => sum + r, 0) / otherRatings.length;
+    if (!isFinite(avgOthers) || avgOthers === 0) return 1.0;
 
     const ratio = positionRating / avgOthers;
     const factor = 1 + Math.min(0.5, Math.max(0, (ratio - 1) * 0.5));
@@ -123,7 +124,7 @@ export class PositionRating {
 
     // Confianca por consistencia: menor variancia = maior confianca
     const performances = recentPerformances.slice(-10); // Ultimos 10 jogos
-    const scores = performances.map((p) => p.performanceScore);
+    const scores = performances.map((p) => p.performanceScore ?? 0);
     const mean = scores.reduce((sum, s) => sum + s, 0) / scores.length;
     const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
     const consistency = Math.max(0, 1 - variance * 2); // Variance esperada ~0.5
@@ -166,6 +167,15 @@ export class PositionRating {
 
     // Aplica boost de especializacao
     const specializationFactor = this.calculateSpecializationFactor(rating, position);
+    // DEBUG: imprime fatores para diagnostico de NaN
+    // eslint-disable-next-line no-console
+    console.debug('getEffectiveRating debug', {
+      id: (rating as any).id,
+      position,
+      base: this.getRatingForPosition(rating, position),
+      specializationFactor,
+      recentPerformance: recentPerformance?.averageScore,
+    });
     effectiveRating *= specializationFactor;
 
     // Aplica ajuste de forma recente

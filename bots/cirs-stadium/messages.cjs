@@ -1,37 +1,7 @@
 //Modulo para mensagens e utilitarios de comunicacao
 
 const { allowPublicAdmin } = require('../../shared/config/variables.cjs');
-const room = globalThis.room;
-
-function announce(msg, targetId, color, style, sound) {
-  if (color == null) {
-    color = 0xfffd82;
-  }
-  if (style == null) {
-    style = 'bold';
-  }
-  if (sound == null) {
-    sound = 0;
-  }
-  room.sendAnnouncement(msg, targetId, color, style, sound);
-  console.log('Announce: ' + msg);
-}
-
-function whisper(msg, targetId, color, style, sound) {
-  if (color == null) {
-    color = 0x66c7ff;
-  }
-  if (style == null) {
-    style = 'normal';
-  }
-  if (sound == null) {
-    sound = 0;
-  }
-  room.sendAnnouncement(msg, targetId, color, style, sound);
-  if (room.getPlayer(targetId) != null) {
-    console.log('Whisper -> ' + room.getPlayer(targetId).name + ': ' + msg);
-  }
-}
+const { announce, whisper, welcomeWhispers, startCommunityAnnouncements, matchStartAnnouncement, matchGoalAnnouncement, matchVictoryAnnouncement } = require('../../shared/config/messages.cjs');
 
 function isAdminPresent() {
   var players = room.getPlayerList();
@@ -42,15 +12,20 @@ function isAdminPresent() {
   }
 }
 
-function displayAdminMessage() {
+function displayAdminMessage(room) {
   if (isAdminPresent() == false && allowPublicAdmin == true) {
-    announce('Sem admin presente, digite !admin para assumir a sala!');
+    announce(room, 'Sem admin presente, digite !admin para assumir a sala!');
   }
 }
 
 module.exports = {
   announce,
   whisper,
+  welcomeWhispers,
+  startCommunityAnnouncements,
+  matchStartAnnouncement,
+  matchGoalAnnouncement,
+  matchVictoryAnnouncement,
   isAdminPresent,
   displayAdminMessage,
 };

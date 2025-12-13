@@ -9,9 +9,9 @@ const AFK_TIMEOUT = 10 * 60 * 1000; // 10 minutos em ms
  * @param {number} playerId - ID do jogador
  * @param {boolean} state - true para ativar AFK, false para desativar
  */
-function setPlayerAFK(playerId, state) {
+function setPlayerAFK(playerId, state, prevTeam = null) {
   if (state) {
-    afkPlayers.set(playerId, { timestamp: Date.now(), warnings: 0 });
+    afkPlayers.set(playerId, { timestamp: Date.now(), warnings: 0, prevTeam });
   } else {
     afkPlayers.delete(playerId);
   }
@@ -50,7 +50,9 @@ function isAFKTimeout(playerId) {
  * @param {number} playerId - ID do jogador
  */
 function removeAFKPlayer(playerId) {
+  const info = afkPlayers.get(playerId);
   afkPlayers.delete(playerId);
+  return info?.prevTeam ?? null;
 }
 
 /**
@@ -58,6 +60,46 @@ function removeAFKPlayer(playerId) {
  */
 function clearAFKPlayers() {
   afkPlayers.clear();
+}
+
+// Sistema de tags por sala (persistente na memoria do processo)
+// Estrutura: globalThis.__CIRS_PLAYER_TAGS__ => Map<roomName, Map<playerId, tag>>
+globalThis.__CIRS_PLAYER_TAGS__ = globalThis.__CIRS_PLAYER_TAGS__ || new Map();
+
+/**
+ * Define tag para um jogador sem alterar avatar
+ * @param {object} room - instancia da sala Haxball
+ * @param {number} playerId - ID do jogador
+ * @param {string} tag - tag visual do jogador (ex: "[S1]")
+ */
+function setPlayerTag(room, playerId, tag) {
+  const name = room && room.name ? room.name : 'default';
+  const map = globalThis.__CIRS_PLAYER_TAGS__.get(name) || new Map();
+  map.set(playerId, tag);
+  globalThis.__CIRS_PLAYER_TAGS__.set(name, map);
+}
+
+/**
+ * Retorna tag do jogador, ou null se nao definida
+ * @param {object} room
+ * @param {number} playerId
+ * @returns {string|null}
+ */
+function getPlayerTag(room, playerId) {
+  const name = room && room.name ? room.name : 'default';
+  const map = globalThis.__CIRS_PLAYER_TAGS__.get(name);
+  if (!map) return null;
+  return map.get(playerId) || null;
+}
+
+/**
+ * Limpa tag do jogador
+ */
+function clearPlayerTag(room, playerId) {
+  const name = room && room.name ? room.name : 'default';
+  const map = globalThis.__CIRS_PLAYER_TAGS__.get(name);
+  if (!map) return;
+  map.delete(playerId);
 }
 
 /**
@@ -198,6 +240,9 @@ module.exports = {
   removeAFKPlayer,
   clearAFKPlayers,
   balanceTeams,
+  setPlayerTag,
+  getPlayerTag,
+  clearPlayerTag,
 };
 
 //   __  ____ ____ _  _

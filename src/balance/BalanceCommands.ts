@@ -129,7 +129,7 @@ export class BalanceCommands {
   /**
    * Helper: busca jogadores por nicknames
    */
-  private async findPlayersByNicknames(nicknames: string[]) {
+  private async findPlayersByNicknames(_nicknames: string[]) {
     // TODO: Implementar busca por nickname no banco
     // Por ora, retorna lista vazia
     return [];
@@ -155,8 +155,7 @@ export class BalanceCommands {
       return;
     }
 
-    const nick = args[0];
-    const position = args[1]?.toUpperCase() as Position | undefined;
+    // TODO: Implement rating lookup by nick and position
 
     // Busca jogador (TODO: implementar busca real)
     // const player = await this.balanceService.getPlayerForBalance(accountId);
@@ -195,7 +194,7 @@ export class BalanceCommands {
    * Comando: stats
    * Mostra estatisticas globais do sistema
    */
-  private async handleStats(message: Message, args: string[]): Promise<void> {
+  private async handleStats(message: Message, _args: string[]): Promise<void> {
     const stats = await this.balanceService.getGlobalRatingStats();
 
     const embed = new EmbedBuilder()

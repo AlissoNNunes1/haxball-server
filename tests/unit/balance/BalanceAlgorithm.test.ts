@@ -1,8 +1,8 @@
-import { BalanceAlgorithm } from '../../src/balance/BalanceAlgorithm';
-import { EloCalculator } from '../../src/balance/EloCalculator';
-import { PerformanceTracker } from '../../src/balance/PerformanceTracker';
-import { PositionRating } from '../../src/balance/PositionRating';
-import { PlayerForBalance, Position } from '../../src/balance/types';
+import { BalanceAlgorithm } from '../../../src/balance/BalanceAlgorithm';
+import { EloCalculator } from '../../../src/balance/EloCalculator';
+import { PerformanceTracker } from '../../../src/balance/PerformanceTracker';
+import { PositionRating } from '../../../src/balance/PositionRating';
+import { PlayerForBalance, Position } from '../../../src/balance/types';
 
 describe('BalanceAlgorithm', () => {
   let algorithm: BalanceAlgorithm;
@@ -29,7 +29,7 @@ describe('BalanceAlgorithm', () => {
       lastUpdated: new Date(),
     },
     preferredPosition: Position.MID,
-  });
+  } as PlayerForBalance);
 
   describe('balanceTeams', () => {
     it('deve lancar erro com menos de 2 jogadores', () => {
@@ -206,7 +206,7 @@ describe('BalanceAlgorithm', () => {
           lastUpdated: new Date(),
         },
         preferredPosition: Position.GK,
-      };
+      } as PlayerForBalance;
 
       const player2: PlayerForBalance = {
         id: 2,
@@ -220,7 +220,7 @@ describe('BalanceAlgorithm', () => {
           lastUpdated: new Date(),
         },
         preferredPosition: Position.ATA,
-      };
+      } as PlayerForBalance;
 
       const players = [player1, player2];
       const result = algorithm.balanceTeams(players);
@@ -257,7 +257,7 @@ describe('BalanceAlgorithm', () => {
           gamesAnalyzed: 10,
           lastMatchDate: new Date(),
         },
-      };
+      } as PlayerForBalance;
 
       const algorithmWithForm = new BalanceAlgorithm(positionRating, performanceTracker, {
         considerRecentForm: true,

@@ -127,6 +127,8 @@ export class BalanceService {
       const cleanSheet = (row.scoreRed || 0) === 0;
 
       return {
+        accountId,
+        position: undefined,
         matchId: row.matchId || 0,
         goals: row.goals || 0,
         assists: row.assists || 0,
@@ -198,7 +200,7 @@ export class BalanceService {
   async recordMatchResult(
     accountId: number,
     matchResult: MatchResult,
-    performance: PerformanceData
+    _performance: PerformanceData
   ): Promise<EloChange> {
     // Busca rating atual
     const currentRating = await this.getPlayerRating(accountId);
@@ -222,7 +224,7 @@ export class BalanceService {
 
     return {
       accountId,
-      matchId: matchResult.matchId,
+      matchId: matchResult.matchId ?? 0,
       position: matchResult.position,
       oldRating: currentRating[matchResult.position.toLowerCase() as keyof EloRating] as number,
       newRating: newRating[matchResult.position.toLowerCase() as keyof EloRating] as number,

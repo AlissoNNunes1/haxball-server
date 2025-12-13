@@ -211,6 +211,74 @@ describe('Room Lifecycle Integration Tests', () => {
       expect(typeof closedCount).toBe('number');
       expect(closedCount).toBeGreaterThanOrEqual(0);
     });
+
+    it('deve parar anuncios da comunidade ao fechar sala', async () => {
+      const { startCommunityAnnouncements } = require('../../shared/config/messages.cjs');
+      const { stopCommunityAnnouncements } = require('../../shared/config/messages.cjs');
+      const mockRoom: any = { getLink: () => 'https://www.haxball.com/headless?c=cleanup' };
+      // start announcements for room
+      startCommunityAnnouncements(mockRoom, 1000);
+      const key = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
+      expect(Boolean((globalThis as any)[key])).toBe(true);
+      const timers = (globalThis as any)[key] as Map<any, any>;
+      expect(timers.has(mockRoom)).toBe(true);
+
+      // register instance in server and close
+      const pid = 9900;
+      (server as any).rooms.set(pid, {
+        room: mockRoom,
+        pid,
+        botName: 'cleanup-test',
+        link: mockRoom.getLink(),
+        createdAt: Date.now(),
+        eventHandlers: new Map(),
+      });
+
+      const success = await server.close(pid);
+      expect(success).toBe(true);
+      // timer entry should be removed
+      expect(timers.has(mockRoom)).toBe(false);
+      // ensure explicit stop function also works without throwing
+      stopCommunityAnnouncements(mockRoom);
+    });
+
+    it('nao deve criar timers duplicados ao reavaliar scripts', async () => {
+      const { startCommunityAnnouncements } = require('../../shared/config/messages.cjs');
+      const key = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
+
+      const mockRoom: any = { getLink: () => 'https://www.haxball.com/headless?c=rereval' };
+      const pid = 9920;
+      (server as any).rooms.set(pid, {
+        room: mockRoom,
+        pid,
+        botName: 'rereval-test',
+        link: mockRoom.getLink(),
+        createdAt: Date.now(),
+        eventHandlers: new Map(),
+      });
+
+      // expose the function to the eval context
+      (globalThis as any).startCommunityAnnouncements = startCommunityAnnouncements;
+
+      const script = "globalThis.startCommunityAnnouncements(room, 1000);";
+      // run twice (should not duplicate timers)
+      (server as any).executeBotScript(mockRoom, script, {}, undefined, undefined);
+      (server as any).executeBotScript(mockRoom, script, {}, undefined, undefined);
+
+      const timers = (globalThis as any)[key] as Map<any, any>;
+      expect(timers).toBeDefined();
+      expect(timers.has(mockRoom)).toBe(true);
+      // expect only 1 timer for the same room object
+      let count = 0;
+      for (const [r] of timers.entries()) {
+        if (r === mockRoom) count++;
+      }
+      expect(count).toBe(1);
+
+      // cleanup
+      delete (globalThis as any).startCommunityAnnouncements;
+      await server.close(pid);
+    });
   });
 
   describe('Metricas de Desempenho', () => {

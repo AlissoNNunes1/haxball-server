@@ -70,7 +70,7 @@ export class StatsCalculator {
     const totalOwnGoals = basicStats.reduce((sum, s) => sum + s.ownGoals, 0);
 
     // Datas
-    const dates = basicStats.map((s) => new Date()).sort((a, b) => a.getTime() - b.getTime());
+    const dates = basicStats.map((_s) => new Date()).sort((a, b) => a.getTime() - b.getTime());
     const firstMatchDate = dates[0];
     const lastMatchDate = dates[dates.length - 1];
 
