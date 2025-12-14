@@ -12,13 +12,12 @@ export class StatsAPI {
   private router: Router;
   private statsService: StatsService;
   private calculator: StatsCalculator;
-  private _authService: AuthService;
 
-  constructor(statsService: StatsService, calculator: StatsCalculator, authService: AuthService) {
+  constructor(statsService: StatsService, calculator: StatsCalculator, _authService?: AuthService) {
     this.router = Router();
     this.statsService = statsService;
     this.calculator = calculator;
-    this._authService = authService;
+    // authService is optional for now; keep constructor signature stable
 
     this.setupRoutes();
   }

@@ -167,15 +167,6 @@ export class PositionRating {
 
     // Aplica boost de especializacao
     const specializationFactor = this.calculateSpecializationFactor(rating, position);
-    // DEBUG: imprime fatores para diagnostico de NaN
-    // eslint-disable-next-line no-console
-    console.debug('getEffectiveRating debug', {
-      id: (rating as any).id,
-      position,
-      base: this.getRatingForPosition(rating, position),
-      specializationFactor,
-      recentPerformance: recentPerformance?.averageScore,
-    });
     effectiveRating *= specializationFactor;
 
     // Aplica ajuste de forma recente

@@ -56,16 +56,7 @@ export class BalanceAlgorithm {
     const team1WithPositions = this.assignPositions(team1);
     const team2WithPositions = this.assignPositions(team2);
 
-    // DEBUG: valores intermediarios para diagnostico de NaN
-    // eslint-disable-next-line no-console
-    console.debug('balanceTeams debug', {
-      playersCount: players.length,
-      team1Count: team1WithPositions.length,
-      team2Count: team2WithPositions.length,
-      team1Players: team1WithPositions.map((p) => ({ id: p.id, rating: p.rating.overall })),
-      team2Players: team2WithPositions.map((p) => ({ id: p.id, rating: p.rating.overall })),
-    });
-
+   
     // Calcula ratings dos times
     const team1Rating = this.calculateTeamRating(team1WithPositions);
     const team2Rating = this.calculateTeamRating(team2WithPositions);
@@ -402,7 +393,7 @@ export class BalanceAlgorithm {
     if (players.length === 0) return 1000; // fallback para rating inicial
     // DEBUG: imprime effectiveRating de cada jogador para diagnostico
     // eslint-disable-next-line no-console
-    console.debug('calculateTeamRating players', players.map((p) => ({ id: p.id, assigned: p.assignedPosition, overall: p.rating.overall })));
+    // console.debug('calculateTeamRating players', players.map((p) => ({ id: p.id, assigned: p.assignedPosition, overall: p.rating.overall })));
     const totalRating = players.reduce((sum, player) => {
       const position = player.assignedPosition || Position.MID;
       const effectiveRating = this.positionRating.getEffectiveRating(
@@ -411,7 +402,7 @@ export class BalanceAlgorithm {
         player.recentPerformance
       );
       // eslint-disable-next-line no-console
-      console.debug('effectiveRating', { id: player.id, effectiveRating });
+      //console.debug('effectiveRating', { id: player.id, effectiveRating });
       return sum + effectiveRating;
     }, 0);
 

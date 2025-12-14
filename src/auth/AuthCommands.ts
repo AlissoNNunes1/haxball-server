@@ -318,9 +318,11 @@ export class AuthCommands {
    * Inicia limpeza periodica de sessoes expiradas
    */
   startSessionCleanup() {
-    setInterval(() => {
+    const handle = setInterval(() => {
       try {
-        const cleaned = this.db.cleanupExpiredSessions();
+        const expiredTime = new Date();
+        expiredTime.setHours(expiredTime.getHours() - 24); // Sessoes com mais de 24 horas
+        const cleaned = this.db.cleanupExpiredSessions(expiredTime);
         if (cleaned > 0) {
           console.log(`[AUTH] Limpeza de sessoes: ${cleaned} sessoes expiradas removidas`);
         }
@@ -328,6 +330,9 @@ export class AuthCommands {
         console.error('[AUTH] Erro ao limpar sessoes expiradas:', error);
       }
     }, 3600000); // A cada 1 hora
+    try {
+      if (handle && typeof (handle as any).unref === 'function') (handle as any).unref();
+    } catch (e) {}
   }
 }
 

@@ -28,8 +28,11 @@ async function openServer(file) {
         const config = await (0, loadConfig_1.loadConfig)(file);
         const db = (0, client_1.initDb)();
         const authDb = (0, auth_client_1.initAuthDb)();
-        // Cria tabelas de autenticacao se nao existirem
+        // Cria tabelas de autenticacao e estatisticas se nao existirem
         authDb.createAuthTables();
+        if (typeof authDb.createStatsTables === 'function') {
+            authDb.createStatsTables();
+        }
         Logger_1.logger.info('OpenServer', 'Banco de dados de autenticacao inicializado');
         const server = new Server_1.Server(config.server, db);
         const roomMonitor = new RoomMonitor_1.RoomMonitor();

@@ -5,7 +5,8 @@
  * @version 6.0.0 (Fase 8 - Migracao haxball.js)
  */
 
-import HaxballJS from 'haxball.js';
+// Import haxball.js lazily to avoid creating network handles during test import
+let HaxballJS: any = null;
 import { createRequire } from 'module';
 import path from 'path';
 import { CustomSettings, ServerConfig } from './Global';
@@ -107,6 +108,11 @@ export class Server {
     try {
       // Nota: HaxballJS nao suporta proxy diretamente
       // Proxy sera tratado a nivel do token headless ou HTTP client
+      if (!HaxballJS) {
+        // Lazy import to prevent network handles at module load time
+        const mod = await import('haxball.js');
+        HaxballJS = (mod && (mod.default || mod)) as any;
+      }
       this.hbInit = await HaxballJS();
       log('SERVER', 'haxball.js inicializado com sucesso');
       return this.hbInit;

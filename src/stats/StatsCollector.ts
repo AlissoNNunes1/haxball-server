@@ -20,6 +20,8 @@ export class StatsCollector {
   private matchId: number;
   private collectionStartTime: Date;
   private positionSamplingInterval?: NodeJS.Timeout;
+  private positionSamplingRoom?: any;
+  private positionSamplingName?: string;
 
   constructor(matchId: number, config?: Partial<StatsCollectionConfig>) {
     this.matchId = matchId;
@@ -84,6 +86,13 @@ export class StatsCollector {
     }
   }
 
+    /**
+     * Compatibilidade: alias para initializePlayer usado por handlers antigos
+     */
+    registerPlayer(accountId: number, _nameOrNick?: string, team: 'red' | 'blue' | 'spectator' = 'spectator'): void {
+      this.initializePlayer(accountId, team);
+    }
+
   /**
    * Registra gol
    */
@@ -101,6 +110,17 @@ export class StatsCollector {
       timestamp: new Date(),
       position,
     });
+  }
+
+  /**
+   * Compatibilidade: alias para recordGoal/recordOwnGoal usado por handlers antigos
+   */
+  trackGoal(accountId: number, _timestamp?: number, isOwnGoal = false, position?: Position2D): void {
+    if (isOwnGoal) {
+      this.recordOwnGoal(accountId, position);
+    } else {
+      this.recordGoal(accountId, position);
+    }
   }
 
   /**
@@ -169,6 +189,13 @@ export class StatsCollector {
       stats.touches++;
       this.basicStats.set(accountId, stats);
     }
+  }
+
+  /**
+   * Compatibilidade: alias para recordTouch usado por handlers antigos
+   */
+  trackTouch(accountId: number, _timestamp?: number): void {
+    this.recordTouch(accountId);
   }
 
   /**
@@ -304,23 +331,23 @@ export class StatsCollector {
    * Marca resultado da partida
    */
   setMatchResult(winningTeam: 'red' | 'blue' | 'draw'): void {
-    for (const [accountId, stats] of this.basicStats) {
+    Array.from(this.basicStats.entries()).forEach(([accountId, stats]) => {
       if (winningTeam === 'draw') {
         stats.won = false;
       } else {
         stats.won = stats.team === winningTeam;
       }
       this.basicStats.set(accountId, stats);
-    }
+    });
 
     // Atualiza advanced stats tambem
-    for (const [accountId, stats] of this.advancedStats) {
+    Array.from(this.advancedStats.entries()).forEach(([accountId, stats]) => {
       const basicStats = this.basicStats.get(accountId);
       if (basicStats) {
         stats.won = basicStats.won;
         this.advancedStats.set(accountId, stats);
       }
-    }
+    });
   }
 
   /**
@@ -369,16 +396,35 @@ export class StatsCollector {
    * Inicia amostragem automatica de posicoes
    * Deve ser chamada com funcao que retorna posicoes atuais
    */
-  startPositionSampling(getPositions: () => Map<number, { x: number; y: number }>): void {
+  startPositionSampling(getPositions: () => Map<number, { x: number; y: number }>, room?: any): void {
     if (!this.config.enablePositionTracking) return;
 
     const intervalMs = 1000 / this.config.positionSamplingRate;
 
+    // Use room timer registry when room provided to enable centralized cleanup
+    if (room) {
+      try {
+        const { createNamedInterval } = require('../../shared/config/roomTimers.cjs');
+        const name = `stats_position_${this.matchId}`;
+        this.positionSamplingName = name;
+        this.positionSamplingRoom = room;
+        this.positionSamplingInterval = createNamedInterval(room, name, () => {
+          const currentPositions = getPositions();
+          Array.from(currentPositions.entries()).forEach(([accountId, pos]) => {
+            this.recordPosition(accountId, pos.x, pos.y);
+          });
+        }, intervalMs);
+        return;
+      } catch (e) {
+        // fallback to native interval
+      }
+    }
+
     this.positionSamplingInterval = setInterval(() => {
       const currentPositions = getPositions();
-      for (const [accountId, pos] of currentPositions) {
+      Array.from(currentPositions.entries()).forEach(([accountId, pos]) => {
         this.recordPosition(accountId, pos.x, pos.y);
-      }
+      });
     }, intervalMs);
   }
 
@@ -386,6 +432,19 @@ export class StatsCollector {
    * Para amostragem de posicoes
    */
   stopPositionSampling(): void {
+    if (this.positionSamplingRoom && this.positionSamplingName) {
+      try {
+        const { clearNamedTimer } = require('../../shared/config/roomTimers.cjs');
+        clearNamedTimer(this.positionSamplingRoom, this.positionSamplingName);
+      } catch (e) {
+        // fallback
+      }
+      this.positionSamplingRoom = undefined;
+      this.positionSamplingName = undefined;
+      this.positionSamplingInterval = undefined;
+      return;
+    }
+
     if (this.positionSamplingInterval) {
       clearInterval(this.positionSamplingInterval);
       this.positionSamplingInterval = undefined;
@@ -424,6 +483,26 @@ export class StatsCollector {
     this.positions.clear();
     this.events = [];
     this.stopPositionSampling();
+  }
+
+  /**
+   * Compatibilidade: alias para setMatchResult usado por handlers antigos
+   */
+  endMatch(winningTeam: 'red' | 'blue' | 'draw'): void {
+    this.setMatchResult(winningTeam);
+  }
+
+  /**
+   * Compatibilidade: alias para finalize
+   */
+  getSummary(): {
+    basicStats: BasicMatchStats[];
+    advancedStats: AdvancedMatchStats[];
+    events: MatchEvent[];
+    positions: Map<number, Position2D[]>;
+    collectionDuration: number;
+  } {
+    return this.finalize();
   }
 }
 

@@ -85,6 +85,147 @@ export function initAuthDb(path = './haxball.sqlite') {
   };
 
   /**
+   * Cria tabelas relacionadas a estatisticas se nao existirem
+   */
+  wrapper.createStatsTables = function () {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_session_id INTEGER,
+        started_at INTEGER DEFAULT (strftime('%s','now')),
+        ended_at INTEGER,
+        score_red INTEGER DEFAULT 0,
+        score_blue INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_id INTEGER,
+        account_id INTEGER,
+        goals INTEGER DEFAULT 0,
+        assists INTEGER DEFAULT 0,
+        saves INTEGER DEFAULT 0,
+        touches INTEGER DEFAULT 0,
+        distance REAL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS match_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_id INTEGER,
+        account_id INTEGER,
+        type TEXT NOT NULL,
+        payload TEXT,
+        at INTEGER DEFAULT (strftime('%s','now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS advanced_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        goals INTEGER DEFAULT 0,
+        assists INTEGER DEFAULT 0,
+        saves INTEGER DEFAULT 0,
+        own_goals INTEGER DEFAULT 0,
+        touches INTEGER DEFAULT 0,
+        passes INTEGER DEFAULT 0,
+        passes_completed INTEGER DEFAULT 0,
+        interceptions INTEGER DEFAULT 0,
+        tackles INTEGER DEFAULT 0,
+        possession_time REAL DEFAULT 0,
+        distance_covered REAL DEFAULT 0,
+        top_speed REAL DEFAULT 0,
+        average_speed REAL DEFAULT 0,
+        shots_on_goal INTEGER DEFAULT 0,
+        shots_off_goal INTEGER DEFAULT 0,
+        times_dispossessed INTEGER DEFAULT 0,
+        time_in_game INTEGER DEFAULT 0,
+        team TEXT NOT NULL,
+        won INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS player_positions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        x REAL NOT NULL,
+        y REAL NOT NULL,
+        timestamp INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS heatmap_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        match_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL,
+        grid_size INTEGER NOT NULL,
+        density_map TEXT NOT NULL,
+        min_x REAL NOT NULL,
+        max_x REAL NOT NULL,
+        min_y REAL NOT NULL,
+        max_y REAL NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s','now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS player_stats_aggregate (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER NOT NULL UNIQUE,
+        total_matches INTEGER DEFAULT 0,
+        total_wins INTEGER DEFAULT 0,
+        total_losses INTEGER DEFAULT 0,
+        total_draws INTEGER DEFAULT 0,
+        win_rate REAL DEFAULT 0,
+        total_goals INTEGER DEFAULT 0,
+        total_assists INTEGER DEFAULT 0,
+        total_saves INTEGER DEFAULT 0,
+        total_own_goals INTEGER DEFAULT 0,
+        avg_goals_per_match REAL DEFAULT 0,
+        avg_assists_per_match REAL DEFAULT 0,
+        avg_saves_per_match REAL DEFAULT 0,
+        total_passes INTEGER DEFAULT 0,
+        pass_accuracy REAL DEFAULT 0,
+        total_interceptions INTEGER DEFAULT 0,
+        total_distance_covered REAL DEFAULT 0,
+        avg_speed REAL DEFAULT 0,
+        first_match_date INTEGER,
+        last_match_date INTEGER,
+        updated_at INTEGER DEFAULT (strftime('%s','now'))
+      );
+    `);
+  };
+
+  /**
+   * Migra esquemas antigos para colunas/nomes novos
+   */
+  wrapper.migrateStatsTables = function () {
+    try {
+      // Verifica colunas da tabela stats (compatibilidade user_id/account_id)
+      const stmtInfo = sqlite.prepare("PRAGMA table_info('stats')");
+      const cols = stmtInfo.all().map((c: any) => c.name);
+
+      if (!cols.includes('account_id') && cols.includes('user_id')) {
+        // Adiciona coluna account_id e copia de user_id
+        sqlite.exec('ALTER TABLE stats ADD COLUMN account_id INTEGER');
+        sqlite.exec('UPDATE stats SET account_id = user_id');
+      }
+
+      // Verifica advanced_stats: adiciona created_at se ausente
+      const advInfo = sqlite.prepare("PRAGMA table_info('advanced_stats')");
+      const advCols = advInfo.all().map((c: any) => c.name);
+      if (!advCols.includes('created_at')) {
+        sqlite.exec("ALTER TABLE advanced_stats ADD COLUMN created_at INTEGER DEFAULT (strftime('%s','now'))");
+      }
+
+      // Verifica player_stats_aggregate: adiciona updated_at se ausente
+      const aggInfo = sqlite.prepare("PRAGMA table_info('player_stats_aggregate')");
+      const aggCols = aggInfo.all().map((c: any) => c.name);
+      if (!aggCols.includes('updated_at')) {
+        sqlite.exec("ALTER TABLE player_stats_aggregate ADD COLUMN updated_at INTEGER DEFAULT (strftime('%s','now'))");
+      }
+    } catch (err) {
+      console.error('[DB] Erro ao migrar tabelas de stats:', err);
+    }
+  };
+
+  /**
    * Cria nova conta
    */
   wrapper.createAccount = function (data: {
@@ -312,7 +453,9 @@ export function initAuthDb(path = './haxball.sqlite') {
 
   // Inicializa tabelas
   wrapper.createAuthTables();
-
+  // Cria e migra tabelas de stats
+  wrapper.createStatsTables();
+  wrapper.migrateStatsTables();
   authDbClient = wrapper;
   return authDbClient;
 }

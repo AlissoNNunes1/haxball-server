@@ -26,10 +26,12 @@ import {
  */
 export class StatsService {
   private db;
+  private sqlite?: Database;
   private calculator: StatsCalculator;
   private balanceService?: BalanceService;
 
   constructor(database: Database, calculator: StatsCalculator, balanceService?: BalanceService) {
+    this.sqlite = database;
     this.db = drizzle(database);
     this.calculator = calculator;
     this.balanceService = balanceService;
@@ -142,7 +144,34 @@ export class StatsService {
       .orderBy(desc(stats.matchId))
       .limit(filter.limit || 100)
       .offset(filter.offset || 0);
-
+    // Fallback: if drizzle returned no rows, check raw sqlite table in case modules used different wrappers
+    if ((!result || result.length === 0) && this.sqlite) {
+      try {
+        const stmt = this.sqlite.prepare('SELECT * FROM stats' +
+          (conditions.length > 0 ? ' WHERE ' + filter.accountIds?.map(() => 'account_id = ?').join(' OR ') : '') +
+          ' ORDER BY match_id DESC LIMIT ? OFFSET ?');
+        const params: any[] = [];
+        if (filter.accountIds && filter.accountIds.length > 0) {
+          params.push(...filter.accountIds);
+        }
+        params.push(filter.limit || 100, filter.offset || 0);
+        const rows = stmt.all(...params);
+        return rows.map((row: any) => ({
+          accountId: row.account_id || 0,
+          matchId: row.match_id || 0,
+          goals: row.goals || 0,
+          assists: row.assists || 0,
+          saves: row.saves || 0,
+          ownGoals: 0,
+          touches: row.touches || 0,
+          timeInGame: 0,
+          team: 'spectator',
+          won: false,
+        }));
+      } catch (err) {
+        // ignore fallback errors
+      }
+    }
     return result.map((row) => ({
       accountId: row.accountId || 0,
       matchId: row.matchId || 0,
@@ -170,6 +199,44 @@ export class StatsService {
       .orderBy(desc(advancedStats.matchId))
       .limit(filter.limit || 100)
       .offset(filter.offset || 0);
+
+    // Fallback: check raw sqlite table
+    if ((!result || result.length === 0) && this.sqlite) {
+      try {
+        const stmt = this.sqlite.prepare('SELECT * FROM advanced_stats' +
+          (filter.accountIds && filter.accountIds.length > 0 ? ' WHERE account_id = ?' : '') +
+          ' ORDER BY match_id DESC LIMIT ? OFFSET ?');
+        const params: any[] = [];
+        if (filter.accountIds && filter.accountIds.length > 0) params.push(filter.accountIds[0]);
+        params.push(filter.limit || 100, filter.offset || 0);
+        const rows = stmt.all(...params);
+        return rows.map((row: any) => ({
+          accountId: row.account_id,
+          matchId: row.match_id,
+          goals: row.goals || 0,
+          assists: row.assists || 0,
+          saves: row.saves || 0,
+          ownGoals: row.own_goals || 0,
+          touches: row.touches || 0,
+          passes: row.passes || 0,
+          passesCompleted: row.passes_completed || 0,
+          interceptions: row.interceptions || 0,
+          tackles: row.tackles || 0,
+          possessionTime: row.possession_time || 0,
+          distanceCovered: row.distance_covered || 0,
+          topSpeed: row.top_speed || 0,
+          averageSpeed: row.average_speed || 0,
+          shotsOnGoal: row.shots_on_goal || 0,
+          shotsOffGoal: row.shots_off_goal || 0,
+          timesDispossessed: row.times_dispossessed || 0,
+          timeInGame: row.time_in_game || 0,
+          team: (row.team as 'red' | 'blue' | 'spectator') || 'spectator',
+          won: Boolean(row.won),
+        }));
+      } catch (err) {
+        // ignore fallback errors
+      }
+    }
 
     return result.map((row) => ({
       accountId: row.accountId,
@@ -201,9 +268,12 @@ export class StatsService {
    */
   private buildFilterConditions(filter: StatsFilter): any[] {
     const conditions: any[] = [];
-
     if (filter.accountIds && filter.accountIds.length > 0) {
-      conditions.push(sql`${stats.accountId} IN (${sql.join(filter.accountIds, sql`, `)})`);
+      if (filter.accountIds.length === 1) {
+        conditions.push(eq(stats.accountId, filter.accountIds[0]));
+      } else {
+        conditions.push(sql`${stats.accountId} IN (${sql.join(filter.accountIds, sql`, `)})`);
+      }
     }
 
     if (filter.matchIds && filter.matchIds.length > 0) {
@@ -228,7 +298,11 @@ export class StatsService {
     const conditions: any[] = [];
 
     if (filter.accountIds && filter.accountIds.length > 0) {
-      conditions.push(sql`${advancedStats.accountId} IN (${sql.join(filter.accountIds, sql`, `)})`);
+      if (filter.accountIds.length === 1) {
+        conditions.push(eq(advancedStats.accountId, filter.accountIds[0]));
+      } else {
+        conditions.push(sql`${advancedStats.accountId} IN (${sql.join(filter.accountIds, sql`, `)})`);
+      }
     }
 
     if (filter.matchIds && filter.matchIds.length > 0) {

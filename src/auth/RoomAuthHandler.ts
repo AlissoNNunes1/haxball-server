@@ -1,5 +1,7 @@
 import { getAuthDb } from '../database/auth-client';
 import { AuthService } from './AuthService';
+import { StatsService } from '../stats/StatsService';
+import { StatsCalculator } from '../stats/StatsCalculator';
 
 /**
  * Gerencia autenticacao e comandos dentro das salas Haxball
@@ -8,10 +10,19 @@ export class RoomAuthHandler {
   private authService: AuthService;
   private db: any;
   private authenticatedPlayers = new Map<number, number>(); // playerId -> accountId
+  private statsService?: StatsService;
 
   constructor() {
     this.db = getAuthDb();
     this.authService = new AuthService();
+    try {
+      const calculator = new StatsCalculator();
+      const sqliteDb = this.db && this.db.sqlite ? this.db.sqlite : this.db;
+      this.statsService = new StatsService(sqliteDb, calculator);
+    } catch (err) {
+      console.error('[AUTH] Nao foi possivel inicializar StatsService no RoomAuthHandler:', err);
+      this.statsService = undefined;
+    }
   }
 
   /**
@@ -374,7 +385,23 @@ export class RoomAuthHandler {
   }
 
   /**
-   * Busca account por player ID
+   * Retorna dados completos da conta do jogador autenticado
+   */
+  getAuthenticatedPlayer(playerId: number): any | null {
+    const accountId = this.authenticatedPlayers.get(playerId);
+    if (!accountId) return null;
+
+    try {
+      const account = this.db.getAccountById(accountId);
+      return account || null;
+    } catch (error) {
+      console.error('[AUTH] Erro ao buscar conta autenticada:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Busca dados de uma conta autenticada (alias para compatibilidade)
    */
   getAccount(playerId: number): any {
     const accountId = this.authenticatedPlayers.get(playerId);
@@ -445,7 +472,28 @@ export class RoomAuthHandler {
    */
   async getProfile(haxballNick: string): Promise<any> {
     try {
-      return await this.authService.getPublicProfile(haxballNick, this.db);
+      const profile = await this.authService.getPublicProfile(haxballNick, this.db);
+      if (!profile) return null;
+
+      try {
+        if (this.statsService) {
+          const aggregate = await this.statsService.getPlayerAggregate(profile.id);
+          if (aggregate) {
+            // Retorna um novo objeto com os campos agregados (sem alterar tipo original)
+            return {
+              ...profile,
+              goals: aggregate.totalGoals,
+              assists: aggregate.totalAssists,
+              saves: aggregate.totalSaves,
+              totalMatches: aggregate.totalMatches,
+            };
+          }
+        }
+      } catch (err) {
+        console.error('[AUTH] Erro ao buscar agregado de stats no getProfile:', err);
+      }
+
+      return profile;
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
       return null;
@@ -459,6 +507,29 @@ export class RoomAuthHandler {
     const account = this.getAccount(playerId);
     if (!account) return null;
 
+    // Enriquecer com agregados das estatisticas (se disponivel)
+    try {
+      if (this.statsService) {
+        const aggregate = await this.statsService.getPlayerAggregate(account.id);
+        if (aggregate) {
+          return {
+            ranking: account.ranking,
+            points: account.points,
+            coins: account.coins,
+            wins: aggregate.totalWins || account.wins || 0,
+            losses: aggregate.totalLosses || account.losses || 0,
+            draws: aggregate.totalDraws || account.draws || 0,
+            goals: aggregate.totalGoals || account.goals || 0,
+            assists: aggregate.totalAssists || account.assists || 0,
+            saves: aggregate.totalSaves || account.saves || 0,
+          };
+        }
+      }
+    } catch (err) {
+      console.error('[AUTH] Erro ao buscar agregado de stats no getPlayerStats:', err);
+    }
+
+    // Fallback para campos na tabela de contas
     return {
       ranking: account.ranking,
       points: account.points,

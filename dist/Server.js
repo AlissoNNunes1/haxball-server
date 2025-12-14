@@ -5,16 +5,52 @@
  * @module Server
  * @version 6.0.0 (Fase 8 - Migracao haxball.js)
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Server = void 0;
-const haxball_js_1 = __importDefault(require("haxball.js"));
+// Import haxball.js lazily to avoid creating network handles during test import
+let HaxballJS = null;
 const module_1 = require("module");
 const path_1 = __importDefault(require("path"));
 const log_1 = require("./utils/log");
 const Logger_1 = require("./utils/Logger");
+// Funcoes utilitarias de mensagens (CJS)
+const { stopCommunityAnnouncements } = require('../shared/config/messages.cjs');
 /**
  * Gerenciador de salas Haxball usando haxball.js
  * 70-80% reducao de memoria comparado a Puppeteer
@@ -23,6 +59,8 @@ const Logger_1 = require("./utils/Logger");
  */
 class Server {
     rooms = new Map();
+    // Map adicional para indexar instancias por link (stable id fornecido por haxball.js)
+    roomsByLink = new Map();
     nextPid = 1000;
     proxyServers;
     db = null;
@@ -68,7 +106,12 @@ class Server {
         try {
             // Nota: HaxballJS nao suporta proxy diretamente
             // Proxy sera tratado a nivel do token headless ou HTTP client
-            this.hbInit = await (0, haxball_js_1.default)();
+            if (!HaxballJS) {
+                // Lazy import to prevent network handles at module load time
+                const mod = await Promise.resolve().then(() => __importStar(require('haxball.js')));
+                HaxballJS = (mod && (mod.default || mod));
+            }
+            this.hbInit = await HaxballJS();
             (0, log_1.log)('SERVER', 'haxball.js inicializado com sucesso');
             return this.hbInit;
         }
@@ -135,6 +178,8 @@ class Server {
                 eventHandlers: new Map(),
             };
             this.rooms.set(pid, roomInstance);
+            if (roomInstance.link)
+                this.roomsByLink.set(String(roomInstance.link), pid);
             (0, log_1.log)('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`);
             Logger_1.logger.info('Server', `Sala aberta`, { pid, name, link: roomInstance.link });
             return {
@@ -186,6 +231,11 @@ class Server {
             const pid = this.nextPid++;
             try {
                 if (typeof roomModule?.init === 'function') {
+                    // Parar anuncios periodicos antes de reavaliar/init do modulo
+                    try {
+                        stopCommunityAnnouncements(room);
+                    }
+                    catch (_) { }
                     roomModule.init({ room, settings: settings || {}, db: this.db });
                 }
                 else {
@@ -206,6 +256,8 @@ class Server {
                 eventHandlers: new Map(),
             };
             this.rooms.set(pid, roomInstance);
+            if (roomInstance.link)
+                this.roomsByLink.set(String(roomInstance.link), pid);
             (0, log_1.log)('SERVER', `Sala aberta (ESM) - PID: ${pid}, Nome: ${roomInstance.botName}, Link: ${roomInstance.link}`);
             Logger_1.logger.info('Server', `Sala aberta ESM`, {
                 pid,
@@ -240,9 +292,17 @@ class Server {
             return false;
         }
         try {
+            // Parar qualquer anuncio periodico da comunidade para evitar timers vazando
+            try {
+                stopCommunityAnnouncements(instance?.room);
+            }
+            catch (_) { }
             // haxball.js nao tem metodo close explicito
             // Remover handlers e deixar garbage collection fazer seu trabalho
             instance.eventHandlers.clear();
+            const link = instance.link;
+            if (link)
+                this.roomsByLink.delete(String(link));
             this.rooms.delete(pid);
             // Tentar force garbage collection se disponivel
             if (global.gc) {
@@ -297,6 +357,35 @@ class Server {
         return Array.from(this.rooms.values());
     }
     /**
+     * Recupera instancia da sala a partir do link (identificador estavel) se existente
+     * @param link string
+     * @returns RoomInstance | undefined
+     */
+    getRoomByLink(link) {
+        const pid = this.roomsByLink.get(String(link));
+        if (pid === undefined)
+            return undefined;
+        return this.getRoom(pid);
+    }
+    /**
+     * Recupera instancia da sala a partir do objeto room do haxball.js
+     * Usa propriedades estaveis como getLink(), link, name ou room.id quando disponivel
+     * @param room any
+     */
+    getRoomByObject(room) {
+        if (!room)
+            return undefined;
+        try {
+            const link = room.getLink?.() || room.link || room.name || room.id;
+            if (!link)
+                return undefined;
+            return this.getRoomByLink(String(link));
+        }
+        catch (_) {
+            return undefined;
+        }
+    }
+    /**
      * Retorna numero de salas abertas
      * @returns {number} Quantidade de salas
      */
@@ -313,6 +402,11 @@ class Server {
      */
     executeBotScript(room, script, settings, db, scriptPath) {
         try {
+            // Garantir que anuncios da comunidade anteriores sejam interrompidos antes de (re)carregar o script
+            try {
+                stopCommunityAnnouncements(room);
+            }
+            catch (_) { }
             // Contexto disponivel ao script
             const safeDb = db
                 ? {
@@ -409,6 +503,15 @@ class Server {
                 const originalHandler = room.onRoomLink;
                 room.onRoomLink = (link) => {
                     (0, log_1.log)('SERVER', `Sala ${pid} link atualizado: ${link}`);
+                    // Atualiza indice por link para manter chave estavel
+                    const inst = this.getRoom(pid);
+                    if (inst) {
+                        if (inst.link)
+                            this.roomsByLink.delete(String(inst.link));
+                        inst.link = link;
+                        if (link)
+                            this.roomsByLink.set(String(link), pid);
+                    }
                     if (typeof originalHandler === 'function') {
                         originalHandler.call(room, link);
                     }

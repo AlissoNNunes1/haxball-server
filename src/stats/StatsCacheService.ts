@@ -88,7 +88,12 @@ export class StatsCacheService {
   }
 
   private startCleanupInterval(): void {
-    setInterval(() => this.cleanup(), 60000);
+    try {
+      const { createNamedInterval } = require('../../shared/config/roomTimers.cjs');
+      createNamedInterval('global_stats_cache', 'stats_cache_cleanup', () => this.cleanup(), 60000);
+    } catch (e) {
+      setInterval(() => this.cleanup(), 60000);
+    }
   }
 
   clear(): void {

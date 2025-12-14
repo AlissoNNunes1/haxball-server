@@ -268,16 +268,22 @@ Erros capturados: ${metrics.errorCount}
    * monitor.startPeriodicReports(30000); // A cada 30 segundos
    */
   startPeriodicReports(intervalMs: number = 60000): void {
-    if (this.reportInterval) {
-      clearInterval(this.reportInterval);
+    try {
+      const { createNamedInterval } = require('../../shared/config/roomTimers.cjs');
+      this.reportInterval = createNamedInterval('monitor', 'room_monitor_reports', () => {
+        const report = this.getFullReport();
+        if (this.metrics.size > 0) {
+          log('MONITOR', '\n' + report);
+        }
+      }, intervalMs) as any;
+    } catch (e) {
+      this.reportInterval = setInterval(() => {
+        const report = this.getFullReport();
+        if (this.metrics.size > 0) {
+          log('MONITOR', '\n' + report);
+        }
+      }, intervalMs);
     }
-
-    this.reportInterval = setInterval(() => {
-      const report = this.getFullReport();
-      if (this.metrics.size > 0) {
-        log('MONITOR', '\n' + report);
-      }
-    }, intervalMs);
 
     log('MONITOR', `Relatorios periodicos iniciados (a cada ${intervalMs}ms)`);
   }
@@ -287,7 +293,7 @@ Erros capturados: ${metrics.errorCount}
    */
   stopPeriodicReports(): void {
     if (this.reportInterval) {
-      clearInterval(this.reportInterval);
+      try { const { clearNamedTimer } = require('../../shared/config/roomTimers.cjs'); clearNamedTimer('monitor', 'room_monitor_reports'); } catch (e) { clearInterval(this.reportInterval); }
       this.reportInterval = null;
       log('MONITOR', 'Relatorios periodicos parados');
     }

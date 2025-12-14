@@ -1198,7 +1198,12 @@ function avatarCelebration(playerId, avatar) {
 function anuncio() {
   room.sendAnnouncement('Discord CIRS: https://discord.gg/RQhSBA3k', null, azul, 'bold', 0);
 }
-setInterval(anuncio, 420000);
+try {
+  const { createNamedInterval } = require('../../shared/config/roomTimers.cjs');
+  createNamedInterval(room, 'stadium_announcements', anuncio, 420000);
+} catch (e) {
+  setInterval(anuncio, 420000);
+}
 
 //   __  ____ ____ _  _
 //  / _\/ ___) ___) )( \

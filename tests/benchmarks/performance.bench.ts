@@ -2,6 +2,7 @@ import { Server } from '../../src/Server';
 import { RoomMonitor } from '../../src/debugging/RoomMonitor';
 import { logger, LogLevel } from '../../src/utils/Logger';
 
+/* StartupMetrics and CPUSample were only used for local dev benchmarks; removed to keep tests clean
 interface _StartupMetrics {
   initTime: number;
   firstRoomTime: number;
@@ -14,6 +15,7 @@ interface _CPUSample {
   user: number;
   system: number;
 }
+*/
 
 describe('Performance Benchmarks - Startup Time', () => {
   let server: Server;
@@ -30,6 +32,7 @@ describe('Performance Benchmarks - Startup Time', () => {
   };
 
   beforeEach(() => {
+    server = new Server(mockConfig);
     logger.clearLogs();
   });
 
@@ -45,7 +48,6 @@ describe('Performance Benchmarks - Startup Time', () => {
     it('deve inicializar rapidamente', async () => {
       const startTime = Date.now();
 
-      server = new Server(mockConfig);
       roomMonitor = new RoomMonitor();
 
       const duration = Date.now() - startTime;
@@ -60,7 +62,7 @@ describe('Performance Benchmarks - Startup Time', () => {
     });
 
     it('deve estar pronto apos inicializacao', () => {
-      server = new Server(mockConfig);
+      // server not required for this benchmark
 
       expect(server).toBeDefined();
       expect(server.browsers).toBeDefined();
@@ -70,7 +72,7 @@ describe('Performance Benchmarks - Startup Time', () => {
 
   describe('Room Startup Time', () => {
     beforeEach(() => {
-      server = new Server(mockConfig);
+      // server not required for this benchmark
       roomMonitor = new RoomMonitor();
     });
 
@@ -164,7 +166,7 @@ describe('Performance Benchmarks - Startup Time', () => {
 
   describe('Cold Start vs Warm Start', () => {
     it('deve ter tempo reduzido apos inicializacao', () => {
-      server = new Server(mockConfig);
+      // server not required for this benchmark
       roomMonitor = new RoomMonitor();
 
       const coldStart = Date.now();
@@ -189,7 +191,7 @@ describe('Performance Benchmarks - Startup Time', () => {
     it('deve fornecer metricas de tempo total', async () => {
       const fullStartTime = Date.now();
 
-      server = new Server(mockConfig);
+      // server not required for this benchmark, skip instantiation
       roomMonitor = new RoomMonitor();
 
       for (let i = 0; i < 5; i++) {
@@ -214,7 +216,7 @@ describe('Performance Benchmarks - Startup Time', () => {
     it('deve calcular tempo ate estar pronto para requisicoes', () => {
       const start = Date.now();
 
-      server = new Server(mockConfig);
+      // server not required for this benchmark, skip instantiation
       roomMonitor = new RoomMonitor();
       logger.setLogLevel(LogLevel.INFO);
 
@@ -233,17 +235,6 @@ describe('Performance Benchmarks - Startup Time', () => {
 });
 
 describe('Performance Benchmarks - CPU Usage', () => {
-  const mockConfig = {
-    proxyEnabled: false,
-    proxyServers: [],
-    disableCache: false,
-    disableRemote: false,
-    userDataDir: '',
-    disableAnonymizeLocalIps: false,
-    execPath: '/mock/path',
-    maxMemoryUsage: 512,
-  };
-
   beforeEach(() => {
     logger.clearLogs();
   });
@@ -281,7 +272,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
   describe('CPU Load from Operations', () => {
     it('deve medir CPU para room tracking', () => {
-      const _server = new Server(mockConfig);
+      // server not required for this benchmark, skip instantiation
       const roomMonitor = new RoomMonitor();
 
       const before = process.cpuUsage();
@@ -405,7 +396,7 @@ describe('Performance Benchmarks - CPU Usage', () => {
 
       const before = process.cpuUsage();
 
-      const _server = new Server(mockConfig);
+      // server not required for this benchmark, skip instantiation
       const roomMonitor = new RoomMonitor();
 
       for (let i = 0; i < 10; i++) {

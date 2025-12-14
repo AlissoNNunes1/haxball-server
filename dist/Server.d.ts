@@ -46,6 +46,7 @@ export interface BrowserInfo {
  */
 export declare class Server {
     private rooms;
+    private roomsByLink;
     private nextPid;
     private proxyServers;
     private db;
@@ -136,6 +137,18 @@ export declare class Server {
      * @returns {RoomInstance[]} Array de salas abertas
      */
     getAllRooms(): RoomInstance[];
+    /**
+     * Recupera instancia da sala a partir do link (identificador estavel) se existente
+     * @param link string
+     * @returns RoomInstance | undefined
+     */
+    getRoomByLink(link: string): RoomInstance | undefined;
+    /**
+     * Recupera instancia da sala a partir do objeto room do haxball.js
+     * Usa propriedades estaveis como getLink(), link, name ou room.id quando disponivel
+     * @param room any
+     */
+    getRoomByObject(room: any): RoomInstance | undefined;
     /**
      * Retorna numero de salas abertas
      * @returns {number} Quantidade de salas

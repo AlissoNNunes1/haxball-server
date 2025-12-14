@@ -39,9 +39,11 @@ function getAFKTime(playerId) {
 /**
  * Verifica se jogador passou do tempo limite de AFK
  * @param {number} playerId - ID do jogador
+ * @param {boolean} isAdmin - Se true, ignora timeout (admins podem ficar AFK ilimitado)
  * @returns {boolean}
  */
-function isAFKTimeout(playerId) {
+function isAFKTimeout(playerId, isAdmin = false) {
+  if (isAdmin) return false; // Admins nao tem limite de tempo AFK
   return getAFKTime(playerId) > AFK_TIMEOUT;
 }
 

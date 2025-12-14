@@ -1,4 +1,4 @@
-Advanced Command Creation
+# Advanced Command Creation
 
 The examples we've covered so far have all been fairly simple commands, such as ping, server, and user which all have standard static responses. However, there's much more you can do with the full suite of slash command tools!
 Adding options
@@ -67,7 +67,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const data = new SlashCommandBuilder()
  .setName('echo')
  .setDescription('Replies with your input!')
- .addStringOption((option) => option.setName('input').setDescription('The input to echo back')); 
+ .addStringOption((option) => option.setName('input').setDescription('The input to echo back'));
  .addStringOption((option) => option.setName('input').setDescription('The input to echo back').setRequired(true));
 
 Choices

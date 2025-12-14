@@ -141,17 +141,34 @@ export class PluginManager {
       },
 
       scheduleTask: (interval: number, task: () => void | Promise<void>) => {
-        const timer = setInterval(async () => {
-          try {
-            await task();
-          } catch (error: any) {
-            logger.error(`Erro na tarefa agendada: ${error.message}`);
-          }
-        }, interval);
+        try {
+          const { createNamedInterval, clearNamedTimer } = require('../../shared/config/roomTimers.cjs');
+          const roomKey = `plugin:${plugin.name}`;
+          const name = `task_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+          createNamedInterval(roomKey, name, async () => {
+            try {
+              await task();
+            } catch (error: any) {
+              logger.error(`Erro na tarefa agendada: ${error.message}`);
+            }
+          }, interval);
 
-        return {
-          cancel: () => clearInterval(timer),
-        };
+          return {
+            cancel: () => clearNamedTimer(roomKey, name),
+          };
+        } catch (e) {
+          const timer = setInterval(async () => {
+            try {
+              await task();
+            } catch (error: any) {
+              logger.error(`Erro na tarefa agendada: ${error.message}`);
+            }
+          }, interval);
+
+          return {
+            cancel: () => clearInterval(timer),
+          };
+        }
       },
     };
 

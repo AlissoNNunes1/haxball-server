@@ -29,8 +29,11 @@ export async function openServer(file?: string): Promise<void> {
     const db = initDb();
     const authDb = initAuthDb();
 
-    // Cria tabelas de autenticacao se nao existirem
+    // Cria tabelas de autenticacao e estatisticas se nao existirem
     authDb.createAuthTables();
+    if (typeof authDb.createStatsTables === 'function') {
+      authDb.createStatsTables();
+    }
     logger.info('OpenServer', 'Banco de dados de autenticacao inicializado');
 
     const server = new Server(config.server, db);

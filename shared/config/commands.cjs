@@ -11,7 +11,14 @@
  */
 
 // Importa funcoes AFK globais e utilitarios extras (tags)
-const { setPlayerAFK, isPlayerAFK, removeAFKPlayer, setPlayerTag, clearPlayerTag, getPlayerTag } = require('./utils.cjs');
+const {
+  setPlayerAFK,
+  isPlayerAFK,
+  removeAFKPlayer,
+  setPlayerTag,
+  clearPlayerTag,
+  getPlayerTag,
+} = require('./utils.cjs');
 
 // Importa RoomAuthHandler para comandos de autenticacao
 let RoomAuthHandler;
@@ -106,6 +113,12 @@ function processGeneralCommand(room, player, message) {
   // !bb - ir para espectador
   if (cmd === 'bb') {
     handleGoSpectator(room, player);
+    return true;
+  }
+
+  // !discord ou !dc - mostrar link do Discord
+  if (cmd === 'discord' || cmd === 'dc') {
+    handleDiscord(room, player);
     return true;
   }
 
@@ -263,14 +276,14 @@ async function handleProfile(room, player, message) {
         1
       );
       room.sendAnnouncement(
-        `Vitorias: ${profile.wins} | Derrotas: ${profile.losses} | Empates: ${profile.draws}`,
+        `Vitorias: ${profile.wins || 0} | Derrotas: ${profile.losses || 0} | Empates: ${profile.draws || 0}`,
         player.id,
         0xaaaaaa,
         'normal',
         1
       );
       room.sendAnnouncement(
-        `Gols: ${profile.goals} | Assistencias: ${profile.assists}`,
+        `Gols: ${profile.goals || 0} | Assistencias: ${profile.assists || 0} | Defesas: ${profile.saves || 0}`,
         player.id,
         0xaaaaaa,
         'normal',
@@ -306,34 +319,8 @@ async function handleStats(room, player) {
       return;
     }
 
-    const stats = await authHandler.getPlayerStats(player.id);
-
-    if (stats) {
-      room.sendAnnouncement(`═══ Suas Estatisticas ═══`, player.id, 0x55aaff, 'bold', 2);
-      room.sendAnnouncement(
-        `Ranking: ${stats.ranking} | Pontos: ${stats.points} | Moedas: ${stats.coins}`,
-        player.id,
-        0xaaaaaa,
-        'normal',
-        1
-      );
-      room.sendAnnouncement(
-        `Partidas: ${stats.wins + stats.losses + stats.draws} | V: ${stats.wins} | D: ${
-          stats.losses
-        } | E: ${stats.draws}`,
-        player.id,
-        0xaaaaaa,
-        'normal',
-        1
-      );
-      room.sendAnnouncement(
-        `Gols: ${stats.goals} | Assistencias: ${stats.assists} | Defesas: ${stats.saves}`,
-        player.id,
-        0xaaaaaa,
-        'normal',
-        1
-      );
-    }
+    // Unificar com /profile: reusar a logica de exibir perfil (evita duplicacao)
+    await handleProfile(room, player, `/profile ${player.name}`);
   } catch (error) {
     console.error('[COMMANDS] Erro ao buscar stats:', error);
   }
@@ -397,7 +384,7 @@ async function handleTop(room, player) {
 function handleAuthHelp(room, player) {
   room.sendAnnouncement('═══ COMANDOS DE AUTENTICACAO ═══', player.id, 0x55aaff, 'bold', 2);
   room.sendAnnouncement(
-    '/login <senha> - Fazer login na sua conta',
+    '!login <senha> - Fazer login na sua conta',
     player.id,
     0xaaaaaa,
     'normal',
@@ -405,7 +392,7 @@ function handleAuthHelp(room, player) {
   );
   room.sendAnnouncement('/logout - Desconectar da sua conta', player.id, 0xaaaaaa, 'normal', 1);
   room.sendAnnouncement(
-    '/profile [nick] - Ver perfil de jogador',
+    '!profile [nick] - Ver perfil de jogador',
     player.id,
     0xaaaaaa,
     'normal',
@@ -484,6 +471,13 @@ function handleGeneralHelp(room, player) {
     1
   );
   room.sendAnnouncement('!bb - Sair da sala', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement(
+    '!discord ou !dc - Link do Discord da comunidade',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
 
   room.sendAnnouncement(
     'Para registrar uma conta, use /register no Discord',
@@ -492,6 +486,23 @@ function handleGeneralHelp(room, player) {
     'small',
     1
   );
+}
+
+function handleDiscord(room, player) {
+  room.sendAnnouncement('', player.id, null, null, 0);
+  room.sendAnnouncement('═══════════════════════════════════', player.id, 0x55aaff, 'bold', 2);
+  room.sendAnnouncement('🔗 DISCORD DA COMUNIDADE CIRS', player.id, 0x00ff00, 'bold', 2);
+  room.sendAnnouncement('═══════════════════════════════════', player.id, 0x55aaff, 'bold', 2);
+  room.sendAnnouncement('', player.id, null, null, 0);
+  room.sendAnnouncement('Entre no nosso Discord:', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement('https://discord.gg/b2km7nvHP7', player.id, 0xffaa00, 'bold', 1);
+  room.sendAnnouncement('', player.id, null, null, 0);
+  room.sendAnnouncement('✓ Registre sua conta com /register', player.id, 0xaaaaaa, 'small', 1);
+  room.sendAnnouncement('✓ Participe de campeonatos e eventos', player.id, 0xaaaaaa, 'small', 1);
+  room.sendAnnouncement('✓ Acompanhe rankings e estatisticas', player.id, 0xaaaaaa, 'small', 1);
+  room.sendAnnouncement('✓ Interaja com a comunidade', player.id, 0xaaaaaa, 'small', 1);
+  room.sendAnnouncement('', player.id, null, null, 0);
+  room.sendAnnouncement('═══════════════════════════════════', player.id, 0x55aaff, 'bold', 2);
 }
 
 function handleAFK(room, player) {
@@ -507,9 +518,21 @@ function handleAFK(room, player) {
 
       if (targetTeamCount < maxPerTeam) {
         room.setPlayerTeam(player.id, prevTeam);
-        room.sendAnnouncement(`${player.name} voltou para o time ${prevTeam === 1 ? 'vermelho' : 'azul'}`, null, 0x00ff00, 'normal', 1);
+        room.sendAnnouncement(
+          `${player.name} voltou para o time ${prevTeam === 1 ? 'vermelho' : 'azul'}`,
+          null,
+          0x00ff00,
+          'normal',
+          1
+        );
       } else {
-        room.sendAnnouncement(`${player.name} saiu do estado AFK, mas nao havia vaga no seu time.`, player.id, 0xff9900, 'normal', 1);
+        room.sendAnnouncement(
+          `${player.name} saiu do estado AFK, mas nao havia vaga no seu time.`,
+          player.id,
+          0xff9900,
+          'normal',
+          1
+        );
       }
     } else {
       room.sendAnnouncement(`${player.name} saiu do estado AFK.`, player.id, 0x00ff00, 'normal', 1);
@@ -523,7 +546,13 @@ function handleAFK(room, player) {
     } catch (err) {
       // Ignorar erro ao mover
     }
-    room.sendAnnouncement(`${player.name} entrou em AFK. Sera kickado se ficar inativo por 10 minutos!`, null, 0xffaa00, 'bold', 1);
+    room.sendAnnouncement(
+      `${player.name} entrou em AFK. Sera kickado se ficar inativo por 10 minutos!`,
+      null,
+      0xffaa00,
+      'bold',
+      1
+    );
   }
 }
 
@@ -539,6 +568,7 @@ module.exports = {
   processCommand,
   processAuthCommand,
   processGeneralCommand,
+  authHandler, // Exporta authHandler para uso em lembretes de registro
 };
 
 //   __  ____ ____ _  _
