@@ -1,7 +1,17 @@
 "use strict";
+/**
+ * Gerenciador de instancias de servidores Haxball com haxball.js
+ * Implementacao moderna usando WebRTC nativo sem necessidade de Chrome/Chromium
+ * @module Server
+ * @version 6.0.0 (Fase 8 - Migracao haxball.js)
+ */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -11,243 +21,553 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Server = void 0;
-const puppeteer_core_1 = __importDefault(require("puppeteer-core"));
-const DebuggingServer_1 = require("./debugging/DebuggingServer");
-const getAvailablePort_1 = require("./utils/getAvailablePort");
-const escapeString_1 = require("./utils/escapeString");
+// Import haxball.js lazily to avoid creating network handles during test import
+let HaxballJS = null;
+const module_1 = require("module");
+const path_1 = __importDefault(require("path"));
 const log_1 = require("./utils/log");
-const Global = __importStar(require("./Global"));
-const Global_1 = require("./Global");
-const selectorFrame = 'body > iframe';
-const selectorRoomLink = '#roomlink > p > a';
-const blockedRes = [
-    '*/favicon.ico',
-    '.css',
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.svg',
-    '.woff',
-    '*.optimizely.com',
-    'everesttech.net',
-    'userzoom.com',
-    'doubleclick.net',
-    'googleadservices.com',
-    'adservice.google.com/*',
-    'connect.facebook.com',
-    'connect.facebook.net',
-    'sp.analytics.yahoo.com'
-];
+const Logger_1 = require("./utils/Logger");
+// Funcoes utilitarias de mensagens (CJS)
+const { stopCommunityAnnouncements } = require('../shared/config/messages.cjs');
+/**
+ * Gerenciador de salas Haxball usando haxball.js
+ * 70-80% reducao de memoria comparado a Puppeteer
+ * Sem necessidade de Chrome/Chromium
+ * @class Server
+ */
 class Server {
-    constructor(config) {
-        var _a, _b, _c, _d, _e;
-        this.browsers = [];
-        this.unnamedCount = 1;
-        this.proxyEnabled = (_a = config === null || config === void 0 ? void 0 : config.proxyEnabled) !== null && _a !== void 0 ? _a : false;
-        this.proxyServers = (_b = config === null || config === void 0 ? void 0 : config.proxyServers) !== null && _b !== void 0 ? _b : [];
-        this.execPath = config.execPath;
-        this.disableCache = (_c = config.disableCache) !== null && _c !== void 0 ? _c : false;
-        this.userDataDir = config.userDataDir;
-        this.remoteChromePort = Global.serverRoomFirstPort;
-        this.disableRemote = (_d = config.disableRemote) !== null && _d !== void 0 ? _d : false;
-        this.disableAnonymizeLocalIps = (_e = config.disableAnonymizeLocalIps) !== null && _e !== void 0 ? _e : false;
-        this.maxMemoryUsage = config.maxMemoryUsage;
-        if (!this.disableRemote) {
-            this.debuggingServer = new DebuggingServer_1.DebuggingServer();
-            this.debuggingServer.listen(Global.serverPort);
+    rooms = new Map();
+    // Map adicional para indexar instancias por link (stable id fornecido por haxball.js)
+    roomsByLink = new Map();
+    nextPid = 1000;
+    proxyServers;
+    db = null;
+    hbInit = null;
+    /**
+     * Compatibilidade com codigo antigo que acessa browsers array
+     * @deprecated Use rooms Map diretamente
+     */
+    get browsers() {
+        return Array.from(this.rooms.values()).map((instance) => ({
+            pid: instance.pid,
+            link: instance.link,
+        }));
+    }
+    /**
+     * Retorna o cliente DB (se inicializado)
+     */
+    getDb() {
+        return this.db;
+    }
+    /**
+     * Inicializa o gerenciador de salas Haxball
+     * @param {ServerConfig} config - Configuracao do servidor
+     * @throws {Error} Se inicializacao de haxball.js falhar
+     */
+    constructor(config, db) {
+        this.proxyServers = config.proxyServers ?? [];
+        this.db = db ?? null;
+        (0, log_1.log)('SERVER', `Inicializando gerenciador de salas Haxball (haxball.js v6.0.0)`);
+        (0, log_1.log)('SERVER', `Proxies habilitados: ${config.proxyEnabled ? 'SIM' : 'NAO'}`);
+        if (this.proxyServers.length > 0) {
+            (0, log_1.log)('SERVER', `Servidores proxy disponiveis: ${this.proxyServers.length}`);
         }
     }
-    async createNewBrowser() {
-        var _a;
-        const args = [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-accelerated-2d-canvas",
-            "--no-first-run",
-            "--no-zygote",
-            "--single-process",
-            "--disable-gpu",
-        ];
-        const remotePort = await (0, getAvailablePort_1.getAvailablePort)(this.remoteChromePort);
-        if (!this.disableRemote)
-            args.push(`--remote-debugging-port=${remotePort}`);
-        if (this.disableCache)
-            args.push("--incognito");
-        if (this.disableAnonymizeLocalIps)
-            args.push(`--disable-features=WebRtcHideLocalIpsWithMdns`);
-        if (this.maxMemoryUsage)
-            args.push("--max-old-space-size=" + this.maxMemoryUsage);
-        let proxyServer = "";
-        if (this.proxyEnabled) {
-            let availableProxies = this.proxyServers.filter(s => {
-                let a = 0;
-                for (const browser of this.browsers) {
-                    if (browser["proxyServer"] === s) {
-                        a++;
+    /**
+     * Inicializa haxball.js de forma lazy (sob demanda)
+     * @private
+     * @returns {Promise<any>} Funcao HBInit do haxball.js
+     */
+    async getHBInit() {
+        if (this.hbInit)
+            return this.hbInit;
+        try {
+            // Nota: HaxballJS nao suporta proxy diretamente
+            // Proxy sera tratado a nivel do token headless ou HTTP client
+            if (!HaxballJS) {
+                // Lazy import to prevent network handles at module load time
+                const mod = await Promise.resolve().then(() => __importStar(require('haxball.js')));
+                HaxballJS = (mod && (mod.default || mod));
+            }
+            this.hbInit = await HaxballJS();
+            (0, log_1.log)('SERVER', 'haxball.js inicializado com sucesso');
+            return this.hbInit;
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            throw new Error(`Falha ao inicializar haxball.js: ${errorMsg}`);
+        }
+    }
+    /**
+     * Abre uma nova sala Haxball
+     * @param {string} script - Codigo do bot script (JavaScript)
+     * @param {string|string[]} tokens - Token(ns) headless do Haxball
+     * @param {string} [name] - Nome da sala (opcional)
+     * @param {CustomSettings} [settings] - Configuracoes personalizadas (opcional)
+     * @returns {Promise<{link: string, pid: number}>} Informacoes da sala aberta
+     * @throws {Error} Se abertura de sala falhar
+     * @example
+     * const result = await server.open(botScript, 'thr1.xxx.xxx', 'Minha Sala');
+     * console.log(`Sala aberta: ${result.link}`);
+     */
+    async open(script, tokens, name, settings, scriptPath) {
+        try {
+            const HBInit = await this.getHBInit();
+            // Converter tokens para array se necessario
+            const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
+            const token = tokenArray[0];
+            if (!token) {
+                throw new Error('Nenhum token fornecido');
+            }
+            // Construir configuracao da sala
+            const roomConfig = {
+                roomName: name || 'Haxball Room',
+                maxPlayers: settings?.['reserved.haxball.maxPlayers']
+                    ? Number(settings['reserved.haxball.maxPlayers'])
+                    : 16,
+                public: settings?.['reserved.haxball.public'] !== false ? true : false,
+                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
+                password: settings?.['reserved.haxball.password']
+                    ? String(settings['reserved.haxball.password'])
+                    : undefined,
+                geo: settings?.['reserved.haxball.geo']
+                    ? JSON.parse(String(settings['reserved.haxball.geo']))
+                    : undefined,
+                token: token,
+            };
+            // Remover undefined
+            Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
+                delete roomConfig[key]);
+            // Abrir sala
+            const room = HBInit(roomConfig);
+            // Gerar PID ficticio para compatibilidade
+            const pid = this.nextPid++;
+            // Executa script do bot
+            this.executeBotScript(room, script, settings, this.db, scriptPath);
+            // Aplicar event handlers padrao
+            this.setupDefaultEventHandlers(room, pid, name);
+            // Armazenar instancia
+            const roomInstance = {
+                room,
+                pid,
+                botName: name || 'Unknown',
+                link: room.getLink?.() || 'https://www.haxball.com/headless',
+                createdAt: Date.now(),
+                eventHandlers: new Map(),
+            };
+            this.rooms.set(pid, roomInstance);
+            if (roomInstance.link)
+                this.roomsByLink.set(String(roomInstance.link), pid);
+            (0, log_1.log)('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`);
+            Logger_1.logger.info('Server', `Sala aberta`, { pid, name, link: roomInstance.link });
+            return {
+                link: roomInstance.link,
+                pid,
+            };
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            (0, log_1.log)('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
+            Logger_1.logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
+            throw error;
+        }
+    }
+    /**
+     * Abre sala consumindo um modulo ESM ja carregado (init executado direto sem VM)
+     * @param {object} roomModule - Modulo com metodo init({ room, settings })
+     * @param {string|string[]} tokens - Token(s) headless do Haxball
+     * @param {string} [name] - Nome da sala (opcional, fallback para roomModule.name)
+     * @param {CustomSettings} [settings] - Configuracoes personalizadas
+     * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
+     */
+    async openWithModule(roomModule, tokens, name, settings) {
+        try {
+            const HBInit = await this.getHBInit();
+            const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
+            const token = tokenArray[0];
+            if (!token) {
+                throw new Error('Nenhum token fornecido');
+            }
+            const roomConfig = {
+                roomName: name || roomModule?.name || 'Haxball Room',
+                maxPlayers: settings?.['reserved.haxball.maxPlayers']
+                    ? Number(settings['reserved.haxball.maxPlayers'])
+                    : 16,
+                public: settings?.['reserved.haxball.public'] !== false ? true : false,
+                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
+                password: settings?.['reserved.haxball.password']
+                    ? String(settings['reserved.haxball.password'])
+                    : undefined,
+                geo: settings?.['reserved.haxball.geo']
+                    ? JSON.parse(String(settings['reserved.haxball.geo']))
+                    : undefined,
+                token: token,
+            };
+            Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
+                delete roomConfig[key]);
+            const room = HBInit(roomConfig);
+            const pid = this.nextPid++;
+            try {
+                if (typeof roomModule?.init === 'function') {
+                    // Parar anuncios periodicos antes de reavaliar/init do modulo
+                    try {
+                        stopCommunityAnnouncements(room);
                     }
-                }
-                return a < 2;
-            });
-            if (availableProxies.length === 0) {
-                proxyServer = this.proxyServers[this.proxyServers.length - 1];
-            }
-            else {
-                proxyServer = availableProxies[0];
-            }
-            args.push("--proxy-server=" + proxyServer);
-        }
-        const puppeteerArgs = {
-            headless: true,
-            args: args,
-            executablePath: this.execPath
-        };
-        if (this.userDataDir && this.disableCache !== true)
-            puppeteerArgs["userDataDir"] = this.userDataDir;
-        const browser = await puppeteer_core_1.default.launch(puppeteerArgs);
-        if (!this.disableRemote)
-            browser["remotePort"] = remotePort;
-        if (proxyServer != "")
-            browser["proxyServer"] = proxyServer;
-        this.browsers.push(browser);
-        browser.on("disconnected", () => {
-            this.browsers = this.browsers.filter(b => {
-                var _a;
-                const isConnected = b.isConnected();
-                if (!isConnected)
-                    b.close();
-                if (!this.disableRemote)
-                    (_a = this.debuggingServer) === null || _a === void 0 ? void 0 : _a.removeRoom(remotePort);
-                return isConnected;
-            });
-        });
-        if (!this.disableRemote)
-            (_a = this.debuggingServer) === null || _a === void 0 ? void 0 : _a.addRoom(remotePort);
-        return browser;
-    }
-    async checkTokenWorks(page, token) {
-        return await page.evaluate(async (token) => {
-            return await new Promise((resolve) => {
-                const server = new WebSocket(`wss://p2p2.haxball.com/host?token=${token}`);
-                server.onopen = function () {
-                    resolve(true);
-                };
-                server.onerror = function () {
-                    resolve(false);
-                };
-            });
-        }, token);
-    }
-    async openRoom(page, script, tokens, name, settings) {
-        page.on("pageerror", ({ message }) => (0, log_1.log)("PAGE ERROR", message))
-            .on("response", response => (0, log_1.log)("PAGE RESPONSE", `${response.status()} : ${response.url()}`))
-            .on("requestfailed", request => { var _a; return (0, log_1.log)("REQUEST FAILED", `${(_a = request.failure()) === null || _a === void 0 ? void 0 : _a.errorText} : ${request.url()}`); })
-            .on("error", (err) => (0, log_1.log)("PAGE CRASHED", `${err}`))
-            .on("pageerror", (err) => (0, log_1.log)("ERROR IN PAGE", `${err}`));
-        if (this.disableCache)
-            await page.setCacheEnabled(false);
-        const client = await page.target().createCDPSession();
-        name = `(args[0]["roomName"] ?? "Unnamed room ${this.unnamedCount++}")` + (name ? ` + " (${(0, escapeString_1.escapeString)(name)})"` : "");
-        let reservedHBInitCustomSettingsScript = "";
-        let customSettingsScript = {};
-        if (settings) {
-            for (const setting of Object.entries(settings)) {
-                const key = setting[0];
-                const value = setting[1];
-                if (Global_1.roomCustomConfigsList.map(config => "reserved.haxball." + config).includes(key)) {
-                    reservedHBInitCustomSettingsScript += `args[0]["${(0, escapeString_1.escapeString)(key.replace("reserved.haxball.", ""))}"] = ${JSON.stringify(value)};`;
+                    catch (_) { }
+                    roomModule.init({ room, settings: settings || {}, db: this.db });
                 }
                 else {
-                    customSettingsScript[key] = value;
+                    (0, log_1.log)('SERVER', 'Modulo de sala sem init definido');
                 }
             }
-        }
-        await client.send('Network.setBlockedURLs', { urls: blockedRes });
-        await page.goto('https://www.haxball.com/headless', { waitUntil: 'networkidle2' });
-        let token;
-        for (const t of tokens) {
-            if (t != "" && await this.checkTokenWorks(page, t))
-                token = t;
-        }
-        const tokenListStr = tokens.filter(t => t && t != "").map(t => "`" + t + "`").join(", ");
-        if (token == null)
-            throw new Error(`Invalid token (tried ${tokenListStr}).`);
-        const scripts = `
-        window.HBInit = new Proxy(window.HBInit, {
-            apply: (target, thisArg, args) => {
-                args[0]["token"] = "${token}";
-
-                ${reservedHBInitCustomSettingsScript}
-
-                document.title = ${name};
-        
-                return target(...args);
+            catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                (0, log_1.log)('SERVER', `AVISO: Erro ao executar modulo ESM: ${errorMsg.substring(0, 100)}`);
             }
-        });
-        
-        window["CustomSettings"] = ${JSON.stringify(customSettingsScript)};
-        `;
-        await page.addScriptTag({ content: scripts });
-        await page.addScriptTag({ content: script });
-        await page.waitForSelector("iframe");
-        const elementHandle = await page.$(selectorFrame);
-        const frame = await elementHandle.contentFrame();
-        await frame.waitForSelector(selectorRoomLink);
-        const roomLinkElement = await frame.$(selectorRoomLink);
-        const link = await frame.evaluate(el => el.textContent, roomLinkElement);
-        return link;
-    }
-    async open(script, tokens, name, settings) {
-        var _a;
-        const browser = await this.createNewBrowser();
-        const pid = (_a = browser === null || browser === void 0 ? void 0 : browser.process()) === null || _a === void 0 ? void 0 : _a.pid;
-        const [page] = await browser.pages();
-        tokens = typeof tokens === "string" ? [tokens] : tokens;
-        try {
-            const link = await this.openRoom(page, script, tokens, name, settings);
-            return { link, pid, remotePort: browser["remotePort"] };
+            this.setupDefaultEventHandlers(room, pid, name || roomModule?.name);
+            const roomInstance = {
+                room,
+                pid,
+                botName: name || roomModule?.name || 'Unknown',
+                link: room.getLink?.() || 'https://www.haxball.com/headless',
+                createdAt: Date.now(),
+                eventHandlers: new Map(),
+            };
+            this.rooms.set(pid, roomInstance);
+            if (roomInstance.link)
+                this.roomsByLink.set(String(roomInstance.link), pid);
+            (0, log_1.log)('SERVER', `Sala aberta (ESM) - PID: ${pid}, Nome: ${roomInstance.botName}, Link: ${roomInstance.link}`);
+            Logger_1.logger.info('Server', `Sala aberta ESM`, {
+                pid,
+                name: roomInstance.botName,
+                link: roomInstance.link,
+            });
+            return {
+                link: roomInstance.link,
+                pid,
+            };
         }
-        catch (e) {
-            this.close(pid);
-            throw e;
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            (0, log_1.log)('SERVER', `ERRO ao abrir sala ESM: ${errorMsg}`);
+            Logger_1.logger.error('Server', `Erro ao abrir sala ESM`, { name, error: errorMsg });
+            throw error;
         }
     }
+    /**
+     * Fecha uma sala aberta
+     * @param {string|number} pidOrTitle - PID da sala ou nome
+     * @returns {Promise<boolean>} true se sala foi fechada, false se nao encontrada
+     * @example
+     * const success = await server.close(1000);
+     * if (success) console.log('Sala fechada com sucesso');
+     */
     async close(pidOrTitle) {
-        var _a;
-        let success = false;
-        let pOT = pidOrTitle;
-        for (const browser of this.browsers) {
-            const title = await (await browser.pages())[0].title();
-            if (title == pOT)
-                pOT = (_a = browser === null || browser === void 0 ? void 0 : browser.process()) === null || _a === void 0 ? void 0 : _a.pid;
+        const pid = typeof pidOrTitle === 'number' ? pidOrTitle : parseInt(pidOrTitle);
+        const instance = this.rooms.get(pid);
+        if (!instance) {
+            (0, log_1.log)('SERVER', `Sala ${pid} nao encontrada para fechamento`);
+            return false;
         }
-        this.browsers = this.browsers.filter(b => {
-            var _a;
-            const pid = (_a = b === null || b === void 0 ? void 0 : b.process()) === null || _a === void 0 ? void 0 : _a.pid;
-            if (pid == pOT) {
-                b.close().then(() => {
-                    var _a;
-                    if (!this.disableRemote)
-                        (_a = this.debuggingServer) === null || _a === void 0 ? void 0 : _a.removeRoom(b["remotePort"]);
-                });
-                success = true;
+        try {
+            // Parar qualquer anuncio periodico da comunidade para evitar timers vazando
+            try {
+                stopCommunityAnnouncements(instance?.room);
             }
-            return pid != pOT;
+            catch (_) { }
+            // haxball.js nao tem metodo close explicito
+            // Remover handlers e deixar garbage collection fazer seu trabalho
+            instance.eventHandlers.clear();
+            const link = instance.link;
+            if (link)
+                this.roomsByLink.delete(String(link));
+            this.rooms.delete(pid);
+            // Tentar force garbage collection se disponivel
+            if (global.gc) {
+                setImmediate(() => global.gc?.());
+            }
+            (0, log_1.log)('SERVER', `Sala ${pid} (${instance.botName}) fechada com sucesso`);
+            Logger_1.logger.info('Server', `Sala fechada`, { pid, name: instance.botName });
+            return true;
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            (0, log_1.log)('SERVER', `ERRO ao fechar sala ${pid}: ${errorMsg}`);
+            Logger_1.logger.error('Server', `Erro ao fechar sala`, { pid, error: errorMsg });
+            return false;
+        }
+    }
+    /**
+     * Fecha todas as salas abertas
+     * Util para shutdown gracioso ou limpeza completa
+     * @returns {number} Numero de salas fechadas
+     * @example
+     * await server.closeAll();
+     */
+    async closeAll() {
+        const pids = Array.from(this.rooms.keys());
+        let closedCount = 0;
+        for (const pid of pids) {
+            const result = await this.close(pid);
+            if (result)
+                closedCount++;
+        }
+        (0, log_1.log)('SERVER', `Todas as salas fechadas: ${closedCount}/${pids.length}`);
+        Logger_1.logger.info('Server', `Shutdown completo`, {
+            closedRooms: closedCount,
+            totalRooms: pids.length,
         });
-        return success;
+        return closedCount;
+    }
+    /**
+     * Retorna instancia de sala por PID
+     * @param {number} pid - ID da sala
+     * @returns {RoomInstance|undefined} Instancia da sala ou undefined
+     */
+    getRoom(pid) {
+        return this.rooms.get(pid);
+    }
+    /**
+     * Retorna todas as salas abertas
+     * @returns {RoomInstance[]} Array de salas abertas
+     */
+    getAllRooms() {
+        return Array.from(this.rooms.values());
+    }
+    /**
+     * Recupera instancia da sala a partir do link (identificador estavel) se existente
+     * @param link string
+     * @returns RoomInstance | undefined
+     */
+    getRoomByLink(link) {
+        const pid = this.roomsByLink.get(String(link));
+        if (pid === undefined)
+            return undefined;
+        return this.getRoom(pid);
+    }
+    /**
+     * Recupera instancia da sala a partir do objeto room do haxball.js
+     * Usa propriedades estaveis como getLink(), link, name ou room.id quando disponivel
+     * @param room any
+     */
+    getRoomByObject(room) {
+        if (!room)
+            return undefined;
+        try {
+            const link = room.getLink?.() || room.link || room.name || room.id;
+            if (!link)
+                return undefined;
+            return this.getRoomByLink(String(link));
+        }
+        catch (_) {
+            return undefined;
+        }
+    }
+    /**
+     * Retorna numero de salas abertas
+     * @returns {number} Quantidade de salas
+     */
+    getRoomCount() {
+        return this.rooms.size;
+    }
+    /**
+     * Executa script do bot no contexto da sala
+     * @private
+     * @param {any} room - Objeto de sala
+     * @param {string} script - Codigo JavaScript do bot (caminho ou conteudo)
+     * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
+     * @param {string} [scriptPath] - Caminho do script para require
+     */
+    executeBotScript(room, script, settings, db, scriptPath) {
+        try {
+            // Garantir que anuncios da comunidade anteriores sejam interrompidos antes de (re)carregar o script
+            try {
+                stopCommunityAnnouncements(room);
+            }
+            catch (_) { }
+            // Contexto disponivel ao script
+            const safeDb = db
+                ? {
+                    ensureUserByName: db.ensureUserByName?.bind(db),
+                    createRoomSession: db.createRoomSession?.bind(db),
+                    createMatch: db.createMatch?.bind(db),
+                    insertMatchEvent: db.insertMatchEvent?.bind(db),
+                    incrementStatCount: db.incrementStatCount?.bind(db),
+                    logEvent: db.logEvent?.bind(db),
+                }
+                : undefined;
+            // Se temos um caminho de script, tentar usar require diretamente
+            if (scriptPath) {
+                const scriptDir = path_1.default.dirname(scriptPath);
+                let requireFn;
+                try {
+                    // Criar um require funcao para o diretorio do script
+                    requireFn = (0, module_1.createRequire)(path_1.default.join(scriptDir, '__placeholder__.js'));
+                    // Limpar cache se existir
+                    if (require.cache[scriptPath]) {
+                        delete require.cache[scriptPath];
+                    }
+                    // Injetar contexto global antes de carregar
+                    globalThis.room = room;
+                    globalThis.customSettings = settings || {};
+                    globalThis.db = safeDb;
+                    globalThis.HBInit = (_config) => room;
+                    // Executar o script com require nativo
+                    requireFn(scriptPath);
+                    (0, log_1.log)('SERVER', `Bot script carregado com sucesso: ${path_1.default.basename(scriptPath)}`);
+                }
+                catch (requireError) {
+                    (0, log_1.log)('SERVER', `Erro ao carregar via require, usando eval: ${requireError instanceof Error ? requireError.message : String(requireError)}`);
+                    // Injetar globais para eval
+                    globalThis.room = room;
+                    globalThis.customSettings = settings || {};
+                    globalThis.db = safeDb;
+                    globalThis.HBInit = (_config) => room;
+                    // Definir require especifico do diretorio do script para que require() resolva corretamente
+                    let localRequire;
+                    if (typeof requireFn !== 'undefined') {
+                        localRequire = requireFn;
+                    }
+                    try {
+                        if (localRequire) {
+                            const wrappedScript = `(function(require, module, exports){\n${script}\n})(localRequire, module, exports)`;
+                            // Avaliar com require local
+                            eval(wrappedScript);
+                        }
+                        else {
+                            eval(script);
+                        }
+                        (0, log_1.log)('SERVER', 'Bot script carregado com eval como fallback');
+                    }
+                    finally {
+                        // Nao ha mais injecoes de require global
+                    }
+                }
+            }
+            else {
+                // Fallback para eval se nao temos caminho
+                globalThis.room = room;
+                globalThis.customSettings = settings || {};
+                globalThis.db = safeDb;
+                globalThis.HBInit = (_config) => room;
+                eval(script);
+                (0, log_1.log)('SERVER', 'Bot script carregado e executado com sucesso');
+            }
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            (0, log_1.log)('SERVER', `AVISO: Erro ao executar script bot: ${errorMsg}`);
+            // Nao lancar erro - permitir que sala continue funcionando
+        }
+        finally {
+            // Limpar globais injetados
+            delete globalThis.room;
+            delete globalThis.customSettings;
+            delete globalThis.db;
+            delete globalThis.HBInit;
+        }
+    }
+    /**
+     * Aplica event handlers padrao para logging e monitoramento
+     * @private
+     * @param {any} room - Objeto de sala
+     * @param {number} pid - ID da sala
+     * @param {string} [_botName] - Nome do bot (para futuro uso em logging)
+     */
+    setupDefaultEventHandlers(room, pid, _botName) {
+        try {
+            // Evento: Link da sala disponivel
+            if (room.onRoomLink) {
+                const originalHandler = room.onRoomLink;
+                room.onRoomLink = (link) => {
+                    (0, log_1.log)('SERVER', `Sala ${pid} link atualizado: ${link}`);
+                    // Atualiza indice por link para manter chave estavel
+                    const inst = this.getRoom(pid);
+                    if (inst) {
+                        if (inst.link)
+                            this.roomsByLink.delete(String(inst.link));
+                        inst.link = link;
+                        if (link)
+                            this.roomsByLink.set(String(link), pid);
+                    }
+                    if (typeof originalHandler === 'function') {
+                        originalHandler.call(room, link);
+                    }
+                };
+            }
+            // Evento: Jogador entrou
+            if (room.onPlayerJoin) {
+                const originalHandler = room.onPlayerJoin;
+                room.onPlayerJoin = (player) => {
+                    (0, log_1.log)('SERVER', `Sala ${pid}: Jogador entrou - ${player?.name || 'Unknown'}`);
+                    if (typeof originalHandler === 'function') {
+                        originalHandler.call(room, player);
+                    }
+                };
+            }
+            // Evento: Jogador saiu
+            if (room.onPlayerLeave) {
+                const originalHandler = room.onPlayerLeave;
+                room.onPlayerLeave = (player) => {
+                    (0, log_1.log)('SERVER', `Sala ${pid}: Jogador saiu - ${player?.name || 'Unknown'}`);
+                    if (typeof originalHandler === 'function') {
+                        originalHandler.call(room, player);
+                    }
+                };
+            }
+            // Evento: Jogo comecou
+            if (room.onGameStart) {
+                const originalHandler = room.onGameStart;
+                room.onGameStart = () => {
+                    (0, log_1.log)('SERVER', `Sala ${pid}: Jogo iniciado`);
+                    if (typeof originalHandler === 'function') {
+                        originalHandler.call(room);
+                    }
+                };
+            }
+            // Evento: Jogo parou
+            if (room.onGameStop) {
+                const originalHandler = room.onGameStop;
+                room.onGameStop = (byPlayer) => {
+                    (0, log_1.log)('SERVER', `Sala ${pid}: Jogo parado`);
+                    if (typeof originalHandler === 'function') {
+                        originalHandler.call(room, byPlayer);
+                    }
+                };
+            }
+            (0, log_1.log)('SERVER', `Sala ${pid}: Event handlers padrao configurados`);
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            (0, log_1.log)('SERVER', `AVISO: Erro ao configurar handlers: ${errorMsg}`);
+        }
     }
 }
 exports.Server = Server;
+//    __  ____ ____ _  _
+//  / _\/ ___) ___) )( \
+// /    \___ \___ ) \/ (
+// \_/\_(____(____|____/
 //# sourceMappingURL=Server.js.map

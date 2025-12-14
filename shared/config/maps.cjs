@@ -1,0 +1,680 @@
+//Modulo para mapas compartilhados
+
+// Variaveis compartilhadas entre o mapa e os handlers
+let currentStadium;
+let goalsCoord;
+let penalArea;
+let penalMark;
+let goalKickCoord;
+let cornerKickCoord;
+let cornerKickStrength;
+let goalKickStrength;
+let goalCoord_x;
+let goalCoord_y;
+
+function getRealSoccerMap(map) {
+  map = {
+    name: 'CIRS Stadium',
+
+    width: 1821,
+
+    height: 945,
+
+    spawnDistance: 560,
+
+    bg: { type: 'grass', width: 1610, height: 840, kickOffRadius: 252, cornerRadius: 0 },
+
+    playerPhysics: {
+      bCoef: 0.3,
+      invMass: 0.5,
+      damping: 0.96,
+      acceleration: 0.12,
+      kickingAcceleration: 0.08,
+      kickingDamping: 0.97,
+      kickStrength: 4.99,
+    },
+
+    ballPhysics: {
+      radius: 8.25,
+      bCoef: 0.5,
+      invMass: 1.05,
+      damping: 0.99,
+      color: 'FFFFFF',
+      cMask: ['all'],
+      cGroup: ['ball'],
+    },
+
+    vertexes: [
+      /* 0 */ { x: 0, y: 945.7899108644018, trait: 'kickOffBarrier' },
+      /* 1 */ { x: 0, y: 252.2106428971738, trait: 'kickOffBarrier' },
+      /* 2 */ { x: 0, y: -252.2106428971738, trait: 'kickOffBarrier' },
+      /* 3 */ { x: 0, y: -945.7899108644018, trait: 'kickOffBarrier' },
+
+      /* 4 */ { x: 1610, y: 448.37447626164237, trait: 'line' },
+      /* 5 */ { x: 1176.983000186811, y: 448.37447626164237, trait: 'line' },
+      /* 6 */ { x: 1610, y: -448.37447626164237, trait: 'line' },
+      /* 7 */ { x: 1176.983000186811, y: -448.37447626164237, trait: 'line' },
+      /* 8 */ { x: 1610, y: 252.2106428971738, trait: 'line' },
+      /* 9 */ { x: 1443.2053454671614, y: 252.2106428971738, trait: 'line' },
+      /* 10 */ { x: 1610, y: -252.2106428971738, trait: 'line' },
+      /* 11 */ { x: 1443.2053454671614, y: -252.2106428971738, trait: 'line' },
+      /* 12 */ { x: 1176.983000186811, y: -182.1521309812922, trait: 'line', curve: -130 },
+      /* 13 */ { x: 1176.983000186811, y: 182.1521309812922, trait: 'line', curve: -130 },
+      /* 14 */ { x: -1610, y: -448.37447626164237, trait: 'line' },
+      /* 15 */ { x: -1176.983000186811, y: -448.37447626164237, trait: 'line' },
+      /* 16 */ { x: -1610, y: 448.37447626164237, trait: 'line' },
+      /* 17 */ { x: -1176.983000186811, y: 448.37447626164237, trait: 'line' },
+      /* 18 */ { x: -1610, y: -245.20479170558565, trait: 'line' },
+      /* 19 */ { x: -1443.2053454671614, y: -245.20479170558565, trait: 'line' },
+      /* 20 */ { x: -1610, y: 245.20479170558565, trait: 'line' },
+      /* 21 */ { x: -1443.2053454671614, y: 245.20479170558565, trait: 'line' },
+      /* 22 */ { x: -1176.983000186811, y: 182.1521309812922, trait: 'line', curve: -130 },
+      /* 23 */ { x: -1176.983000186811, y: -182.1521309812922, trait: 'line', curve: -130 },
+      /* 24 */ { x: 1310.0941728269863, y: 4.2035107149528965, trait: 'line' },
+      /* 25 */ { x: 1310.0941728269863, y: -4.2035107149528965, trait: 'line' },
+      /* 26 */ { x: -1310.0941728269863, y: 4.2035107149528965, trait: 'line' },
+      /* 27 */ { x: -1310.0941728269863, y: -4.2035107149528965, trait: 'line' },
+      /* 28 */ { x: -1610, y: 810, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      /* 29 */ { x: -1580, y: 840, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      /* 30 */ { x: -1580, y: -840, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      /* 31 */ { x: -1610, y: -810, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      /* 32 */ {
+        x: 1569.3106669157482,
+        y: 840.7021429905794,
+        bCoef: -2.9,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+      },
+      /* 33 */ {
+        x: 1610,
+        y: 798.6670358410504,
+        bCoef: -2.9,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+      },
+      /* 34 */ {
+        x: 1610,
+        y: -798.6670358410504,
+        bCoef: -2.9,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+      },
+      /* 35 */ {
+        x: 1569.3106669157482,
+        y: -840.7021429905794,
+        bCoef: -2.9,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+      },
+
+      /* 36 */ {
+        x: 0,
+        y: 252.2106428971738,
+        bCoef: 0.1,
+        cMask: ['red', 'blue'],
+        cGroup: ['blueKO'],
+        trait: 'kickOffBarrier',
+        curve: -180,
+      },
+      /* 37 */ {
+        x: 0,
+        y: -252.2106428971738,
+        bCoef: 0.1,
+        cMask: ['red', 'blue'],
+        cGroup: ['redKO'],
+        trait: 'kickOffBarrier',
+        curve: 180,
+      },
+      /* 38 */ {
+        x: 0,
+        y: 252.2106428971738,
+        bCoef: 0.1,
+        cMask: ['red', 'blue'],
+        cGroup: ['redKO'],
+        trait: 'kickOffBarrier',
+        curve: 180,
+      },
+
+      /* 39 */ {
+        x: -1443.2053454671614,
+        y: -56.046809532705296,
+        bCoef: -5.7,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+        curve: 70,
+        color: '576C46',
+        vis: false,
+      },
+      /* 40 */ {
+        x: -1443.2053454671614,
+        y: 56.046809532705296,
+        bCoef: -5.7,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+        curve: 70,
+        color: '576C46',
+        vis: false,
+      },
+      /* 41 */ {
+        x: 1443.2053454671614,
+        y: -56.046809532705296,
+        bCoef: -5.7,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+        curve: -70,
+        color: '576C46',
+        vis: false,
+      },
+      /* 42 */ {
+        x: 1443.2053454671614,
+        y: 56.046809532705296,
+        bCoef: -5.7,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+        curve: -70,
+        color: '576C46',
+        vis: false,
+      },
+      /* 43 */ { x: 1443.2053454671614, y: -56.046809532705296, trait: 'line', color: '576C46' },
+      /* 44 */ { x: 1443.2053454671614, y: 56.046809532705296, trait: 'line', color: '576C46' },
+      /* 45 */ { x: -1443.2053454671614, y: -56.046809532705296, trait: 'line', color: '576C46' },
+      /* 46 */ { x: -1443.2053454671614, y: 56.046809532705296, trait: 'line', color: '576C46' },
+      /* 47 */ { x: 0, y: 4.2035107149528965, trait: 'line', radius: 10 },
+      /* 48 */ { x: 0, y: -4.2035107149528965, trait: 'line', radius: 10 },
+
+      /* 49 */ {
+        x: -1821.521309812922,
+        y: -700,
+        bCoef: 0,
+        cMask: ['c1'],
+        cGroup: ['red', 'blue'],
+        color: 'ec644b',
+        vis: false,
+      },
+      /* 50 */ {
+        x: 1821.521309812922,
+        y: -700,
+        bCoef: 0,
+        cMask: ['c1'],
+        cGroup: ['red', 'blue'],
+        color: 'ec644b',
+        vis: false,
+      },
+      /* 51 */ {
+        x: -1821.521309812922,
+        y: 700,
+        bCoef: 0,
+        cMask: ['c1'],
+        cGroup: ['red', 'blue'],
+        color: 'ec644b',
+        vis: false,
+      },
+      /* 52 */ {
+        x: 1821.521309812922,
+        y: 700,
+        bCoef: 0,
+        cMask: ['c1'],
+        cGroup: ['red', 'blue'],
+        color: 'ec644b',
+        vis: false,
+      },
+      /* 53 */ {
+        x: -1814.515458621334,
+        y: -448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 54 */ {
+        x: -1176.983000186811,
+        y: -448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 55 */ {
+        x: -1176.983000186811,
+        y: 448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 56 */ {
+        x: -1814.515458621334,
+        y: 448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 57 */ {
+        x: 1814.515458621334,
+        y: -448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 58 */ {
+        x: 1176.983000186811,
+        y: -448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 59 */ {
+        x: 1176.983000186811,
+        y: 448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 60 */ {
+        x: 1814.515458621334,
+        y: 448.37447626164237,
+        cMask: ['c0'],
+        cGroup: ['red', 'blue'],
+      },
+      /* 61 */ { x: -1610, y: -150, bCoef: 0.1, cMask: ['ball', 'red', 'blue'] },
+      /* 62 */ { x: -1690, y: -150, bCoef: 0.1, cMask: ['red', 'blue'], bias: 0, curve: 5 },
+      /* 63 */ { x: -1610, y: 150, bCoef: 0.1, cMask: ['ball', 'red', 'blue'] },
+      /* 64 */ { x: -1690, y: 150, bCoef: 0.1, cMask: ['red', 'blue'], bias: 0, curve: 5 },
+      /* 65 */ { x: -1740, y: -196, bCoef: 0, cMask: ['ball'], pos: [-1740, -196] },
+      /* 66 */ { x: -1740, y: 196, bCoef: 0, cMask: ['ball'], pos: [-1740, 196] },
+      /* 67 */ { x: 1610, y: 150, bCoef: 0.1, cMask: ['ball', 'red', 'blue'], pos: [1610, 173] },
+      /* 68 */ { x: 1690, y: 150, bCoef: 0.1, cMask: ['red', 'blue'], curve: -5 },
+      /* 69 */ { x: 1610, y: -150, bCoef: 0.1, cMask: ['ball', 'red', 'blue'] },
+      /* 70 */ { x: 1690, y: -150, bCoef: 0.1, cMask: ['red', 'blue'], curve: -5 },
+      /* 71 */ { x: 1751.4627978970404, y: -221.38489765418592, bCoef: 0, cMask: ['ball'] },
+      /* 72 */ { x: 1751.4627978970404, y: 221.38489765418592, bCoef: 0, cMask: ['ball'] },
+    ],
+
+    segments: [
+      { v0: 0, v1: 1, trait: 'kickOffBarrier' },
+      { v0: 2, v1: 3, trait: 'kickOffBarrier' },
+
+      { v0: 4, v1: 5, trait: 'line', y: 320 },
+      { v0: 5, v1: 7, trait: 'line', x: 840 },
+      { v0: 6, v1: 7, trait: 'line', y: -320 },
+      { v0: 8, v1: 9, trait: 'line', y: 180 },
+      { v0: 9, v1: 11, trait: 'line', x: 1030 },
+      { v0: 10, v1: 11, trait: 'line', y: -180 },
+      { v0: 12, v1: 13, curve: -130, trait: 'line', x: 840 },
+      { v0: 14, v1: 15, trait: 'line', y: -320 },
+      { v0: 15, v1: 17, trait: 'line', x: -840 },
+      { v0: 16, v1: 17, trait: 'line', y: 320 },
+      { v0: 18, v1: 19, trait: 'line', y: -175 },
+      { v0: 19, v1: 21, trait: 'line', x: -1030 },
+      { v0: 20, v1: 21, trait: 'line', y: 175 },
+      { v0: 22, v1: 23, curve: -130, trait: 'line', x: -840 },
+      { v0: 24, v1: 25, curve: -180, trait: 'line', x: 935 },
+      { v0: 26, v1: 27, curve: -180, trait: 'line', x: -935 },
+      { v0: 24, v1: 25, curve: 180, trait: 'line', x: 935 },
+      { v0: 26, v1: 27, curve: 180, trait: 'line', x: -935 },
+      { v0: 24, v1: 25, curve: 90, trait: 'line', x: 935 },
+      { v0: 26, v1: 27, curve: 90, trait: 'line', x: -935 },
+      { v0: 24, v1: 25, curve: -90, trait: 'line', x: 935 },
+      { v0: 26, v1: 27, curve: -90, trait: 'line', x: -935 },
+      { v0: 24, v1: 25, trait: 'line', x: 935 },
+      { v0: 26, v1: 27, trait: 'line', x: -935 },
+      { v0: 28, v1: 29, curve: 90, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      { v0: 30, v1: 31, curve: 90, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      { v0: 32, v1: 33, curve: 90, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+      { v0: 34, v1: 35, curve: 90, bCoef: -2.9, cMask: ['ball'], cGroup: ['c0'], trait: 'line' },
+
+      {
+        v0: 37,
+        v1: 36,
+        curve: -180,
+        vis: false,
+        bCoef: 0.1,
+        cGroup: ['blueKO'],
+        trait: 'kickOffBarrier',
+      },
+
+      {
+        v0: 39,
+        v1: 40,
+        curve: 70,
+        vis: false,
+        color: '576C46',
+        bCoef: -5.7,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+        x: -1030,
+      },
+      {
+        v0: 41,
+        v1: 42,
+        curve: -70,
+        vis: false,
+        color: '576C46',
+        bCoef: -5.7,
+        cMask: ['ball'],
+        cGroup: ['c0'],
+        trait: 'line',
+        x: 1030,
+      },
+
+      {
+        v0: 37,
+        v1: 38,
+        curve: 180,
+        vis: false,
+        bCoef: 0.1,
+        cMask: ['red', 'blue'],
+        cGroup: ['redKO'],
+        trait: 'kickOffBarrier',
+      },
+
+      { v0: 43, v1: 44, vis: true, color: '576C46', trait: 'line', x: 1030 },
+      { v0: 45, v1: 46, vis: true, color: '576C46', trait: 'line', x: -1030 },
+      { v0: 47, v1: 48, curve: -180, trait: 'line', x: -935, radius: 10 },
+      { v0: 47, v1: 48, curve: 180, trait: 'line', x: -935, radius: 10 },
+      { v0: 47, v1: 48, curve: 90, trait: 'line', x: -935, radius: 10 },
+      { v0: 47, v1: 48, curve: -90, trait: 'line', x: -935, radius: 10 },
+      { v0: 47, v1: 48, trait: 'line', x: -935, radius: 10 },
+
+      {
+        v0: 49,
+        v1: 50,
+        vis: false,
+        color: 'ec644b',
+        bCoef: 0,
+        cMask: ['c1'],
+        cGroup: ['red', 'blue'],
+        y: -700,
+      },
+      {
+        v0: 51,
+        v1: 52,
+        vis: false,
+        color: 'ec644b',
+        bCoef: 0,
+        cMask: ['c1'],
+        cGroup: ['red', 'blue'],
+        y: 700,
+      },
+      { v0: 53, v1: 54, vis: false, color: 'ec644b', cMask: ['c0'], cGroup: ['red', 'blue'] },
+      { v0: 54, v1: 55, vis: false, color: 'ec644b', cMask: ['c0'], cGroup: ['red', 'blue'] },
+      { v0: 55, v1: 56, vis: false, color: 'ec644b', cMask: ['c0'], cGroup: ['red', 'blue'] },
+      { v0: 57, v1: 58, vis: false, cMask: ['c0'], cGroup: ['red', 'blue'] },
+      { v0: 58, v1: 59, vis: false, cMask: ['c0'], cGroup: ['red', 'blue'] },
+      { v0: 59, v1: 60, vis: false, cMask: ['c0'], cGroup: ['red', 'blue'] },
+      { v0: 61, v1: 62, color: 'FFFFFF', bCoef: 0.1, cMask: ['ball', 'red', 'blue'], y: -150 },
+      { v0: 63, v1: 64, color: 'FFFFFF', bCoef: 0.1, cMask: ['ball', 'red', 'blue'], y: 150 },
+      {
+        v0: 64,
+        v1: 62,
+        curve: 5,
+        color: 'FFFFFF',
+        bCoef: 0.1,
+        cMask: ['ball', 'red', 'blue'],
+        bias: 0,
+        x: -1690,
+      },
+      { v0: 62, v1: 65, color: 'FFFFFF', bCoef: 0, cMask: ['ball'] },
+      { v0: 64, v1: 66, color: 'FFFFFF', bCoef: 0, cMask: ['ball'] },
+      { v0: 67, v1: 68, color: 'FFFFFF', bCoef: 0.1, cMask: ['ball', 'red', 'blue'], y: 150 },
+      { v0: 69, v1: 70, color: 'FFFFFF', bCoef: 0.1, cMask: ['ball', 'red', 'blue'], y: -150 },
+      {
+        v0: 68,
+        v1: 70,
+        curve: -5,
+        color: 'FFFFFF',
+        bCoef: 0.1,
+        cMask: ['ball', 'red', 'blue'],
+        x: 1690,
+      },
+      { v0: 70, v1: 71, color: 'FFFFFF', bCoef: 0, cMask: ['ball'] },
+      { v0: 68, v1: 72, color: 'FFFFFF', bCoef: 0, cMask: ['ball'] },
+    ],
+
+    goals: [
+      { p0: [-1620.6373256311497, 150], p1: [-1620.6373256311497, -150], team: 'red' },
+      { p0: [1620, 150], p1: [1620, -150], team: 'blue', radius: 0, invMass: 1 },
+    ],
+
+    discs: [
+      {
+        radius: 0,
+        invMass: 0,
+        pos: [-1836.934182434416, -26.622234528035015],
+        color: 'ffffffff',
+        bCoef: 0,
+        cMask: ['red'],
+        cGroup: ['ball'],
+      },
+      {
+        radius: 0,
+        invMass: 0,
+        pos: [-1835.5330121960983, 40.633936911211336],
+        color: 'ffffffff',
+        bCoef: 0,
+        cMask: ['blue'],
+        cGroup: ['ball'],
+      },
+      {
+        radius: 0,
+        invMass: 0,
+        pos: [-1832.730671719463, 86.8725547756932],
+        color: 'ffffffff',
+        bCoef: 0,
+        cMask: ['red', 'blue'],
+        cGroup: ['ball'],
+      },
+
+      { radius: 3.7831596434576076, pos: [-1610, 840], cGroup: ['ball'], trait: 'cornerflag' },
+      {
+        radius: 3.7831596434576076,
+        pos: [1610, -840.7021429905794],
+        cGroup: ['ball'],
+        trait: 'cornerflag',
+      },
+      {
+        radius: 3.7831596434576076,
+        pos: [1610, 840.7021429905794],
+        cGroup: ['ball'],
+        trait: 'cornerflag',
+      },
+
+      {
+        radius: 6.21048543178578,
+        invMass: 0,
+        pos: [-1610, -150],
+        bCoef: 0.5,
+        trait: 'goalPost',
+        x: -1610,
+      },
+      {
+        radius: 6.21048543178578,
+        invMass: 0,
+        pos: [-1610, 150],
+        bCoef: 0.5,
+        trait: 'goalPost',
+        x: -1610,
+      },
+      {
+        radius: 2.4841941727143118,
+        invMass: 0,
+        pos: [-1740, -196],
+        color: '000000',
+        bCoef: 1,
+        trait: 'goalPost',
+        x: -1740,
+        y: -196,
+      },
+      {
+        radius: 2.4841941727143118,
+        invMass: 0,
+        pos: [-1740, 196],
+        color: '000000',
+        bCoef: 1,
+        trait: 'goalPost',
+        y: 196,
+        x: -1740,
+      },
+      { radius: 7.005851191588162, invMass: 0, pos: [1610, -150], bCoef: 0.5, trait: 'goalPost' },
+      {
+        radius: 7.005851191588162,
+        invMass: 0,
+        pos: [1610, 150],
+        bCoef: 0.5,
+        trait: 'goalPost',
+        x: 1610,
+      },
+      {
+        radius: 2.8023404766352646,
+        invMass: 0,
+        pos: [1751.4627978970404, -221.38489765418592],
+        color: '000000',
+        bCoef: 1,
+        trait: 'goalPost',
+      },
+      {
+        radius: 2.8023404766352646,
+        invMass: 0,
+        pos: [1751.4627978970404, 221.38489765418592],
+        color: '000000',
+        bCoef: 1,
+        trait: 'goalPost',
+      },
+
+      {
+        radius: 3.7831596434576076,
+        pos: [-1610, -840.7021429905794],
+        cGroup: ['ball'],
+        trait: 'cornerflag',
+      },
+
+      { radius: 0, pos: [10000, 840], cMask: [] },
+      { radius: 0, pos: [10000, -840], cMask: [] },
+      { radius: 0, pos: [10000, 840], cMask: [] },
+      { radius: 0, pos: [10000, -840], cMask: [] },
+      { radius: 0, pos: [-1149, 460], cMask: [] },
+      { radius: 0, pos: [1149, 460], cMask: [] },
+      { radius: 0, pos: [-1149, 460], cMask: [] },
+      { radius: 0, pos: [1149, 460], cMask: [] },
+    ],
+
+    planes: [
+      { normal: [0, 1], dist: -902, bCoef: 0, cGroup: ['ball'], trait: 'ballArea' },
+      { normal: [0, -1], dist: -902, bCoef: 0, cGroup: ['ball'], trait: 'ballArea' },
+
+      { normal: [0, 1], dist: -945, bCoef: 0 },
+      { normal: [0, -1], dist: -945, bCoef: 0 },
+      { normal: [1, 0], dist: -1821, bCoef: 0 },
+      { normal: [-1, 0], dist: -1821, bCoef: 0.1 },
+      { normal: [1, 0], dist: -1751, bCoef: 0, cMask: ['ball'], cGroup: ['ball'] },
+      { normal: [-1, 0], dist: -1751, bCoef: 0, cMask: ['ball'], cGroup: ['ball'] },
+    ],
+
+    traits: {
+      ballArea: { vis: false, bCoef: 0, cMask: ['ball'], cGroup: ['ball'] },
+      goalPost: { radius: 5, invMass: 0, bCoef: 1, cGroup: ['wall'] },
+      rightNet: { radius: 0, invMass: 1, bCoef: 0, cGroup: ['ball', 'c3'] },
+      leftNet: { radius: 0, invMass: 1, bCoef: 0, cGroup: ['ball', 'c2'] },
+      stanchion: { radius: 3, invMass: 0, bCoef: 3, cMask: ['none'] },
+      cornerflag: { radius: 3, invMass: 0, bCoef: 0.2, color: 'FFFF00', cMask: ['ball'] },
+      reargoalNetleft: {
+        vis: true,
+        bCoef: 0.1,
+        cMask: ['ball', 'red', 'blue'],
+        curve: 10,
+        color: 'C7E6BD',
+      },
+      reargoalNetright: {
+        vis: true,
+        bCoef: 0.1,
+        cMask: ['ball', 'red', 'blue'],
+        curve: -10,
+        color: 'C7E6BD',
+      },
+      sidegoalNet: { vis: true, bCoef: 1, cMask: ['ball', 'red', 'blue'], color: 'C7E6BD' },
+      kickOffBarrier: {
+        vis: false,
+        bCoef: 0.1,
+        cGroup: ['redKO', 'blueKO'],
+        cMask: ['red', 'blue'],
+      },
+      line: { vis: true, cMask: [], color: 'C7E6BD' },
+    },
+
+    redSpawnPoints: [],
+
+    blueSpawnPoints: [],
+
+    canBeStored: true,
+
+    joints: [
+      { d0: 18, d1: 19, strength: 'rigid', color: 'ff0000', length: null },
+      { d0: 16, d1: 17, strength: 'rigid', color: '0000ff', length: null },
+    ],
+
+    kickOffReset: 'full',
+  };
+  penalArea = [1176, 448];
+  penalMark = 1310;
+  goalKickCoord = 1473;
+  cornerKickCoord = [1595, 825];
+  cornerKickStrength = 2.175;
+  goalKickStrength = 1.55555;
+
+  currentStadium = map;
+  goalCoord_x = Math.abs(map.goals[0].p0[0]);
+  goalCoord_y = Math.abs(map.goals[0].p0[1]);
+  goalsCoord = [goalCoord_x, goalCoord_y];
+  return JSON.stringify(map);
+}
+
+// Funcao para obter mapa futsal baseado na quantidade de jogadores
+function getFutsalMap(playerCount) {
+  const fs = require('fs');
+  const path = require('path');
+
+  let mapFile;
+
+  if (playerCount <= 2) {
+    // 1x1 ou 2x2
+    mapFile = path.join(__dirname, '../maps/futsal_1x1_2x2.hbs');
+  } else if (playerCount <= 6) {
+    // 3x3 ou 4x4
+    mapFile = path.join(__dirname, '../maps/futsal_3x3_4x4.hbs');
+  } else if (playerCount <= 12) {
+    // 5x5 ou 6x6
+    mapFile = path.join(__dirname, '../maps/futsal_5x5_6x6.hbs');
+  } else if (playerCount <= 14) {
+    // 7x7
+    mapFile = path.join(__dirname, '../maps/futsal_x7.hbs');
+  } else {
+    // 8x8+
+    mapFile = path.join(__dirname, '../maps/futsal_x8+.hbs');
+  }
+
+  try {
+    const mapData = fs.readFileSync(mapFile, 'utf8');
+    return mapData;
+  } catch (error) {
+    console.error(`[MAPS] Erro ao carregar mapa: ${error.message}`);
+    // Fallback para mapa medio
+    return fs.readFileSync(path.join(__dirname, '../maps/futsal_5x5_6x6.hbs'), 'utf8');
+  }
+}
+
+module.exports = {
+  getRealSoccerMap,
+  getFutsalMap,
+  currentStadium,
+  goalsCoord,
+  penalArea,
+  penalMark,
+  goalKickCoord,
+  cornerKickCoord,
+  cornerKickStrength,
+  goalKickStrength,
+};
+
+//   __  ____ ____ _  _
+//  / _\/ ___) ___) )( \
+// /    \___ \___ ) \/ (
+// \_/\_(____(____|____/

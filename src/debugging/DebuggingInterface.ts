@@ -1,10 +1,10 @@
-import express from "express";
-import http from "http";
-import * as WebSocket from "ws";
+import express from 'express';
+import http from 'http';
+import * as WebSocket from 'ws';
 
-import { DebuggingClient } from "./DebuggingClient";
+import { DebuggingClient } from './DebuggingClient';
 
-import * as Global from "../Global";
+import * as Global from '../Global';
 
 const html = `
 <!doctype html>
@@ -44,86 +44,92 @@ const html = `
 `;
 
 export class ConnectInterface {
-    listen(expressPort: number, wsPort: number, debuggingClient: DebuggingClient) {
-        this.openWSServer(wsPort, debuggingClient);
+  listen(expressPort: number, wsPort: number, debuggingClient: DebuggingClient) {
+    this.openWSServer(wsPort, debuggingClient);
 
-        const url = this.openExpressServer(expressPort);
+    const url = this.openExpressServer(expressPort);
 
-        return url;
-    }
+    return url;
+  }
 
-    private openExpressServer(port: number) {
-        const app = express();
+  private openExpressServer(port: number) {
+    const app = express();
 
-        const url = `http://localhost:${port}`;
+    const url = `http://localhost:${port}`;
 
-        app.get('/', (req, res) => {
-            res.send(html);
+    app.get('/', (_req, res) => {
+      res.send(html);
+    });
+
+    app.listen(port, 'localhost', () => {
+      console.log(`Listening web server at ${url}`);
+    });
+
+    return url;
+  }
+
+  private openWSServer(port: number, client: DebuggingClient) {
+    const wss = new WebSocket.Server({ port });
+
+    wss.on('connection', (ws) => {
+      client.on('add', async (_server, client) => {
+        setTimeout(() => this.addRoomToList(client, ws), 2000);
+      });
+
+      client.on('remove', async (_server, client) => {
+        this.removeRoomFromList(client, ws);
+      });
+
+      for (const room of client.rooms) {
+        this.addRoomToList(room, ws);
+      }
+    });
+  }
+
+  private addRoomToList(room: number, ws: WebSocket.WebSocket, iteration: number = 0) {
+    const url = `http://localhost:${room}`;
+
+    if (iteration >= 3) return;
+
+    http
+      .get(`${url}/json`, (res) => {
+        let body = '';
+
+        res.on('data', (chunk) => (body += chunk));
+        res.on('end', () => {
+          const data = JSON.parse(body)[0];
+
+          ws.send(
+            JSON.stringify({
+              type: 'add',
+              message: {
+                port: room,
+                source: url,
+                url: data.devtoolsFrontendUrl,
+                title: data.title,
+              },
+            })
+          );
         });
+      })
+      .on('error', (error) => {
+        console.error(error);
+        setTimeout(() => this.addRoomToList(room, ws, iteration + 1), 2000);
+      });
+  }
 
-        app.listen(port, "localhost", () => {
-            console.log(`Listening web server at ${url}`)
-        });
-
-        return url;
+  private removeRoomFromList(room: number, ws: WebSocket.WebSocket) {
+    try {
+      ws.send(
+        JSON.stringify({
+          type: 'remove',
+          message: {
+            port: room,
+          },
+        })
+      );
+    } catch (err) {
+      console.error(err);
     }
-
-    private openWSServer(port: number, client: DebuggingClient) {
-        const wss = new WebSocket.Server({ port });
-
-        wss.on('connection', (ws) => {
-            client.on("add", async (server, client) => {
-                setTimeout(() => this.addRoomToList(client, ws), 2000);
-            });
-
-            client.on("remove", async (server, client) => {
-                this.removeRoomFromList(client, ws);
-            });
-
-            for (const room of client.rooms) {
-                this.addRoomToList(room, ws);
-            }
-        });
-    }
-
-    private addRoomToList(room: number, ws: any, iteration: number = 0) {
-        const url = `http://localhost:${room}`;
-
-        if (iteration >= 3) return;
-
-        http.get(`${url}/json`, (res) => {
-            let body = "";
-
-            res.on("data", (chunk) => body += chunk);
-            res.on("end", () => {
-                const data = JSON.parse(body)[0];
-
-                ws.send(JSON.stringify({
-                    type: "add",
-                    message: {
-                        port: room,
-                        source: url,
-                        url: data.devtoolsFrontendUrl,
-                        title: data.title
-                    }
-                }));
-            });
-        }).on("error", (error) => {
-            console.error(error);
-            setTimeout(() => this.addRoomToList(room, ws, iteration + 1), 2000);
-        });
-    }
-
-    private removeRoomFromList(room: number, ws: any) {
-        try {
-            ws.send(JSON.stringify({
-                type: "remove",
-                message: {
-                    port: room
-                }
-            }));
-        } catch (err) {
-            console.error(err);
-        }
-    }
+  }
 }
