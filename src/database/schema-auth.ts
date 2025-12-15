@@ -121,6 +121,8 @@ export const stats = sqliteTable('stats', {
   saves: integer('saves').default(0),
   touches: integer('touches').default(0),
   distance: real('distance').default(0),
+  team: text('team').default('spectator'),
+  won: integer('won', { mode: 'boolean' }).default(false).notNull(),
 });
 
 export const matchEvents = sqliteTable('match_events', {

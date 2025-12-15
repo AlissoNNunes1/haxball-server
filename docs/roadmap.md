@@ -1,5 +1,40 @@
 # Plano de Modernizacao e Atualizacao do Haxball Server
 
+## 📋 REFATORACAO DE CODIGO REUTILIZAVEL (PRIORIDADE MAXIMA)
+
+**Documento Completo:** [docs/REFACTORING_PLAN.md](./REFACTORING_PLAN.md)  
+**Status:** ✅ Plano criado, ⏳ Implementacao pendente
+
+### Objetivo
+
+Centralizar funcionalidades comuns em `shared/handlers/` para maxima reutilizacao entre todas as salas CIRS, eliminando duplicacao de codigo e padronizando experiencia do jogador.
+
+### Acoes Principais
+
+- ✅ **Plano completo documentado** com 8 secoes detalhadas
+- ⏳ Criar `shared/handlers/chatHandlers.cjs` - Team chat e mensagens privadas (PM)
+- ⏳ Criar `shared/handlers/goalHandlers.cjs` - Gol, assistencia e gol contra
+- ⏳ Criar `shared/handlers/matchHandlers.cjs` - Inicio, fim e acrescimos
+- ⏳ Criar `shared/handlers/playerHandlers.cjs` - Join, leave e sistema de tags visuais
+- ⏳ Implementar **sistema de tag visual** para jogadores (NOVO)
+- ⏳ Migrar e deprecar `cirsbase.js` para novo padrao modular
+
+### Impacto Esperado
+
+- ✅ **70%+ reducao** de codigo duplicado
+- ✅ **Experiencia consistente** em todas as salas
+- ✅ **Criacao de novas salas** 5x mais rapida
+- ✅ **Manutencao centralizada** - corrigir uma vez, aplicar em todas as salas
+
+### Roadmap de Implementacao
+
+1. **Fase 1:** Criar handlers globais (chatHandlers, goalHandlers, matchHandlers, playerHandlers)
+2. **Fase 2:** Criar utilitarios de comemoracao (celebrationUtils)
+3. **Fase 3:** Atualizar salas existentes (cirs-stadium, todos_jogam)
+4. **Fase 4:** Integracao, testes e documentacao
+
+---
+
 ## Status Atual - MODERNIZACAO CONCLUIDA + FEATURES AVANCADAS
 
 O projeto **haxball-server** foi completamente modernizado com sucesso! Todas as fases criticas foram implementadas, resultando em um projeto robusto, seguro, testado e pronto para producao. Agora com sistema de autenticacao e balanceamento Elo hibrido!

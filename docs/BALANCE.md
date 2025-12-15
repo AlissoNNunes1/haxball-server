@@ -14,7 +14,7 @@ Sistema Elo hibrido para Haxball com ratings por posicao, algoritmos de balancea
 
 ### Componentes Principais
 
-```
+```bash
 src/balance/
 ├── types.ts                  # Tipos e interfaces
 ├── EloCalculator.ts          # Calculo de rating Elo
@@ -42,7 +42,7 @@ Partida -> PerformanceData -> EloCalculator -> Nova Rating
 
 ### Formula Base
 
-```
+```bash
 Nova Rating = Rating Atual + K × (Score Real - Score Esperado)
 ```
 
@@ -123,7 +123,7 @@ Cada jogador possui 5 ratings:
 
 ### Rating Efetivo
 
-```
+a
 Rating Efetivo = Rating Base × Fator Especializacao × Fator Forma × Fator Off-Position
 ```
 

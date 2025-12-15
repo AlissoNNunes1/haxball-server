@@ -271,7 +271,9 @@ export class Server {
       try {
         if (typeof roomModule?.init === 'function') {
           // Parar anuncios periodicos antes de reavaliar/init do modulo
-          try { stopCommunityAnnouncements(room); } catch (_) {}
+          try {
+            stopCommunityAnnouncements(room);
+          } catch (_) {}
           roomModule.init({ room, settings: settings || {}, db: this.db });
         } else {
           log('SERVER', 'Modulo de sala sem init definido');
@@ -336,7 +338,9 @@ export class Server {
 
     try {
       // Parar qualquer anuncio periodico da comunidade para evitar timers vazando
-      try { stopCommunityAnnouncements(instance?.room); } catch (_) {}
+      try {
+        stopCommunityAnnouncements(instance?.room);
+      } catch (_) {}
       // haxball.js nao tem metodo close explicito
       // Remover handlers e deixar garbage collection fazer seu trabalho
       instance.eventHandlers.clear();
@@ -453,7 +457,9 @@ export class Server {
   ): void {
     try {
       // Garantir que anuncios da comunidade anteriores sejam interrompidos antes de (re)carregar o script
-      try { stopCommunityAnnouncements(room); } catch (_) {}
+      try {
+        stopCommunityAnnouncements(room);
+      } catch (_) {}
       // Contexto disponivel ao script
       const safeDb = db
         ? {

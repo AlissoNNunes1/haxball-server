@@ -25,7 +25,7 @@ var token = 'thr1.AAAAAGiNH5hLLJwiOkRVbQ.y4LGvzqOIl0';
 var roomLink = '';
 var gameTime = 7;
 var map = 'RSR';
-var superAdmins = ['assu'];
+var superAdmins = ['assu','gusta'];
 
 module.exports = {
   fieldWidth,

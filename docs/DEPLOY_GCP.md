@@ -75,6 +75,7 @@ node -v && npm -v
 ### 4) Obter o código
 
 #### 4.1) Repositório público
+
 ```bash
 cd /opt
 sudo git clone https://github.com/AlissoNNunes1/haxball-server.git
@@ -87,6 +88,7 @@ npm run build
 #### 4.2) Repositório privado
 
 **Opção A: SSH Key (recomendado)**
+
 ```bash
 # Gerar chave SSH na VM (sem senha para automação)
 ssh-keygen -t ed25519 -C "haxball-vm@gcp" -f ~/.ssh/id_haxball -N ""
@@ -118,6 +120,7 @@ npm run build
 ```
 
 **Opção B: Personal Access Token (PAT)**
+
 ```bash
 # Criar PAT no GitHub/GitLab com permissão 'repo' ou 'read_repository'
 # GitHub: Settings > Developer settings > Personal access tokens > Generate new token
@@ -137,6 +140,7 @@ npm run build
 ```
 
 **Opção C: Secret Manager + Deploy Key (produção)**
+aa
 ```bash
 # Armazenar chave SSH privada no Secret Manager
 gcloud secrets create haxball-deploy-key --data-file="$HOME/.ssh/id_haxball"
@@ -212,6 +216,7 @@ sudo systemctl status haxball.service
 ### 9) Atualizações
 
 **Repositório público:**
+
 ```bash
 cd /opt/haxball-server
 git pull
@@ -221,6 +226,7 @@ sudo systemctl restart haxball.service
 ```
 
 **Repositório privado (SSH):**
+
 ```bash
 cd /opt/haxball-server
 # Git já está configurado com SSH key
@@ -231,6 +237,7 @@ sudo systemctl restart haxball.service
 ```
 
 **Automação de atualizações (opcional):**
+
 ```bash
 # Script de atualização
 sudo tee /opt/haxball-server/update.sh > /dev/null <<'EOF'
@@ -269,7 +276,4 @@ sudo chmod +x /opt/haxball-server/update.sh
 - Porta não acessível: confirmar regras de firewall e se WebMonitor está ativo.
 - Tokens inválidos: revisar `config.json` e permissões do bot no Discord.
 
-//   __  ____ ____ __
-// / _\/ ___) ___) )( \
-//    \___ \___ ) \/ (
-// \_/\_(____(____|____/
+

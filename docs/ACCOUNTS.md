@@ -80,13 +80,16 @@ O Sistema de Contas CIRS permite que jogadores criem contas unificadas que funci
 ### Via API REST
 
 1. Cliente envia POST para `/api/auth/login`:
+
    ```json
    {
      "haxballNick": "MeuNick",
      "password": "minhaSenha"
    }
    ```
+
 2. Resposta com token:
+
    ```json
    {
      "success": true,
@@ -94,6 +97,7 @@ O Sistema de Contas CIRS permite que jogadores criem contas unificadas que funci
      "account": { "id": 1, "haxballNick": "MeuNick", ... }
    }
    ```
+
 3. Token pode ser usado para validacao posterior
 
 ## Seguranca

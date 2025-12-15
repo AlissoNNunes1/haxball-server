@@ -36,7 +36,10 @@ function hasNamedTimer(room, name) {
 function createNamedInterval(room, name, fn, ms) {
   if (hasNamedTimer(room, name)) return null;
   const handle = setInterval(fn, ms);
-  if (handle && typeof handle.unref === 'function') try { handle.unref(); } catch (e) {}
+  if (handle && typeof handle.unref === 'function')
+    try {
+      handle.unref();
+    } catch (e) {}
   registerNamedTimer(room, name, handle, 'interval');
   return handle;
 }
@@ -44,28 +47,40 @@ function createNamedInterval(room, name, fn, ms) {
 function createNamedTimeout(room, name, fn, ms) {
   if (hasNamedTimer(room, name)) return null;
   const handle = setTimeout(fn, ms);
-  if (handle && typeof handle.unref === 'function') try { handle.unref(); } catch (e) {}
+  if (handle && typeof handle.unref === 'function')
+    try {
+      handle.unref();
+    } catch (e) {}
   registerNamedTimer(room, name, handle, 'timeout');
   return handle;
 }
 
 function createInterval(room, fn, ms) {
   const handle = setInterval(fn, ms);
-  if (handle && typeof handle.unref === 'function') try { handle.unref(); } catch (e) {}
+  if (handle && typeof handle.unref === 'function')
+    try {
+      handle.unref();
+    } catch (e) {}
   registerTimer(room, handle, 'interval');
   return handle;
 }
 
 function createTimeout(room, fn, ms) {
   const handle = setTimeout(fn, ms);
-  if (handle && typeof handle.unref === 'function') try { handle.unref(); } catch (e) {}
+  if (handle && typeof handle.unref === 'function')
+    try {
+      handle.unref();
+    } catch (e) {}
   registerTimer(room, handle, 'timeout');
   return handle;
 }
 
 function createImmediate(room, fn) {
   const handle = setImmediate(fn);
-  if (handle && typeof handle.unref === 'function') try { handle.unref(); } catch (e) {}
+  if (handle && typeof handle.unref === 'function')
+    try {
+      handle.unref();
+    } catch (e) {}
   registerTimer(room, handle, 'immediate');
   return handle;
 }
@@ -82,7 +97,9 @@ function clearRoomTimers(room) {
       else if (type === 'immediate') clearImmediate(handle);
       else if (handle && typeof handle.cancel === 'function') handle.cancel();
     } catch (e) {
-      try { console.error('[TIMERS] Erro ao limpar timer:', e); } catch (ee) {}
+      try {
+        console.error('[TIMERS] Erro ao limpar timer:', e);
+      } catch (ee) {}
     }
   }
   registry.delete(key);
@@ -107,7 +124,8 @@ function clearNamedTimer(room, name) {
       keep.push(it);
     }
   }
-  if (keep.length > 0) registry.set(key, keep); else registry.delete(key);
+  if (keep.length > 0) registry.set(key, keep);
+  else registry.delete(key);
 }
 
 function clearAllRoomTimers() {

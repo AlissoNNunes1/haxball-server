@@ -1,6 +1,6 @@
 import { initAuthDb } from '../../src/database/auth-client';
-import { StatsService } from '../../src/stats/StatsService';
 import { StatsCalculator } from '../../src/stats/StatsCalculator';
+import { StatsService } from '../../src/stats/StatsService';
 
 describe('Stats integration - profile after match', () => {
   beforeEach(() => {
@@ -18,7 +18,12 @@ describe('Stats integration - profile after match', () => {
     // init db
     const db = initAuthDb(':memory:');
     const sqlite = db.sqlite;
-    const acc1 = db.createAccount({ haxballNick: 'P1', passwordHash: 'x', salt: 'y', discordId: null });
+    const acc1Id = db.createAccount({
+      haxballNick: 'P1',
+      passwordHash: 'x',
+      salt: 'y',
+      discordId: null,
+    });
 
     // Prepare mock auth wrapper used by bot handlers (dist path used by bot scripts)
     const authClientPath = require.resolve('../../dist/database/auth-client');
@@ -54,19 +59,26 @@ describe('Stats integration - profile after match', () => {
       if (mockRoom.onGameStart) mockRoom.onGameStart();
     };
 
-
     // Load handler (registers handlers on global room) and mark P1 as authenticated
     jest.isolateModules(() => {
       const commands = require('../../shared/config/commands.cjs');
       // Autentica antes de carregar handlers para garantir que handlers vejam o estado
-      if (commands && commands.authHandler && typeof commands.authHandler.authenticatePlayer === 'function') {
-        commands.authHandler.authenticatePlayer(1, acc1.id);
+      if (
+        commands &&
+        commands.authHandler &&
+        typeof commands.authHandler.authenticatePlayer === 'function'
+      ) {
+        commands.authHandler.authenticatePlayer(1, acc1Id);
         expect(commands.authHandler.isAuthenticated(1)).toBe(true);
       }
       require('../../bots/todos_jogam/handlers.cjs');
       // Reforca autenticacao depois de carregar handlers (caso handlers tenham ressignificado authHandler)
-      if (commands && commands.authHandler && typeof commands.authHandler.authenticatePlayer === 'function') {
-        commands.authHandler.authenticatePlayer(1, acc1.id);
+      if (
+        commands &&
+        commands.authHandler &&
+        typeof commands.authHandler.authenticatePlayer === 'function'
+      ) {
+        commands.authHandler.authenticatePlayer(1, acc1Id);
         expect(commands.authHandler.isAuthenticated(1)).toBe(true);
       }
     });
@@ -94,19 +106,17 @@ describe('Stats integration - profile after match', () => {
 
     // Garantir persistencia manual caso handlers nao tenham salvado (simula save do onTeamVictory)
     // Sanity check: confirma que tabela stats existe
-    const tableInfo = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='stats'").get();
+    const tableInfo = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='stats'")
+      .get();
     expect(tableInfo).toBeDefined();
 
     // Tenta inserir diretamente via sqlite para validar que a tabela aceita inserts
-    sqlite.prepare('INSERT INTO stats (match_id, account_id, goals, assists, saves, touches, distance) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
-      Date.now(),
-      acc1.id,
-      1,
-      0,
-      0,
-      1,
-      0
-    );
+    sqlite
+      .prepare(
+        'INSERT INTO stats (match_id, account_id, goals, assists, saves, touches, distance) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      )
+      .run(Date.now(), acc1Id, 1, 0, 0, 1, 0);
 
     // DEBUG: count rows now
     const countAfterInsert = sqlite.prepare('SELECT COUNT(*) as c FROM stats').get().c;
@@ -114,7 +124,7 @@ describe('Stats integration - profile after match', () => {
 
     // Insercao via service (drizzle)
     await service.saveBasicStats({
-      accountId: acc1.id,
+      accountId: acc1Id,
       matchId: Date.now(),
       goals: 1,
       assists: 0,
@@ -125,20 +135,22 @@ describe('Stats integration - profile after match', () => {
       team: 'red',
       won: true,
     });
-    await service.updatePlayerAggregate(acc1.id);
+    await service.updatePlayerAggregate(acc1Id);
 
     // Sanity check: confirma que a tabela stats tem linhas via sqlite direto
-    const directRows = sqlite.prepare('SELECT * FROM stats WHERE account_id = ?').all(acc1.id);
+    const directRows = sqlite.prepare('SELECT * FROM stats WHERE account_id = ?').all(acc1Id);
     expect(directRows.length).toBeGreaterThanOrEqual(1);
 
     // Verifica a tabela direta no sqlite para confirmar insert
     const stmt = sqlite.prepare('SELECT * FROM stats WHERE account_id = ?');
-    const rows = stmt.all(acc1.id);
+    const rows = stmt.all(acc1Id);
     expect(rows.length).toBeGreaterThanOrEqual(1);
 
     // Atualiza agregado e verifica via sqlite (fallback) para evitar problemas com instancias drizzle divergentes
-    await service.updatePlayerAggregate(acc1.id);
-    const aggRow = sqlite.prepare('SELECT * FROM player_stats_aggregate WHERE account_id = ?').get(acc1.id);
+    await service.updatePlayerAggregate(acc1Id);
+    const aggRow = sqlite
+      .prepare('SELECT * FROM player_stats_aggregate WHERE account_id = ?')
+      .get(acc1Id);
     expect(aggRow).toBeDefined();
     expect(aggRow.total_matches).toBeGreaterThanOrEqual(1);
   });

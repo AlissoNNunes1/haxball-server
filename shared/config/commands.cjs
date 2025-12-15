@@ -20,6 +20,9 @@ const {
   getPlayerTag,
 } = require('./utils.cjs');
 
+// Importa handlers globais de chat
+const { handleTeamChat, handlePrivateMessage } = require('../handlers/chatHandlers.cjs');
+
 // Importa RoomAuthHandler para comandos de autenticacao
 let RoomAuthHandler;
 let authHandler;
@@ -45,6 +48,11 @@ function processCommand(room, player, message) {
   if (typeof message !== 'string') return false;
 
   message = message.trim();
+
+  // PROCESSA CHAT HANDLERS PRIMEIRO (t e @@)
+  // Estes nao usam ! entao processam antes
+  if (handleTeamChat(room, player, message)) return true;
+  if (handlePrivateMessage(room, player, message)) return true;
 
   // TODOS os comandos Haxball usam ! (autenticacao + gerais)
   if (message.startsWith('!')) {
@@ -276,14 +284,18 @@ async function handleProfile(room, player, message) {
         1
       );
       room.sendAnnouncement(
-        `Vitorias: ${profile.wins || 0} | Derrotas: ${profile.losses || 0} | Empates: ${profile.draws || 0}`,
+        `Vitorias: ${profile.wins || 0} | Derrotas: ${profile.losses || 0} | Empates: ${
+          profile.draws || 0
+        }`,
         player.id,
         0xaaaaaa,
         'normal',
         1
       );
       room.sendAnnouncement(
-        `Gols: ${profile.goals || 0} | Assistencias: ${profile.assists || 0} | Defesas: ${profile.saves || 0}`,
+        `Gols: ${profile.goals || 0} | Assistencias: ${profile.assists || 0} | Defesas: ${
+          profile.saves || 0
+        }`,
         player.id,
         0xaaaaaa,
         'normal',

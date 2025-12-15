@@ -1,7 +1,7 @@
 import { getAuthDb } from '../database/auth-client';
-import { AuthService } from './AuthService';
-import { StatsService } from '../stats/StatsService';
 import { StatsCalculator } from '../stats/StatsCalculator';
+import { StatsService } from '../stats/StatsService';
+import { AuthService } from './AuthService';
 
 /**
  * Gerencia autenticacao e comandos dentro das salas Haxball
@@ -343,20 +343,72 @@ export class RoomAuthHandler {
       }
 
       // Busca stats gerais
-      const stats = this.db.sqlite
+      // Preferir agregado pre-calculado para exibicao
+      const agg = this.db.sqlite
         .prepare(
-          'SELECT SUM(goals) as goals, SUM(assists) as assists, SUM(saves) as saves FROM stats WHERE account_id = ?'
+          'SELECT total_matches, total_wins, total_losses, total_draws, total_goals, total_assists, total_saves, win_rate FROM player_stats_aggregate WHERE account_id = ?'
         )
         .get(accountId) as any;
 
-      if (stats && stats.goals !== null) {
+      if (agg) {
         room.sendAnnouncement(
-          `Gols: ${stats.goals} | Assistencias: ${stats.assists} | Defesas: ${stats.saves}`,
+          `Partidas: ${agg.total_matches} | Vitorias: ${agg.total_wins} | Derrotas: ${agg.total_losses} | Empates: ${agg.total_draws}`,
           player.id,
           0x00aaff,
           'normal',
           1
         );
+
+        room.sendAnnouncement(
+          `Gols: ${agg.total_goals} | Assistencias: ${agg.total_assists} | Defesas: ${
+            agg.total_saves
+          } | WinRate: ${agg.win_rate.toFixed(2)}%`,
+          player.id,
+          0x00aaff,
+          'normal',
+          1
+        );
+      } else {
+        const stats = this.db.sqlite
+          .prepare(
+            'SELECT SUM(goals) as goals, SUM(assists) as assists, SUM(saves) as saves, COUNT(DISTINCT match_id) as matches, SUM(CASE WHEN won=1 THEN 1 ELSE 0 END) as wins FROM stats WHERE account_id = ?'
+          )
+          .get(accountId) as any;
+
+        if (stats && stats.goals !== null) {
+          room.sendAnnouncement(
+            `Partidas: ${stats.matches} | Vitorias: ${stats.wins} | Gols: ${stats.goals} | Assistencias: ${stats.assists} | Defesas: ${stats.saves}`,
+            player.id,
+            0x00aaff,
+            'normal',
+            1
+          );
+        }
+      }
+
+      // Mostra delta Elo do ultimo jogo, se houver
+      try {
+        const lastRank = this.db.sqlite
+          .prepare(
+            'SELECT old_ranking, new_ranking FROM ranking_history WHERE account_id = ? ORDER BY timestamp DESC LIMIT 1'
+          )
+          .get(accountId) as any;
+        if (
+          lastRank &&
+          typeof lastRank.old_ranking === 'number' &&
+          typeof lastRank.new_ranking === 'number'
+        ) {
+          const delta = lastRank.new_ranking - lastRank.old_ranking;
+          room.sendAnnouncement(
+            `Delta Elo (ultimo jogo): ${delta >= 0 ? '+' + delta : delta}`,
+            player.id,
+            0x00aaff,
+            'normal',
+            1
+          );
+        }
+      } catch (err) {
+        // ignore
       }
     } catch (error) {
       console.error('Erro ao buscar stats na sala:', error);

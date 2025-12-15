@@ -12,8 +12,20 @@ const {
   startRegistrationReminders,
 } = require('../../shared/config/messages.cjs');
 const { processCommand, authHandler } = require('../../shared/config/commands.cjs');
+
+// Handlers globais reutilizaveis
+const { handleGoal } = require('../../shared/handlers/goalHandlers.cjs');
+const { handleMatchStart, handleMatchEnd } = require('../../shared/handlers/matchHandlers.cjs');
+const { goalCelebration, assistCelebration } = require('../../shared/utils/celebrationUtils.cjs');
+
 const { getAuthDb } = require('../../dist/database/auth-client');
-const { createInterval, createNamedInterval, createTimeout, clearRoomTimers, clearNamedTimer } = require('../../shared/config/roomTimers.cjs');
+const {
+  createInterval,
+  createNamedInterval,
+  createTimeout,
+  clearRoomTimers,
+  clearNamedTimer,
+} = require('../../shared/config/roomTimers.cjs');
 const {
   setPlayerAFK,
   isPlayerAFK,
@@ -114,6 +126,12 @@ function startGameIfReady() {
   const blueCount = players.filter((p) => p.team === 2).length;
 
   // Precisa pelo menos 1 jogadores em cada time
+
+  // Verificacao global de AFK timeout (10 minutos)
+  var AFK_CHECK_INTERVAL = globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000;
+  globalThis.__CIRS_AFK_CHECK_INTERVAL = AFK_CHECK_INTERVAL;
+
+  // Precisa pelo menos 1 jogadores em cada time
   if (redCount >= 1 && blueCount >= 1 && !gameState.started) {
     announce(room, '⚽ Iniciando partida em 3 segundos...', null, 0xffaa00);
     setTimeout(() => {
@@ -122,32 +140,30 @@ function startGameIfReady() {
       announce(room, '🎮 BOA SORTE A TODOS!', null, 0x00ff00);
     }, 3000);
   }
+
+  createNamedInterval(
+    room,
+    'afk_check',
+    () => {
+      for (const player of players) {
+        // Admins podem ficar AFK por tempo ilimitado
+        const isAdmin = player.admin || false;
+
+        if (isPlayerAFK(player.id) && isAFKTimeout(player.id, isAdmin)) {
+          announce(
+            room,
+            `${player.name} foi kickado por ficar AFK por mais de 10 minutos`,
+            null,
+            0xff0000
+          );
+          removeAFKPlayer(player.id);
+          room.kickPlayer(player.id, 'AFK timeout (10 minutos)', false);
+        }
+      }
+    },
+    globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000
+  );
 }
-
-// Verificacao global de AFK timeout (10 minutos)
-var AFK_CHECK_INTERVAL = globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000;
-globalThis.__CIRS_AFK_CHECK_INTERVAL = AFK_CHECK_INTERVAL;
-
-// Use central registry for named afk_check interval
-createNamedInterval(room, 'afk_check', () => {
-  const players = room.getPlayerList().filter((p) => p.id !== 0);
-
-  for (const player of players) {
-    // Admins podem ficar AFK por tempo ilimitado
-    const isAdmin = player.admin || false;
-    
-    if (isPlayerAFK(player.id) && isAFKTimeout(player.id, isAdmin)) {
-      announce(
-        room,
-        `${player.name} foi kickado por ficar AFK por mais de 10 minutos`,
-        null,
-        0xff0000
-      );
-      removeAFKPlayer(player.id);
-      room.kickPlayer(player.id, 'AFK timeout (10 minutos)', false);
-    }
-  }
-}, AFK_CHECK_INTERVAL);
 
 // Anuncios periodicos da comunidade (a cada 5 minutos)
 startCommunityAnnouncements(room, globalThis.__CIRS_ANNOUNCEMENT_INTERVAL || 5 * 60 * 1000);
@@ -239,9 +255,13 @@ room.onPlayerLeave = function (player) {
   }
 
   // Ajusta times apos saida
-  createTimeout(room, () => {
-    autoBalanceTeams();
-  }, 100);
+  createTimeout(
+    room,
+    () => {
+      autoBalanceTeams();
+    },
+    100
+  );
 };
 
 room.onPlayerChat = function (player, message) {
@@ -301,44 +321,48 @@ room.onPlayerActivity = function (player) {
 };
 
 room.onTeamGoal = function (team) {
-  const teamName = team === 1 ? 'VERMELHO' : 'AZUL';
-  const color = team === 1 ? 0xff0000 : 0x0000ff;
-  const scores = room.getScores();
-
-  let scorerName = null;
-  let assistName = null;
-
-  // Determina quem fez o gol e quem deu assist
-  if (gameState.lastBallTouch && gameState.lastBallTouch.team === team) {
-    scorerName = gameState.lastBallTouch.player;
-
-    // Rastreia gol para stats
-    if (statsCollector && gameState.statsEnabled && authHandler) {
-      try {
-        const scorerId = gameState.lastBallTouch.playerId;
-        const isAuth = authHandler.isAuthenticated(scorerId);
-        if (isAuth) {
-          const account = authHandler.getAuthenticatedPlayer(scorerId);
-          if (account && account.id) {
-            statsCollector.trackGoal(account.id, Date.now(), false);
-            console.log(`[STATS] Gol rastreado para accountId ${account.id}`);
+  // Usa handler global para logica de gol
+  handleGoal(room, team, gameState, {
+    onGoal: (room, goalInfo) => {
+      // Rastreia gol para stats
+      if (
+        statsCollector &&
+        gameState.statsEnabled &&
+        authHandler &&
+        goalInfo.scorer &&
+        !goalInfo.isOwnGoal
+      ) {
+        try {
+          const scorerId = goalInfo.scorer.id;
+          const isAuth = authHandler.isAuthenticated(scorerId);
+          if (isAuth) {
+            const account = authHandler.getAuthenticatedPlayer(scorerId);
+            if (account && account.id) {
+              statsCollector.trackGoal(account.id, Date.now(), false);
+              console.log(`[STATS] Gol rastreado para accountId ${account.id}`);
+            }
           }
+        } catch (error) {
+          console.error('[STATS] Erro ao rastrear gol:', error.message);
         }
-      } catch (error) {
-        console.error('[STATS] Erro ao rastrear gol:', error.message);
       }
-    }
-  }
 
-  // Mensagem padrao de gol + marcador
-  matchGoalAnnouncement(room, teamName, scorerName);
-  announce(room, `Placar: ${scores.red} x ${scores.blue}`, null, 0xffffff);
+      // Celebracoes
+      if (goalInfo.scorer && !goalInfo.isOwnGoal) {
+        goalCelebration(room, goalInfo.scorer.id);
+      }
+      if (goalInfo.assister) {
+        assistCelebration(room, goalInfo.assister.id);
+      }
+    },
+  });
 };
 
 room.onGameStart = function (byPlayer) {
-  gameState.started = true;
+  // Usa handler global para logica de inicio
+  handleMatchStart(room, gameState);
 
-  // Inicializa coleta de estatisticas
+  // Inicializa coleta de estatisticas (logica especifica da sala)
   if (StatsCollector && !statsCollector) {
     try {
       gameState.matchId = Date.now(); // ID unico baseado em timestamp
@@ -365,11 +389,6 @@ room.onGameStart = function (byPlayer) {
       console.error('[STATS] Erro ao inicializar statsCollector:', error.message);
       gameState.statsEnabled = false;
     }
-  }
-
-  if (!byPlayer) {
-    // Mensagem padrao de inicio de partida
-    matchStartAnnouncement(room);
   }
 };
 
@@ -398,7 +417,7 @@ room.onPositionsReset = function () {
   announce(room, 'Posicoes resetadas', null, 0xaaaaaa);
 };
 
-room.onTeamVictory = function (scores) {
+room.onTeamVictory = async function (scores) {
   const winner = scores.red > scores.blue ? 'VERMELHO' : 'AZUL';
   const color = scores.red > scores.blue ? 0xff0000 : 0x0000ff;
   const score = `${scores.red} x ${scores.blue}`;
@@ -411,6 +430,39 @@ room.onTeamVictory = function (scores) {
 
       const summary = statsCollector.getSummary();
       console.log(`[STATS] Partida finalizada. ${summary.basicStats.length} jogadores rastreados.`);
+
+      // Fallback: se nenhum jogador foi rastreado, gera stats minimas para autenticados
+      if (summary.basicStats.length === 0) {
+        const db = typeof getAuthDb === 'function' ? getAuthDb() : null;
+        const fallbackPlayers = room.getPlayerList().filter((p) => p.id !== 0 && p.team !== 0);
+
+        for (const player of fallbackPlayers) {
+          const account =
+            authHandler && authHandler.isAuthenticated(player.id)
+              ? authHandler.getAuthenticatedPlayer(player.id)
+              : null;
+          const accountFromNick =
+            db && typeof db.getAccountByNick === 'function'
+              ? db.getAccountByNick(player.name)
+              : null;
+          const accountId =
+            account && account.id ? account.id : accountFromNick && accountFromNick.id;
+          if (!accountId) continue;
+
+          summary.basicStats.push({
+            accountId,
+            matchId: gameState.matchId,
+            goals: 0,
+            assists: 0,
+            saves: 0,
+            ownGoals: 0,
+            touches: 0,
+            timeInGame: 0,
+            team: player.team === 1 ? 'red' : 'blue',
+            won: (player.team === 1 ? 'red' : 'blue') === winningTeam,
+          });
+        }
+      }
 
       // Salva stats basicas de cada jogador
       const savedAccountIds = new Set();
@@ -436,6 +488,15 @@ room.onTeamVictory = function (scores) {
         }
       }
 
+      // Persiste eventos da partida (gols, saves, etc)
+      if (summary.events && summary.events.length > 0) {
+        for (const event of summary.events) {
+          statsService.saveEvent(event).catch((err) => {
+            console.error('[STATS] Erro ao salvar evento de partida:', err.message);
+          });
+        }
+      }
+
       announce(
         room,
         `📊 Estatisticas salvas para ${summary.basicStats.length} jogadores`,
@@ -443,13 +504,35 @@ room.onTeamVictory = function (scores) {
         0x00ff00
       );
 
-      // Atualiza agregados dos jogadores (recalcula stats globais por jogador)
+      // Atualiza agregados dos jogadores (recalcula stats globais por jogador) e aguarda concluicao
       try {
-        savedAccountIds.forEach((accId) => {
-          statsService.updatePlayerAggregate(accId).catch((err) => {
-            console.error('[STATS] Erro ao atualizar agregado do accountId ' + accId + ':', err.message);
+        const accountIdsToUpdate = Array.from(savedAccountIds);
+        if (accountIdsToUpdate.length > 0) {
+          await Promise.all(
+            accountIdsToUpdate.map((accId) =>
+              statsService.updatePlayerAggregate(accId).catch((err) => {
+                console.error(
+                  '[STATS] Erro ao atualizar agregado do accountId ' + accId + ':',
+                  err.message
+                );
+              })
+            )
+          );
+        }
+
+        // Aplica Elo apos os agregados atualizarem para garantir consistencia de leitura
+        if (typeof statsService.applyEloFromMatch === 'function') {
+          await statsService.applyEloFromMatch(summary.basicStats, winningTeam).catch((err) => {
+            console.error('[STATS] Erro ao atualizar ranking Elo:', err.message);
           });
-        });
+        }
+
+        announce(
+          room,
+          `📊 Estatisticas salvas para ${summary.basicStats.length} jogadores`,
+          null,
+          0x00ff00
+        );
       } catch (err) {
         console.error('[STATS] Erro no processo de atualizacao de agregados:', err.message);
       }
@@ -470,11 +553,15 @@ room.onTeamVictory = function (scores) {
   // Ajusta mapa para proxima partida
   updateMapForPlayerCount();
 
-   // Prepara proxima partida com redistribuicao
-   createTimeout(room, () => {
-    balanceTeamsWithScore();
-    startGameIfReady();
-  }, 3000);
+  // Prepara proxima partida com redistribuicao
+  createTimeout(
+    room,
+    () => {
+      balanceTeamsWithScore();
+      startGameIfReady();
+    },
+    3000
+  );
 };
 
 //   __  ____ ____ _  _

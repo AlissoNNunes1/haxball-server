@@ -4,6 +4,15 @@ const { announce, whisper, isAdminPresent, displayAdminMessage } = require('./me
 const room = globalThis.room;
 const { sleep, pointDistance, ballWarning } = require('../../shared/config/utils.cjs');
 const { processCommand } = require('../../shared/config/commands.cjs');
+
+// Handlers globais reutilizaveis
+const { handleGoal } = require('../../shared/handlers/goalHandlers.cjs');
+const {
+  avatarCelebration,
+  goalCelebration,
+  assistCelebration,
+} = require('../../shared/utils/celebrationUtils.cjs');
+
 const {
   positions,
   activeFormation_red,
@@ -759,64 +768,30 @@ room.onTeamGoal = function (team) {
   if (variables.map == 'RSR') {
     game.rsActive = false;
 
-    let goalTime = secondsToMinutes(Math.floor(room.getScores().time));
-    let scorer;
-    let assister = '';
-    let goalType;
-    if (team == 1) {
-      if (game.lastKickerTeam == 1) {
-        //if goal type is goal
-        goalType = 'GOLAÇO!';
-        scorer = 'Gol de: ' + game.lastKickerName;
-        if (game.secondLastKickerTeam == 1 && game.lastKickerId != game.secondLastKickerId) {
-          // if assist is from teammate
-          assister = ' (Assistência de: ' + game.secondLastKickerName + ')';
+    // Mensagens customizadas para a sala Stadium
+    const customMessages = {
+      ownGoal: {
+        red: 'Gol contra mano, serio?',
+        blue: 'Ala kkkkkk, gol contra!',
+      },
+    };
+
+    // Usa handler global com mensagens customizadas
+    handleGoal(room, team, game, {
+      customMessages,
+      onGoal: (room, goalInfo) => {
+        // Celebracao para scorer (se nao for gol contra)
+        if (goalInfo.scorer && !goalInfo.isOwnGoal) {
+          goalCelebration(room, goalInfo.scorer.id);
         }
-      }
-      if (game.lastKickerTeam == 2) {
-        //if goal type is owngoal
-        goalType = 'Gol contra mano, sério?';
-        scorer = 'foi o bagre do: ' + game.lastKickerName;
-        if (game.secondLastKickerTeam == 1) {
-          // if owngoal was assisted
-          assister = ' (Chute de: ' + game.secondLastKickerName + ')';
+
+        // Celebracao para assister
+        if (goalInfo.assister) {
+          assistCelebration(room, goalInfo.assister.id);
         }
-      }
-      game.redScore++;
-    }
-    if (team == 2) {
-      if (game.lastKickerTeam == 2) {
-        //if goal type is goal
-        goalType = 'GOLAÇO!';
-        scorer = 'Gol de: ' + game.lastKickerName;
-        if (game.secondLastKickerTeam == 2 && game.lastKickerId != game.secondLastKickerId) {
-          // if assist is from teammate
-          assister = ' (Assistência de: ' + game.secondLastKickerName + ')';
-        }
-      }
-      if (game.lastKickerTeam == 1) {
-        //if goal type is owngoal
-        goalType = 'Ala kkkkkk, gol contra!';
-        scorer = 'Esses bagres estão evoluíndo... e um deles é esse: ' + game.lastKickerName;
-        if (game.secondLastKickerTeam == 2) {
-          // if owngoal was assisted
-          assister = ' (Chute de: ' + game.secondLastKickerName + ')';
-        }
-      }
-      game.blueScore++;
-    }
-    announce(
-      goalType +
-        ' Vermelho ' +
-        game.redScore +
-        ' - ' +
-        game.blueScore +
-        ' Azul ¦¦ Marcado aos ' +
-        goalTime +
-        ' ' +
-        scorer +
-        assister
-    );
+      },
+    });
+
     game.lastKicker = undefined;
     game.secondLastKicker = undefined;
     game.lastKickerTeam = undefined;
@@ -1152,48 +1127,7 @@ function secondsToMinutes(time) {
   return ret;
 }
 
-function avatarCelebration(playerId, avatar) {
-  room.setPlayerAvatar(playerId, avatar);
-  sleep(250).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-  sleep(500).then(() => {
-    room.setPlayerAvatar(playerId, avatar);
-  });
-  sleep(750).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-  sleep(1000).then(() => {
-    room.setPlayerAvatar(playerId, avatar);
-  });
-  sleep(1250).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-  sleep(1500).then(() => {
-    room.setPlayerAvatar(playerId, avatar);
-  });
-  sleep(1750).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-  sleep(2000).then(() => {
-    room.setPlayerAvatar(playerId, avatar);
-  });
-  sleep(2250).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-  sleep(2500).then(() => {
-    room.setPlayerAvatar(playerId, avatar);
-  });
-  sleep(2750).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-  sleep(3000).then(() => {
-    room.setPlayerAvatar(playerId, avatar);
-  });
-  sleep(3250).then(() => {
-    room.setPlayerAvatar(playerId, null);
-  });
-}
+// Funcao avatarCelebration removida - agora usando shared/utils/celebrationUtils.cjs
 
 function anuncio() {
   room.sendAnnouncement('Discord CIRS: https://discord.gg/RQhSBA3k', null, azul, 'bold', 0);

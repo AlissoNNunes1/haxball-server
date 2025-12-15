@@ -207,18 +207,40 @@ export function initAuthDb(path = './haxball.sqlite') {
         sqlite.exec('UPDATE stats SET account_id = user_id');
       }
 
+      // Verifica se tabela stats possui colunas team/won e adiciona se ausentes
+      if (!cols.includes('team')) {
+        sqlite.exec("ALTER TABLE stats ADD COLUMN team TEXT DEFAULT 'spectator'");
+      }
+      if (!cols.includes('won')) {
+        sqlite.exec('ALTER TABLE stats ADD COLUMN won INTEGER DEFAULT 0');
+      }
+
+      // Verifica colunas da tabela match_events (compatibilidade user_id -> account_id)
+      const evtInfo = sqlite.prepare("PRAGMA table_info('match_events')");
+      const evtCols = evtInfo.all().map((c: any) => c.name);
+
+      if (!evtCols.includes('account_id') && evtCols.includes('user_id')) {
+        // Adiciona coluna account_id e copia de user_id
+        sqlite.exec('ALTER TABLE match_events ADD COLUMN account_id INTEGER');
+        sqlite.exec('UPDATE match_events SET account_id = user_id');
+      }
+
       // Verifica advanced_stats: adiciona created_at se ausente
       const advInfo = sqlite.prepare("PRAGMA table_info('advanced_stats')");
       const advCols = advInfo.all().map((c: any) => c.name);
       if (!advCols.includes('created_at')) {
-        sqlite.exec("ALTER TABLE advanced_stats ADD COLUMN created_at INTEGER DEFAULT (strftime('%s','now'))");
+        sqlite.exec(
+          "ALTER TABLE advanced_stats ADD COLUMN created_at INTEGER DEFAULT (strftime('%s','now'))"
+        );
       }
 
       // Verifica player_stats_aggregate: adiciona updated_at se ausente
       const aggInfo = sqlite.prepare("PRAGMA table_info('player_stats_aggregate')");
       const aggCols = aggInfo.all().map((c: any) => c.name);
       if (!aggCols.includes('updated_at')) {
-        sqlite.exec("ALTER TABLE player_stats_aggregate ADD COLUMN updated_at INTEGER DEFAULT (strftime('%s','now'))");
+        sqlite.exec(
+          "ALTER TABLE player_stats_aggregate ADD COLUMN updated_at INTEGER DEFAULT (strftime('%s','now'))"
+        );
       }
     } catch (err) {
       console.error('[DB] Erro ao migrar tabelas de stats:', err);

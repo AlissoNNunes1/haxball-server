@@ -52,7 +52,7 @@ export class StatsCommands {
         { name: 'Partidas', value: aggregate.totalMatches.toString(), inline: true },
         {
           name: 'Vitorias',
-          value: `${aggregate.totalWins} (${(aggregate.winRate * 100).toFixed(1)}%)`,
+          value: `${aggregate.totalWins} (${aggregate.winRate.toFixed(2)}%)`,
           inline: true,
         },
         { name: 'Derrotas', value: aggregate.totalLosses.toString(), inline: true },
@@ -82,6 +82,28 @@ export class StatsCommands {
         value: `${(aggregate.passAccuracy * 100).toFixed(1)}%`,
         inline: true,
       });
+    }
+
+    // Mostra delta Elo do ultimo jogo se disponivel (uso de sqlite como fallback confiavel)
+    try {
+      const sqlite = (this.statsService as any).sqlite;
+      if (sqlite) {
+        const last = sqlite
+          .prepare(
+            'SELECT old_ranking, new_ranking FROM ranking_history WHERE account_id = ? ORDER BY timestamp DESC LIMIT 1'
+          )
+          .get(account.id) as any;
+        if (last && typeof last.old_ranking === 'number' && typeof last.new_ranking === 'number') {
+          const delta = last.new_ranking - last.old_ranking;
+          embed.addFields({
+            name: 'Delta Elo (ultimo jogo)',
+            value: `${delta >= 0 ? '+' + delta : delta}`,
+            inline: true,
+          });
+        }
+      }
+    } catch (err) {
+      // ignore
     }
 
     if (aggregate.avgSpeed !== undefined) {

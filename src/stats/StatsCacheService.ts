@@ -126,4 +126,3 @@ export class StatsCacheService {
     for (const key of keysToDelete) this.heatmapCache.delete(key);
   }
 }
-

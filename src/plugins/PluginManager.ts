@@ -142,16 +142,24 @@ export class PluginManager {
 
       scheduleTask: (interval: number, task: () => void | Promise<void>) => {
         try {
-          const { createNamedInterval, clearNamedTimer } = require('../../shared/config/roomTimers.cjs');
+          const {
+            createNamedInterval,
+            clearNamedTimer,
+          } = require('../../shared/config/roomTimers.cjs');
           const roomKey = `plugin:${plugin.name}`;
           const name = `task_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-          createNamedInterval(roomKey, name, async () => {
-            try {
-              await task();
-            } catch (error: any) {
-              logger.error(`Erro na tarefa agendada: ${error.message}`);
-            }
-          }, interval);
+          createNamedInterval(
+            roomKey,
+            name,
+            async () => {
+              try {
+                await task();
+              } catch (error: any) {
+                logger.error(`Erro na tarefa agendada: ${error.message}`);
+              }
+            },
+            interval
+          );
 
           return {
             cancel: () => clearNamedTimer(roomKey, name),
@@ -182,7 +190,9 @@ export class PluginManager {
     return {
       info: (message: string, ...args: any[]) => {
         try {
-          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          const extra = args.length
+            ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
+            : '';
           log('info', `[${pluginName}] ${message}${extra}`);
         } catch (_) {
           log('info', `[${pluginName}] ${message}`);
@@ -190,7 +200,9 @@ export class PluginManager {
       },
       warn: (message: string, ...args: any[]) => {
         try {
-          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          const extra = args.length
+            ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
+            : '';
           log('warn', `[${pluginName}] ${message}${extra}`);
         } catch (_) {
           log('warn', `[${pluginName}] ${message}`);
@@ -198,7 +210,9 @@ export class PluginManager {
       },
       error: (message: string, ...args: any[]) => {
         try {
-          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          const extra = args.length
+            ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
+            : '';
           log('error', `[${pluginName}] ${message}${extra}`);
         } catch (_) {
           log('error', `[${pluginName}] ${message}`);
@@ -206,7 +220,9 @@ export class PluginManager {
       },
       debug: (message: string, ...args: any[]) => {
         try {
-          const extra = args.length ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ') : '';
+          const extra = args.length
+            ? ' ' + args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
+            : '';
           log('debug', `[${pluginName}] ${message}${extra}`);
         } catch (_) {
           log('debug', `[${pluginName}] ${message}`);

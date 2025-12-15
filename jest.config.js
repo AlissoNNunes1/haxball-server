@@ -2,10 +2,16 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
-  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/shared'],
+  testMatch: [
+    '**/__tests__/**/*.ts',
+    '**/?(*.)+(spec|test).ts',
+    '**/__tests__/**/*.js',
+    '**/?(*.)+(spec|test).js',
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
+    'shared/**/*.cjs',
     '!src/**/*.d.ts',
     '!src/**/index.ts',
     '!src/main.ts',
@@ -23,7 +29,7 @@ module.exports = {
       statements: 70,
     },
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node', 'cjs'],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
@@ -34,6 +40,7 @@ module.exports = {
         },
       },
     ],
+    '^.+\\.(js|cjs)$': 'babel-jest',
   },
 };
 

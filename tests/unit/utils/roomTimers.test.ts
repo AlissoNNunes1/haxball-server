@@ -13,11 +13,15 @@ describe('roomTimers registry', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     // clear global registry
-    try { clearAllRoomTimers(); } catch (e) {}
+    try {
+      clearAllRoomTimers();
+    } catch (e) {}
   });
   afterEach(() => {
     jest.useRealTimers();
-    try { clearAllRoomTimers(); } catch (e) {}
+    try {
+      clearAllRoomTimers();
+    } catch (e) {}
   });
 
   it('createNamedInterval is idempotent and can be cleared', () => {

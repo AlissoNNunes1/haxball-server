@@ -28,7 +28,16 @@ function welcomeWhispers(room, player) {
   whisper(room, '✓ Use !help para ver os comandos', player.id, 0xffaa00, 'bold', 1);
 }
 
-const { createInterval, createNamedInterval, createTimeout, clearRoomTimers, clearAllRoomTimers, hasRoomTimers, hasNamedTimer, clearNamedTimer } = require('./roomTimers.cjs');
+const {
+  createInterval,
+  createNamedInterval,
+  createTimeout,
+  clearRoomTimers,
+  clearAllRoomTimers,
+  hasRoomTimers,
+  hasNamedTimer,
+  clearNamedTimer,
+} = require('./roomTimers.cjs');
 
 // Backwards-compat map used by tests and older code.
 const COMMUNITY_KEY = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
@@ -37,23 +46,28 @@ if (!globalThis[COMMUNITY_KEY]) globalThis[COMMUNITY_KEY] = new Map();
 function startCommunityAnnouncements(room, intervalMs = 5 * 60 * 1000) {
   if (!room) return;
   if (hasNamedTimer(room, 'community_announcements')) return; // already running for this room
-  const intervalId = createNamedInterval(room, 'community_announcements', () => {
-    announce(room, '', null, null, 0);
-    announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
-    announce(room, '🏆 COMUNIDADE CIRS - REAL SOCCER', null, 0x00ff00, 'bold', 2);
-    announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
-    announce(
-      room,
-      'Entre no nosso Discord: https://discord.gg/b2km7nvHP7',
-      null,
-      0xffaa00,
-      'bold',
-      1
-    );
-    announce(room, 'Participe de campeonatos, ligas e eventos!', null, 0xaaaaaa, 'normal', 1);
-    announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
-    announce(room, '', null, null, 0);
-  }, intervalMs);
+  const intervalId = createNamedInterval(
+    room,
+    'community_announcements',
+    () => {
+      announce(room, '', null, null, 0);
+      announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
+      announce(room, '🏆 COMUNIDADE CIRS - REAL SOCCER', null, 0x00ff00, 'bold', 2);
+      announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
+      announce(
+        room,
+        'Entre no nosso Discord: https://discord.gg/b2km7nvHP7',
+        null,
+        0xffaa00,
+        'bold',
+        1
+      );
+      announce(room, 'Participe de campeonatos, ligas e eventos!', null, 0xaaaaaa, 'normal', 1);
+      announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
+      announce(room, '', null, null, 0);
+    },
+    intervalMs
+  );
   // timers are registered in the registry via createNamedInterval
   try {
     // Keep old compatibility map
@@ -64,7 +78,9 @@ function startCommunityAnnouncements(room, intervalMs = 5 * 60 * 1000) {
 function stopCommunityAnnouncements(room) {
   if (!room) return;
   clearNamedTimer(room, 'community_announcements');
-  try { globalThis[COMMUNITY_KEY].delete(room); } catch (e) {}
+  try {
+    globalThis[COMMUNITY_KEY].delete(room);
+  } catch (e) {}
 }
 
 function stopAllCommunityAnnouncements() {
@@ -84,65 +100,105 @@ function startRegistrationReminders(room, authHandler, intervalMs = 5 * 60 * 100
   if (!room || !authHandler) return;
   // avoid registering duplicate reminders
   if (hasNamedTimer(room, 'registration_reminders')) return; // already running
-  const intervalId = createNamedInterval(room, 'registration_reminders', () => {
-    try {
-      const players = room.getPlayerList();
-      players.forEach((player) => {
-        if (player.id === 0) return; // Ignora host
-        
-        // Verifica se jogador esta autenticado
-        const isAuth = authHandler.isAuthenticated(player.id);
-        
-        if (!isAuth) {
-          // Verifica se jogador tem conta cadastrada
-          let hasAccount = false;
-          try {
-            if (getAuthDb && typeof getAuthDb === 'function') {
-              const db = getAuthDb();
-              const account = db.getAccountByNick(player.name);
-              hasAccount = !!account;
+  const intervalId = createNamedInterval(
+    room,
+    'registration_reminders',
+    () => {
+      try {
+        const players = room.getPlayerList();
+        players.forEach((player) => {
+          if (player.id === 0) return; // Ignora host
+
+          // Verifica se jogador esta autenticado
+          const isAuth = authHandler.isAuthenticated(player.id);
+
+          if (!isAuth) {
+            // Verifica se jogador tem conta cadastrada
+            let hasAccount = false;
+            try {
+              if (getAuthDb && typeof getAuthDb === 'function') {
+                const db = getAuthDb();
+                const account = db.getAccountByNick(player.name);
+                hasAccount = !!account;
+              }
+            } catch (err) {
+              console.error('[MESSAGES] Erro ao verificar conta:', err.message);
             }
-          } catch (err) {
-            console.error('[MESSAGES] Erro ao verificar conta:', err.message);
+
+            if (hasAccount) {
+              // Tem conta mas nao esta logado - pedir login
+              whisper(room, '', player.id, null, null, 0);
+              whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
+              whisper(room, '🔑 FACA LOGIN NA SUA CONTA!', player.id, 0xffaa00, 'bold', 2);
+              whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
+              whisper(room, 'Sua conta foi encontrada!', player.id, 0x00ff00, 'normal', 1);
+              whisper(room, 'Use: !login <senha>', player.id, 0xffff00, 'bold', 1);
+              whisper(room, '', player.id, null, null, 0);
+              whisper(
+                room,
+                '✓ Acesse suas estatisticas e ranking',
+                player.id,
+                0xaaaaaa,
+                'small',
+                1
+              );
+              whisper(room, '✓ Participe de campeonatos oficiais', player.id, 0xaaaaaa, 'small', 1);
+              whisper(room, '✓ Ganhe moedas e recompensas', player.id, 0xaaaaaa, 'small', 1);
+              whisper(room, '', player.id, null, null, 0);
+              whisper(
+                room,
+                'Esqueceu a senha? Contate admin no Discord',
+                player.id,
+                0xff9900,
+                'small',
+                1
+              );
+              whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
+            } else {
+              // Nao tem conta - pedir registro
+              whisper(room, '', player.id, null, null, 0);
+              whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
+              whisper(room, '📋 REGISTRE-SE NA COMUNIDADE CIRS!', player.id, 0xffaa00, 'bold', 2);
+              whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
+              whisper(room, 'Entre no Discord e crie sua conta:', player.id, 0xaaaaaa, 'normal', 1);
+              whisper(room, '🔗 https://discord.gg/b2km7nvHP7', player.id, 0x00ff00, 'bold', 1);
+              whisper(room, '', player.id, null, null, 0);
+              whisper(
+                room,
+                '✓ Acompanhe seu ranking e estatisticas',
+                player.id,
+                0xaaaaaa,
+                'small',
+                1
+              );
+              whisper(
+                room,
+                '✓ Participe de campeonatos e eventos',
+                player.id,
+                0xaaaaaa,
+                'small',
+                1
+              );
+              whisper(room, '✓ Ganhe moedas e premios exclusivos', player.id, 0xaaaaaa, 'small', 1);
+              whisper(room, '', player.id, null, null, 0);
+              whisper(
+                room,
+                'Use !discord para ver o link novamente',
+                player.id,
+                0xff9900,
+                'small',
+                1
+              );
+              whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
+            }
           }
-          
-          if (hasAccount) {
-            // Tem conta mas nao esta logado - pedir login
-            whisper(room, '', player.id, null, null, 0);
-            whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-            whisper(room, '🔑 FACA LOGIN NA SUA CONTA!', player.id, 0xffaa00, 'bold', 2);
-            whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-            whisper(room, 'Sua conta foi encontrada!', player.id, 0x00ff00, 'normal', 1);
-            whisper(room, 'Use: !login <senha>', player.id, 0xffff00, 'bold', 1);
-            whisper(room, '', player.id, null, null, 0);
-            whisper(room, '✓ Acesse suas estatisticas e ranking', player.id, 0xaaaaaa, 'small', 1);
-            whisper(room, '✓ Participe de campeonatos oficiais', player.id, 0xaaaaaa, 'small', 1);
-            whisper(room, '✓ Ganhe moedas e recompensas', player.id, 0xaaaaaa, 'small', 1);
-            whisper(room, '', player.id, null, null, 0);
-            whisper(room, 'Esqueceu a senha? Contate admin no Discord', player.id, 0xff9900, 'small', 1);
-            whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-          } else {
-            // Nao tem conta - pedir registro
-            whisper(room, '', player.id, null, null, 0);
-            whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-            whisper(room, '📋 REGISTRE-SE NA COMUNIDADE CIRS!', player.id, 0xffaa00, 'bold', 2);
-            whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-            whisper(room, 'Entre no Discord e crie sua conta:', player.id, 0xaaaaaa, 'normal', 1);
-            whisper(room, '🔗 https://discord.gg/b2km7nvHP7', player.id, 0x00ff00, 'bold', 1);
-            whisper(room, '', player.id, null, null, 0);
-            whisper(room, '✓ Acompanhe seu ranking e estatisticas', player.id, 0xaaaaaa, 'small', 1);
-            whisper(room, '✓ Participe de campeonatos e eventos', player.id, 0xaaaaaa, 'small', 1);
-            whisper(room, '✓ Ganhe moedas e premios exclusivos', player.id, 0xaaaaaa, 'small', 1);
-            whisper(room, '', player.id, null, null, 0);
-            whisper(room, 'Use !discord para ver o link novamente', player.id, 0xff9900, 'small', 1);
-            whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-          }
-        }
-      });
-    } catch (error) {
-      console.error('[MESSAGES] Erro ao enviar lembretes de registro:', error);
-    }
-  }, intervalMs);
+        });
+      } catch (error) {
+        console.error('[MESSAGES] Erro ao enviar lembretes de registro:', error);
+      }
+    },
+    intervalMs
+  );
 
   // created via createInterval, registry does the storing
 }

@@ -105,10 +105,35 @@ haxball-server/
 │   └── benchmarks/
 │       ├── memory.bench.ts
 │       └── performance.bench.ts
+├── shared/                        # Codigo compartilhado entre salas
+│   ├── handlers/                  # Handlers globais reutilizaveis
+│   │   ├── playerHandlers.cjs     # Gerenciamento de jogadores
+│   │   ├── chatHandlers.cjs       # Sistema de chat (team, PM)
+│   │   ├── goalHandlers.cjs       # Eventos de gol e assistencia
+│   │   ├── matchHandlers.cjs      # Inicio, fim e controle de partida
+│   │   └── README.md              # Documentacao dos handlers
+│   ├── config/                    # Configuracoes globais
+│   │   ├── commands.cjs           # Sistema de comandos globais
+│   │   ├── maps.cjs               # Mapas compartilhados
+│   │   ├── messages.cjs           # Mensagens padrao
+│   │   └── utils.cjs              # Utilitarios gerais
+│   └── utils/                     # Utilidades compartilhadas
+│       ├── celebrationUtils.cjs   # Animacoes e celebracoes
+│       └── README.md              # Documentacao das utilities
+├── bots/                          # Scripts de salas Haxball
+│   ├── cirs-stadium/              # Sala principal CIRS
+│   │   ├── handlers.cjs           # Handlers especificos
+│   │   ├── main.cjs               # Inicializacao
+│   │   ├── messages.cjs           # Mensagens personalizadas
+│   │   └── rules.cjs              # Regras (formacoes, offside)
+│   └── todos_jogam/               # Sala "Todos Jogam"
+│       └── handlers.cjs           # Handlers com stats
 ├── docs/
 │   ├── roadmap.md                 # Plano de modernizacao
 │   ├── ARCHITECTURE.md            # Este arquivo
 │   ├── ACCOUNTS.md                # Sistema de Contas (FASE 9)
+│   ├── HANDLERS_GUIDE.md          # Guia de Handlers Globais (NOVO)
+│   ├── REFACTORING_PLAN.md        # Plano de refatoracao (NOVO)
 │   ├── BOT_COMPATIBILITY.md       # Compatibilidade de bots
 │   └── haxball_documentation/     # Docs API Haxball
 ├── package.json                   # Dependencias e scripts
@@ -656,11 +681,75 @@ database/
 - ✅ Sessoes com tokens
 - ✅ Documentacao completa (docs/ACCOUNTS.md)
 
+### Fase 9.5 (v5.2.0) - Sistema de Handlers Globais ✅ COMPLETO
+
+```
+shared/
+├── handlers/                     # Handlers globais reutilizaveis
+│   ├── playerHandlers.cjs        # Gerenciamento de jogadores
+│   ├── chatHandlers.cjs          # Sistema de chat (team, PM)
+│   ├── goalHandlers.cjs          # Eventos de gol e assistencia
+│   ├── matchHandlers.cjs         # Inicio, fim e controle de partida
+│   └── README.md                 # Documentacao dos handlers
+├── utils/
+│   ├── celebrationUtils.cjs      # Animacoes e celebracoes
+│   └── README.md                 # Documentacao das utilities
+└── config/
+    └── commands.cjs              # Sistema de comandos integrado
+```
+
+**Funcionalidades Implementadas:**
+
+- ✅ Player Handlers: normalizePlayerName, findPlayerByName, formatPlayerName
+- ✅ Chat Handlers: handleTeamChat, handlePrivateMessage, processChatMessage
+- ✅ Goal Handlers: handleGoal, calculateGoalInfo, announceGoal
+- ✅ Match Handlers: handleMatchStart, handleMatchEnd, handleExtraTime
+- ✅ Celebration Utils: avatarCelebration, goalCelebration, assistCelebration
+- ✅ Ball/Warning Utils: ballWarning, offsideWarning, foulWarning
+- ✅ Sistema de comandos: t (team chat), @@ (PM), !help, !discord, etc
+- ✅ 66 testes unitarios + 2 suites de integracao
+- ✅ Migracao completa de cirs-stadium e todos_jogam
+- ✅ ~100+ linhas de codigo duplicado eliminadas
+- ✅ Documentacao completa (docs/HANDLERS_GUIDE.md, docs/REFACTORING_PLAN.md)
+
+**Arquitetura de Handlers:**
+
+Os handlers globais seguem o principio de **reusabilidade com customizacao**:
+
+1. **Handlers Base**: Fornecem funcionalidade padrao para todas as salas
+2. **Mensagens Customizadas**: Salas podem sobrescrever mensagens especificas
+3. **Callbacks**: Permitem injetar logica customizada sem modificar handlers
+4. **Modularidade**: Cada handler tem responsabilidade unica e bem definida
+
+**Exemplo de Uso:**
+
+```javascript
+const { handleGoal } = require('../../shared/handlers/goalHandlers.cjs');
+const { goalCelebration } = require('../../shared/utils/celebrationUtils.cjs');
+
+// Uso basico (mensagens padrao)
+room.onTeamGoal = (team) => handleGoal(room, team, gameState);
+
+// Com customizacao e callbacks
+const customMessages = { ownGoal: 'Gol contra mano, serio?' };
+const callbacks = {
+  onScorerCelebration: (room, scorer) => goalCelebration(room, scorer.team),
+};
+handleGoal(room, team, gameState, customMessages, callbacks);
+```
+
+**Beneficios Realizados:**
+
+- ✅ Experiencia consistente entre salas
+- ✅ Facil criacao de novas salas (menos codigo boilerplate)
+- ✅ Manutencao centralizada (bugs corrigidos uma vez)
+- ✅ Sistema de testes robusto (260+ testes passando)
+
 ### Fase 10 - Sistema de Balanceamento Hibrido
 
 **Objetivo:** Balanceamento inteligente usando Elo por posicao + performance recente
 
-```
+```bash
 balance/
 ├── EloCalculator.ts         # Calculo de Elo dinamico
 ├── PositionRating.ts        # Elo por posicao (GK/DEF/MID/ATA)
@@ -739,7 +828,7 @@ Proximos passos em v6.0.0:
 - 📋 Sistema de plugins
 - 📋 Web interface de monitoramento
 
-// ** \_\_** \_**\_ \_ _
+// **\_\_** \_**\_ \_ _
 // / _\/ \_**) **\_) )( \
-// / \_** \_** ) \/ (
+// / \_** \_**) \/ (
 // \_/\_(\_\_**(\_**\_|\_\_**/

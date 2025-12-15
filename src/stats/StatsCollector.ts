@@ -86,12 +86,16 @@ export class StatsCollector {
     }
   }
 
-    /**
-     * Compatibilidade: alias para initializePlayer usado por handlers antigos
-     */
-    registerPlayer(accountId: number, _nameOrNick?: string, team: 'red' | 'blue' | 'spectator' = 'spectator'): void {
-      this.initializePlayer(accountId, team);
-    }
+  /**
+   * Compatibilidade: alias para initializePlayer usado por handlers antigos
+   */
+  registerPlayer(
+    accountId: number,
+    _nameOrNick?: string,
+    team: 'red' | 'blue' | 'spectator' = 'spectator'
+  ): void {
+    this.initializePlayer(accountId, team);
+  }
 
   /**
    * Registra gol
@@ -115,7 +119,12 @@ export class StatsCollector {
   /**
    * Compatibilidade: alias para recordGoal/recordOwnGoal usado por handlers antigos
    */
-  trackGoal(accountId: number, _timestamp?: number, isOwnGoal = false, position?: Position2D): void {
+  trackGoal(
+    accountId: number,
+    _timestamp?: number,
+    isOwnGoal = false,
+    position?: Position2D
+  ): void {
     if (isOwnGoal) {
       this.recordOwnGoal(accountId, position);
     } else {
@@ -396,7 +405,10 @@ export class StatsCollector {
    * Inicia amostragem automatica de posicoes
    * Deve ser chamada com funcao que retorna posicoes atuais
    */
-  startPositionSampling(getPositions: () => Map<number, { x: number; y: number }>, room?: any): void {
+  startPositionSampling(
+    getPositions: () => Map<number, { x: number; y: number }>,
+    room?: any
+  ): void {
     if (!this.config.enablePositionTracking) return;
 
     const intervalMs = 1000 / this.config.positionSamplingRate;
@@ -408,12 +420,17 @@ export class StatsCollector {
         const name = `stats_position_${this.matchId}`;
         this.positionSamplingName = name;
         this.positionSamplingRoom = room;
-        this.positionSamplingInterval = createNamedInterval(room, name, () => {
-          const currentPositions = getPositions();
-          Array.from(currentPositions.entries()).forEach(([accountId, pos]) => {
-            this.recordPosition(accountId, pos.x, pos.y);
-          });
-        }, intervalMs);
+        this.positionSamplingInterval = createNamedInterval(
+          room,
+          name,
+          () => {
+            const currentPositions = getPositions();
+            Array.from(currentPositions.entries()).forEach(([accountId, pos]) => {
+              this.recordPosition(accountId, pos.x, pos.y);
+            });
+          },
+          intervalMs
+        );
         return;
       } catch (e) {
         // fallback to native interval

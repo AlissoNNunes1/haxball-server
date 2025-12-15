@@ -69,7 +69,7 @@ e este projeto adere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html
   - Storage persistente (contador de salas totais)
   - Todos os lifecycle hooks implementados
 
-### Changed
+### Modificado
 
 - **Versao**: 5.0.0 → 6.0.0
 - **Roadmap atualizado** com:
@@ -269,7 +269,7 @@ Ativadas as seguintes opcoes de tipo strict:
 - 🔒 Atualizacao de express resolve multiplas vulnerabilidades de seguranca
 - 🔒 Todas as dependencias auditadas com `npm audit`
 
-### Technical Details
+#### Detalhes Tecnicos
 
 #### Migracao Discord.js v12 → v14
 
@@ -394,8 +394,3 @@ function process(config: unknown): string {
 ## [4.x] - Anterior
 
 Versoes anteriores nao sao mantidas. Veja o repositorio principal para historico completo.
-
-// ** \_\_** \_**\_ \_ _
-// / _\/ \_**) **\_) )( \
-// / \_** \_** ) \/ (
-// \_/\_(\_\_**(\_**\_|\_\_**/

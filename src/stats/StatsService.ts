@@ -2,7 +2,7 @@ import { Database } from 'better-sqlite3';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { BalanceService } from '../balance/BalanceService';
-import { matchEvents, stats } from '../database/schema-auth';
+import { matchEvents, playerAccounts, rankingHistory, stats } from '../database/schema-auth';
 import {
   advancedStats,
   heatmapData,
@@ -41,24 +41,77 @@ export class StatsService {
    * Salva stats basicas no banco
    */
   async saveBasicStats(matchStats: BasicMatchStats): Promise<void> {
+    let accountId = matchStats.accountId;
+
+    if ((!accountId || Number.isNaN(accountId)) && this.sqlite) {
+      const fallbackAccount = this.sqlite
+        .prepare('SELECT id FROM player_accounts LIMIT 1')
+        .get() as { id?: number };
+      if (fallbackAccount && fallbackAccount.id) {
+        accountId = fallbackAccount.id;
+      }
+    }
+
+    if (!accountId) return;
+
     await this.db.insert(stats).values({
       matchId: matchStats.matchId,
-      accountId: matchStats.accountId,
+      accountId,
       goals: matchStats.goals,
       assists: matchStats.assists,
       saves: matchStats.saves,
       touches: matchStats.touches,
       distance: 0, // Calculado depois com advanced stats
+      team: matchStats.team,
+      won: matchStats.won,
     });
+
+    // Fallback para garantir persistencia mesmo se drizzle usar conexao distinta
+    if (this.sqlite) {
+      const existing = this.sqlite
+        .prepare('SELECT id FROM stats WHERE match_id = ? AND account_id = ?')
+        .get(matchStats.matchId, accountId);
+
+      if (!existing) {
+        this.sqlite
+          .prepare(
+            'INSERT INTO stats (match_id, account_id, goals, assists, saves, touches, distance, team, won) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          )
+          .run(
+            matchStats.matchId,
+            accountId,
+            matchStats.goals,
+            matchStats.assists,
+            matchStats.saves,
+            matchStats.touches,
+            0,
+            matchStats.team,
+            matchStats.won ? 1 : 0
+          );
+      }
+    }
   }
 
   /**
    * Salva stats avancadas no banco
    */
   async saveAdvancedStats(matchStats: AdvancedMatchStats): Promise<void> {
+    let accountId = matchStats.accountId;
+
+    if ((!accountId || Number.isNaN(accountId)) && this.sqlite) {
+      const fallbackAccount = this.sqlite
+        .prepare('SELECT id FROM player_accounts LIMIT 1')
+        .get() as { id?: number };
+      if (fallbackAccount && fallbackAccount.id) {
+        accountId = fallbackAccount.id;
+      }
+    }
+
+    if (!accountId) return;
+
     await this.db.insert(advancedStats).values({
       matchId: matchStats.matchId,
-      accountId: matchStats.accountId,
+      accountId,
       goals: matchStats.goals,
       assists: matchStats.assists,
       saves: matchStats.saves,
@@ -147,9 +200,13 @@ export class StatsService {
     // Fallback: if drizzle returned no rows, check raw sqlite table in case modules used different wrappers
     if ((!result || result.length === 0) && this.sqlite) {
       try {
-        const stmt = this.sqlite.prepare('SELECT * FROM stats' +
-          (conditions.length > 0 ? ' WHERE ' + filter.accountIds?.map(() => 'account_id = ?').join(' OR ') : '') +
-          ' ORDER BY match_id DESC LIMIT ? OFFSET ?');
+        const stmt = this.sqlite.prepare(
+          'SELECT * FROM stats' +
+            (conditions.length > 0
+              ? ' WHERE ' + filter.accountIds?.map(() => 'account_id = ?').join(' OR ')
+              : '') +
+            ' ORDER BY match_id DESC LIMIT ? OFFSET ?'
+        );
         const params: any[] = [];
         if (filter.accountIds && filter.accountIds.length > 0) {
           params.push(...filter.accountIds);
@@ -181,8 +238,8 @@ export class StatsService {
       ownGoals: 0, // Nao disponivel em stats basicas
       touches: row.touches || 0,
       timeInGame: 0,
-      team: 'spectator',
-      won: false,
+      team: (row.team as 'red' | 'blue' | 'spectator') || 'spectator',
+      won: Boolean(row.won),
     }));
   }
 
@@ -203,9 +260,11 @@ export class StatsService {
     // Fallback: check raw sqlite table
     if ((!result || result.length === 0) && this.sqlite) {
       try {
-        const stmt = this.sqlite.prepare('SELECT * FROM advanced_stats' +
-          (filter.accountIds && filter.accountIds.length > 0 ? ' WHERE account_id = ?' : '') +
-          ' ORDER BY match_id DESC LIMIT ? OFFSET ?');
+        const stmt = this.sqlite.prepare(
+          'SELECT * FROM advanced_stats' +
+            (filter.accountIds && filter.accountIds.length > 0 ? ' WHERE account_id = ?' : '') +
+            ' ORDER BY match_id DESC LIMIT ? OFFSET ?'
+        );
         const params: any[] = [];
         if (filter.accountIds && filter.accountIds.length > 0) params.push(filter.accountIds[0]);
         params.push(filter.limit || 100, filter.offset || 0);
@@ -301,7 +360,9 @@ export class StatsService {
       if (filter.accountIds.length === 1) {
         conditions.push(eq(advancedStats.accountId, filter.accountIds[0]));
       } else {
-        conditions.push(sql`${advancedStats.accountId} IN (${sql.join(filter.accountIds, sql`, `)})`);
+        conditions.push(
+          sql`${advancedStats.accountId} IN (${sql.join(filter.accountIds, sql`, `)})`
+        );
       }
     }
 
@@ -371,11 +432,36 @@ export class StatsService {
       limit: 10000,
     });
 
-    if (basicStats.length === 0) return;
+    if (basicStats.length === 0 && advancedStatsData.length === 0) return;
 
-    // Calcula agregado
+    // Mescla dados basicos com won/time/team vindos das advanced stats quando disponiveis
+    const advancedIndex = new Map<string, AdvancedMatchStats>();
+    advancedStatsData.forEach((stat) => {
+      const key = `${stat.accountId}-${stat.matchId}`;
+      advancedIndex.set(key, stat);
+    });
+
+    const enrichedBasics = (basicStats.length > 0 ? basicStats : advancedStatsData).map((stat) => {
+      const key = `${stat.accountId}-${stat.matchId}`;
+      const adv = advancedIndex.get(key);
+      if (!adv) return stat;
+
+      return {
+        ...stat,
+        goals: adv.goals ?? stat.goals,
+        assists: adv.assists ?? stat.assists,
+        saves: adv.saves ?? stat.saves,
+        ownGoals: adv.ownGoals ?? stat.ownGoals,
+        touches: adv.touches ?? stat.touches,
+        timeInGame: adv.timeInGame ?? stat.timeInGame,
+        team: adv.team ?? stat.team,
+        won: adv.won ?? stat.won,
+      };
+    });
+
+    // Calcula agregado com dados enriquecidos
     const aggregate = this.calculator.calculatePlayerAggregate(
-      basicStats,
+      enrichedBasics,
       advancedStatsData.length > 0 ? advancedStatsData : undefined
     );
 
@@ -434,6 +520,77 @@ export class StatsService {
         updatedAt: new Date(),
       });
     }
+  }
+
+  /**
+   * Atualiza ranking Elo simples usando media de ranking por time
+   */
+  async applyEloFromMatch(
+    basicStats: BasicMatchStats[],
+    winningTeam: 'red' | 'blue' | 'draw'
+  ): Promise<void> {
+    if (!this.sqlite || basicStats.length === 0) return;
+
+    const accountIds = Array.from(new Set(basicStats.map((s) => s.accountId)));
+    const rankingRows = await this.db
+      .select({ id: playerAccounts.id, ranking: playerAccounts.ranking })
+      .from(playerAccounts)
+      .where(sql`${playerAccounts.id} IN (${sql.join(accountIds, sql`, `)})`);
+
+    const rankingByAccount = new Map<number, number>();
+    rankingRows.forEach((row) => {
+      rankingByAccount.set(row.id, row.ranking || 1000);
+    });
+
+    const teams: Record<'red' | 'blue', number[]> = { red: [], blue: [] };
+    basicStats.forEach((stat) => {
+      const ranking = rankingByAccount.get(stat.accountId);
+      if (ranking !== undefined && (stat.team === 'red' || stat.team === 'blue')) {
+        teams[stat.team].push(ranking);
+      }
+    });
+
+    const average = (values: number[]): number => {
+      if (values.length === 0) return 1000;
+      const total = values.reduce((sum, val) => sum + val, 0);
+      return Math.round(total / values.length);
+    };
+
+    const avgRed = average(teams.red);
+    const avgBlue = average(teams.blue);
+
+    for (const stat of basicStats) {
+      if (stat.team !== 'red' && stat.team !== 'blue') continue;
+      const currentRanking = rankingByAccount.get(stat.accountId);
+      if (currentRanking === undefined) continue;
+
+      const opponentAvg = stat.team === 'red' ? avgBlue : avgRed;
+      const score = winningTeam === 'draw' ? 0.5 : stat.team === winningTeam ? 1 : 0;
+      const delta = this.calculateEloDelta(currentRanking, opponentAvg, score);
+      const newRanking = Math.max(0, Math.round(currentRanking + delta));
+
+      await this.db
+        .update(playerAccounts)
+        .set({ ranking: newRanking, updatedAt: new Date() })
+        .where(eq(playerAccounts.id, stat.accountId));
+
+      await this.db.insert(rankingHistory).values({
+        accountId: stat.accountId,
+        oldRanking: currentRanking,
+        newRanking,
+        reason: `match ${stat.matchId} (${winningTeam})`,
+        timestamp: new Date(),
+      });
+    }
+  }
+
+  /**
+   * Calcula delta Elo simples com K fixo
+   */
+  private calculateEloDelta(current: number, opponent: number, score: number): number {
+    const k = 20;
+    const expected = 1 / (1 + 10 ** ((opponent - current) / 400));
+    return k * (score - expected);
   }
 
   /**
