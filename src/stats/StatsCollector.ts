@@ -43,6 +43,10 @@ export class StatsCollector {
     this.collectionStartTime = new Date();
   }
 
+  hasPlayer(accountId: number): boolean {
+    return this.basicStats.has(accountId);
+  }
+
   /**
    * Inicializa jogador no sistema de stats
    */

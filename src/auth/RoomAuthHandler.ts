@@ -534,6 +534,9 @@ export class RoomAuthHandler {
             // Retorna um novo objeto com os campos agregados (sem alterar tipo original)
             return {
               ...profile,
+              wins: aggregate.totalWins,
+              losses: aggregate.totalLosses,
+              draws: aggregate.totalDraws,
               goals: aggregate.totalGoals,
               assists: aggregate.totalAssists,
               saves: aggregate.totalSaves,

@@ -432,6 +432,9 @@ export class StatsService {
       limit: 10000,
     });
 
+    console.log('[DEBUG] basicStats carregados do banco:', basicStats.map((s) => ({ matchId: s.matchId, goals: s.goals, assists: s.assists, saves: s.saves })));
+    console.log('[DEBUG] advancedStats carregados do banco:', advancedStatsData.map((s) => ({ matchId: s.matchId, goals: s.goals, assists: s.assists, saves: s.saves })));
+
     if (basicStats.length === 0 && advancedStatsData.length === 0) return;
 
     // Mescla dados basicos com won/time/team vindos das advanced stats quando disponiveis
@@ -441,6 +444,23 @@ export class StatsService {
       advancedIndex.set(key, stat);
     });
 
+    const pickStat = (advVal: number | null | undefined, basicVal: number | undefined) => {
+      if (advVal === undefined || advVal === null) return basicVal;
+      if (basicVal !== undefined && basicVal > 0 && advVal === 0) return basicVal;
+      return advVal;
+    };
+
+    const pickTeam = (
+      advTeam: 'red' | 'blue' | 'spectator' | undefined,
+      basicTeam: 'red' | 'blue' | 'spectator' | undefined
+    ): 'red' | 'blue' | 'spectator' | undefined => {
+      return advTeam !== undefined && advTeam !== null ? advTeam : basicTeam;
+    };
+
+    const pickWon = (advWon: boolean | undefined, basicWon: boolean | undefined) => {
+      return advWon !== undefined && advWon !== null ? advWon : basicWon;
+    };
+
     const enrichedBasics = (basicStats.length > 0 ? basicStats : advancedStatsData).map((stat) => {
       const key = `${stat.accountId}-${stat.matchId}`;
       const adv = advancedIndex.get(key);
@@ -448,14 +468,14 @@ export class StatsService {
 
       return {
         ...stat,
-        goals: adv.goals ?? stat.goals,
-        assists: adv.assists ?? stat.assists,
-        saves: adv.saves ?? stat.saves,
-        ownGoals: adv.ownGoals ?? stat.ownGoals,
-        touches: adv.touches ?? stat.touches,
-        timeInGame: adv.timeInGame ?? stat.timeInGame,
-        team: adv.team ?? stat.team,
-        won: adv.won ?? stat.won,
+        goals: pickStat(adv.goals, stat.goals) ?? 0,
+        assists: pickStat(adv.assists, stat.assists) ?? 0,
+        saves: pickStat(adv.saves, stat.saves) ?? 0,
+        ownGoals: pickStat(adv.ownGoals, stat.ownGoals) ?? 0,
+        touches: pickStat(adv.touches, stat.touches) ?? 0,
+        timeInGame: pickStat(adv.timeInGame, stat.timeInGame) ?? 0,
+        team: pickTeam(adv.team as any, stat.team as any) ?? stat.team,
+        won: pickWon(adv.won, stat.won) ?? stat.won,
       };
     });
 
@@ -464,6 +484,13 @@ export class StatsService {
       enrichedBasics,
       advancedStatsData.length > 0 ? advancedStatsData : undefined
     );
+
+    console.log(`[DEBUG] Agregado calculado para accountId ${accountId}:`, {
+      totalMatches: aggregate.totalMatches,
+      totalGoals: aggregate.totalGoals,
+      totalAssists: aggregate.totalAssists,
+      totalSaves: aggregate.totalSaves,
+    });
 
     // Verifica se ja existe
     const existing = await this.getPlayerAggregate(accountId);

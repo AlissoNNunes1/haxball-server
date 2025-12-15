@@ -71,6 +71,12 @@ let gameState = {
   mapBucket: null,
   playerCount: 0,
   lastBallTouch: null,
+  lastKickerId: undefined,
+  lastKickerName: undefined,
+  lastKickerTeam: undefined,
+  secondLastKickerId: undefined,
+  secondLastKickerName: undefined,
+  secondLastKickerTeam: undefined,
   matchId: 0, // ID da partida atual para stats
   statsEnabled: false, // Se stats estao sendo coletadas
 };
@@ -114,6 +120,23 @@ function updateMapForPlayerCount() {
 
 function autoBalanceTeams() {
   balanceTeams(room, false);
+}
+
+function ensureStatsRegistration(player) {
+  if (!statsCollector || !gameState.statsEnabled || !authHandler) return null;
+  const isAuth = authHandler.isAuthenticated(player.id);
+  if (!isAuth) return null;
+
+  const account = authHandler.getAuthenticatedPlayer(player.id);
+  if (!account || !account.id) return null;
+
+  const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
+  if (typeof statsCollector.hasPlayer === 'function' && statsCollector.hasPlayer(account.id)) {
+    return account.id;
+  }
+
+  statsCollector.registerPlayer(account.id, player.name, teamStr);
+  return account.id;
 }
 
 function balanceTeamsWithScore() {
@@ -290,6 +313,17 @@ room.onPlayerChat = function (player, message) {
 };
 
 room.onPlayerBallKick = function (player) {
+  // Atualiza penultimo chutador
+  gameState.secondLastKickerId = gameState.lastKickerId;
+  gameState.secondLastKickerName = gameState.lastKickerName;
+  gameState.secondLastKickerTeam = gameState.lastKickerTeam;
+
+  // Atualiza ultimo chutador
+  gameState.lastKickerId = player.id;
+  gameState.lastKickerName = player.name;
+  gameState.lastKickerTeam = player.team;
+
+  // Legado: lastBallTouch (mantido por compatibilidade)
   gameState.lastBallTouch = {
     player: player.name,
     playerId: player.id,
@@ -300,12 +334,9 @@ room.onPlayerBallKick = function (player) {
   // Rastreia toque na bola para stats
   if (statsCollector && gameState.statsEnabled) {
     try {
-      const isAuth = authHandler && authHandler.isAuthenticated(player.id);
-      if (isAuth) {
-        const account = authHandler.getAuthenticatedPlayer(player.id);
-        if (account && account.id) {
-          statsCollector.trackTouch(account.id, Date.now());
-        }
+      const accountId = ensureStatsRegistration(player);
+      if (accountId) {
+        statsCollector.trackTouch(accountId, Date.now());
       }
     } catch (error) {
       console.error('[STATS] Erro ao rastrear toque:', error.message);
@@ -333,14 +364,11 @@ room.onTeamGoal = function (team) {
         !goalInfo.isOwnGoal
       ) {
         try {
-          const scorerId = goalInfo.scorer.id;
-          const isAuth = authHandler.isAuthenticated(scorerId);
-          if (isAuth) {
-            const account = authHandler.getAuthenticatedPlayer(scorerId);
-            if (account && account.id) {
-              statsCollector.trackGoal(account.id, Date.now(), false);
-              console.log(`[STATS] Gol rastreado para accountId ${account.id}`);
-            }
+          const scorerPlayer = room.getPlayer(goalInfo.scorer.id);
+          const accountId = scorerPlayer ? ensureStatsRegistration(scorerPlayer) : null;
+          if (accountId) {
+            statsCollector.trackGoal(accountId, Date.now(), false);
+            console.log(`[STATS] Gol rastreado para accountId ${accountId}`);
           }
         } catch (error) {
           console.error('[STATS] Erro ao rastrear gol:', error.message);
@@ -371,20 +399,33 @@ room.onGameStart = function (byPlayer) {
 
       // Registra jogadores autenticados na partida
       const players = room.getPlayerList().filter((p) => p.id !== 0 && p.team !== 0);
+      let authenticatedCount = 0;
+      
       for (const player of players) {
         if (authHandler && authHandler.isAuthenticated(player.id)) {
           const account = authHandler.getAuthenticatedPlayer(player.id);
           if (account && account.id) {
             const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
             statsCollector.registerPlayer(account.id, player.name, teamStr);
+            authenticatedCount++;
             console.log(
               `[STATS] Jogador ${player.name} (accountId ${account.id}) registrado no time ${teamStr}`
             );
           }
+        } else {
+          // Lembra jogador nao autenticado que precisa fazer login para ter stats
+          whisper(
+            room,
+            '⚠️ Use !login <senha> para suas stats serem contabilizadas',
+            player.id,
+            0xffaa00,
+            'small',
+            1
+          );
         }
       }
 
-      console.log(`[STATS] Coleta iniciada para matchId ${gameState.matchId}`);
+      console.log(`[STATS] Coleta iniciada para matchId ${gameState.matchId} (${authenticatedCount}/${players.length} jogadores autenticados)`);
     } catch (error) {
       console.error('[STATS] Erro ao inicializar statsCollector:', error.message);
       gameState.statsEnabled = false;
@@ -465,6 +506,7 @@ room.onTeamVictory = async function (scores) {
       }
 
       // Salva stats basicas de cada jogador
+      console.log('[DEBUG] Resumo basicStats antes de salvar:', summary.basicStats);
       const savedAccountIds = new Set();
       for (const basicStats of summary.basicStats) {
         savedAccountIds.add(basicStats.accountId);
@@ -508,6 +550,7 @@ room.onTeamVictory = async function (scores) {
       try {
         const accountIdsToUpdate = Array.from(savedAccountIds);
         if (accountIdsToUpdate.length > 0) {
+          console.log('[DEBUG] Atualizando agregados para accountIds:', accountIdsToUpdate);
           await Promise.all(
             accountIdsToUpdate.map((accId) =>
               statsService.updatePlayerAggregate(accId).catch((err) => {
@@ -518,6 +561,7 @@ room.onTeamVictory = async function (scores) {
               })
             )
           );
+          console.log('[DEBUG] Agregados atualizados com sucesso');
         }
 
         // Aplica Elo apos os agregados atualizarem para garantir consistencia de leitura
