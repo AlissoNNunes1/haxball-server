@@ -7,30 +7,40 @@ Forneca contexto do projeto e diretrizes de codificacao que a IA deve seguir ao 
 # Instrucoes para Copilot no Haxball Server
 
 - **Panorama**: Projeto Node/TypeScript (strict) para abrir salas Haxball headless usando `haxball.js` (sem Chrome) e gerenciar via Discord Bot; CLI exposta em `src/main.ts` com comando `open`.
-- **Arquitetura**: `openServer.ts` carrega config (`utils/loadConfig.ts`), instancia `Server` (haxball.js), inicia monitores (`RoomMonitor`/`WebMonitor`) e cria `ControlPanel` (Discord). Consulte e mantenha sempre atualizados os documentos em `docs/ARCHITECTURE.md` e `docs/roadmap.md`.
+- **Arquitetura**: `openServer.ts` carrega config (`utils/loadConfig.ts`), instancia `Server` (haxball.js), inicia monitores (`RoomMonitor`/`WebMonitor`) e cria `ControlPanel` (Discord). Consulte e mantenha sempre atualizados os documentos em `docs/ARCHITECTURE.md`, `docs/roadmap.md` e `docs/HANDLERS_GUIDE.md`.
 - **Server (haxball.js)**: `src/Server.ts` abre sala com `HBInit` lazy, gera PID ficticio e aplica handlers basicos de log. Scripts de bot rodam isolados via `vm.runInNewContext` com timeout 5s e contexto fornecido (`room`, `HBInit` stub que devolve a sala, `customSettings`, timers `setTimeout/setInterval/*`, `Date`, `Promise`, `global/window/self`). Evite depender de outros globais.
 - **Bots**: `ControlPanel` carrega bots de `config.panel.bots`; `Bot.run` chama `Server.open` com `tokens` (usa primeiro token). Scripts de bot devem operar sobre `room` fornecida; se chamarem `HBInit`, recebem a mesma sala. Mapear dependencias externas manualmente (contexto e sandbox sao limitados).
+- **Handlers Globais**: Sistema centralizado em `shared/handlers/` fornece funcionalidades reutilizaveis para todas as salas (playerHandlers, chatHandlers, goalHandlers, matchHandlers). Utilities em `shared/utils/` incluem celebrationUtils para animacoes. Todas as salas devem usar handlers globais ao inves de duplicar codigo. Consulte `docs/HANDLERS_GUIDE.md` para uso completo.
 - **Discord**: Prefixo vem de `config.panel.discordPrefix`; `mastersDiscordId` controla acesso. Comandos principais: `open <bot> <token> [setting]`, `close <pid|all>`, `info`, `meminfo`, `metrics`, `reload`, `exit`, `tokenlink`. Respostas usam embeds simples e logs via `utils/log` e `utils/Logger`.
+- **Sistema de Comandos**: `shared/config/commands.cjs` processa comandos globais (chat, auth, gerais). Comandos de chat: `t <mensagem>` (team chat), `@@ <nome> <mensagem>` (PM). Comandos gerais: `!help`, `!discord`, `!afk`, `!bb`. Comandos de auth: `!login`, `!logout`, `!profile`, `!stats`, `!ranking`. Handlers de chat ja integrados via `processChatMessage`.
 - **Custom settings**: `ControlPanel.loadCustomSettings` resolve heranca (`extends` aceita string ou array) mesclando objetos e removendo `extends`; existe fallback para `default`. Campos reservados usados pelo server: `reserved.haxball.*` (maxPlayers, public, noPlayer, password, geo).
 - **Monitores**: `RoomMonitor` acompanha salas abertas e emite relatorios periodicos (5 min). `WebMonitor` (porta padrao 3000) cria dashboard simples a partir do `RoomMonitor`.
-- **Build/Test**: `npm run build` (tsc) gera `dist/`; `npm start` roda tsc + node dist/main.js; `npm test`/`npm run test:watch`/`npm run test:coverage` para Jest. Atualize apenas `src/` e rode `npm run build` para alinhar `dist/`.
+- **Build/Test**: `npm run build` (tsc) gera `dist/`; `npm start` roda tsc + node dist/main.js; `npm test`/`npm run test:watch`/`npm run test:coverage` para Jest. Atualize apenas `src/` e rode `npm run build` para alinhar `dist/`. Suite de testes: 260+ testes (unitarios + integracao).
 - **Execucao local**: `node dist/main.js open config.json` (ou via binarios `haxball-server|haxballserver`). Config exige `server` e `panel` (bots, token, prefixo, mastersDiscordId). Tokens sao obrigatorios e nao ha suporte real a proxy alem de lista de `proxyServers` (informativo).
 - **Erros comuns**: Falta de globais no VM quebra bots—garanta uso apenas de APIs expostas. `HBInit` e timers ja estao stubbados; qualquer falta adicional deve ser adicionada ao contexto. Timeout de 5s pode matar scripts bloqueantes.
-- **Convencoes**: Comentarios em codigo devem estar em pt-BR sem acentos; siga assinaturas ASCII ja usadas. Evite editar `dist/` manualmente (gerado). Priorize modularizacao e mantenca do estilo async/await.
-- **Arquivos-chave**: `src/Server.ts` (runtime haxball.js + VM), `src/ControlPanel.ts` (Discord), `src/commands/openServer.ts` (bootstrap), `src/utils/*` (log, loadConfig, ports), `tests/*` (unit + integration baseline), `docs/haxball_documentation/*` (referencia API Haxball headless).
-- **Como contribuir**: Use Node >=18, rode `npm run build` e `npm test` antes de PR. Mantenha nomenclatura consistente (PID ficticio inicia em 1000; logs via `log`/`Logger`).
-- - A pasta bots é onde fica as salas Haxball, cada bot é uma sala diferente com suas proprias configurações, regras e scripts.Mas seguindo um padrao/base comum para todas as salas.
-    -- A pasta shared é onde ficam os arquivos compartilhados entre as salas,como configurações globais,utilitários,ferramentas e etc.é Onde fica todo o código que é usado por mais de uma sala.Os codigos espicifos de cada sala fica em seu proprio .js em bots
-    -- A pasta docs é onde fica toda a documentação do projeto,como guias,manuais,arquitetura,roadmaps e etc.
-    -- A pasta core é onde fica o motor principal das salas,com a lógica de hooks,pipelines e etc.
-    -- A pasta database é onde fica o schema do banco de dados Drizzle e o cliente SQLite.
-    -- A pasta apps/discord-bot é onde fica a integração com o Discord para gerenciar as salas.
-    -- A pasta shared\maps é onde ficam os mapas personalizados para as salas Haxball.Podem ser usados em qualquer sala.
-    -- Em src\balance é onde fica a lógica de balanceamento dos jogadores nas salas,como algoritmos e regras para formar times equilibrados.
-    -- Em src\stats é onde fica a lógica de estatísticas dos jogadores nas salas,como coleta,armazenamento e consulta de dados estatísticos.
-    -- Em src\commands é onde ficam os comandos da CLI para gerenciar o servidor Haxball,como abrir e fechar salas,ver status e etc.
-    -- Em src\plugins é onde ficam os plugins opcionais para estender a funcionalidade do servidor Haxball,como novos comandos,monitores e etc.
-    -- Em src
+- **Convencoes**: Comentarios em codigo devem estar em pt-BR sem acentos; siga assinaturas ASCII ja usadas. Evite editar `dist/` manualmente (gerado). Priorize modularizacao e mantenca do estilo async/await. Sempre use handlers globais ao inves de duplicar codigo.
+- **Arquivos-chave**: `src/Server.ts` (runtime haxball.js + VM), `src/ControlPanel.ts` (Discord), `src/commands/openServer.ts` (bootstrap), `src/utils/*` (log, loadConfig, ports), `shared/handlers/*` (handlers globais), `shared/utils/*` (utilities), `tests/*` (unit + integration), `docs/haxball_documentation/*` (referencia API Haxball headless), `docs/HANDLERS_GUIDE.md` (guia de handlers).
+- **Como contribuir**: Use Node >=18, rode `npm run build` e `npm test` antes de PR. Mantenha nomenclatura consistente (PID ficticio inicia em 1000; logs via `log`/`Logger`). Ao criar novas salas, sempre use handlers globais de `shared/handlers/` e utilities de `shared/utils/`.
+
+## Estrutura de Diretorios
+
+- **bots/**: Salas Haxball, cada bot e uma sala diferente com configuracoes, regras e scripts proprios. Seguem padrao base comum definido em shared/. Exemplos: `cirs-stadium/`, `todos_jogam/`.
+- **shared/**: Codigo compartilhado entre todas as salas. Contem handlers globais, utilities, configuracoes, comandos, mapas e mensagens padrao.
+  - **shared/handlers/**: Handlers globais reutilizaveis (playerHandlers, chatHandlers, goalHandlers, matchHandlers). Documentacao em `shared/handlers/README.md`.
+  - **shared/utils/**: Utilidades compartilhadas (celebrationUtils para animacoes). Documentacao em `shared/utils/README.md`.
+  - **shared/config/**: Configuracoes globais (commands.cjs, maps.cjs, messages.cjs, utils.cjs, variables.cjs).
+  - **shared/maps/**: Mapas personalizados compartilhados entre salas.
+- **src/**: Codigo TypeScript do servidor principal (Server, ControlPanel, auth, database, commands, utils, debugging).
+  - **src/auth/**: Sistema de autenticacao (AuthService, RoomAuthHandler, AuthAPI).
+  - **src/database/**: Schemas Drizzle e clientes SQLite (schema.ts, auth-client.ts).
+  - **src/balance/**: Logica de balanceamento de jogadores (algoritmos, Elo, posicoes).
+  - **src/stats/**: Coleta e analise de estatisticas dos jogadores.
+  - **src/commands/**: Comandos CLI (openServer, connect).
+  - **src/debugging/**: Ferramentas de debugging (RoomMonitor, WebMonitor).
+  - **src/utils/**: Utilidades gerais (log, Logger, loadConfig, ports).
+- **tests/**: Testes unitarios e de integracao (Jest). Subdiretorios: unit/, integration/, benchmarks/.
+- **docs/**: Documentacao completa do projeto (ARCHITECTURE.md, roadmap.md, HANDLERS_GUIDE.md, REFACTORING_PLAN.md, ACCOUNTS.md, BOT_COMPATIBILITY.md, haxball_documentation/).
+- **dist/**: Codigo JavaScript compilado (gerado via tsc, nao editar manualmente)
 
 ## Diretrizes adicionais para Copilot
 

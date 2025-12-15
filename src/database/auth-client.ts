@@ -473,6 +473,19 @@ export function initAuthDb(path = './haxball.sqlite') {
     return rows.map(wrapper.mapRowToAccount);
   };
 
+  /**
+   * Retorna todas as contas ativas
+   */
+  wrapper.getAllAccounts = function (): PlayerAccount[] {
+    const stmt = sqlite.prepare(`
+      SELECT * FROM player_accounts
+      WHERE is_active = 1
+      ORDER BY ranking DESC
+    `);
+    const rows = stmt.all() as any[];
+    return rows.map(wrapper.mapRowToAccount);
+  };
+
   // Inicializa tabelas
   wrapper.createAuthTables();
   // Cria e migra tabelas de stats

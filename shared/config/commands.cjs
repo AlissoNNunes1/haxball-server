@@ -472,6 +472,17 @@ function handleGeneralHelp(room, player) {
   );
   room.sendAnnouncement('!top - Ver top 10 jogadores', player.id, 0xaaaaaa, 'normal', 1);
 
+  // Comandos de chat
+  room.sendAnnouncement('--- Chat ---', player.id, 0xffaa00, 'bold', 1);
+  room.sendAnnouncement('t <mensagem> - Chat da equipe', player.id, 0xaaaaaa, 'normal', 1);
+  room.sendAnnouncement(
+    '@@ <nome> <mensagem> - Mensagem privada',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+
   // Comandos gerais
   room.sendAnnouncement('--- Comandos Gerais ---', player.id, 0xffaa00, 'bold', 1);
   room.sendAnnouncement('!help - Mostra esta lista de comandos', player.id, 0xaaaaaa, 'normal', 1);

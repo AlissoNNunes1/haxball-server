@@ -340,27 +340,33 @@ export class ControlPanel {
 
     const embed = new Discord.EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('Comandos Admin Disponiveis')
+      .setTitle('Comandos CIRS Haxball Server')
       .setDescription(
         [
           channelInfo.length > 0 ? channelInfo.join('\n') + '\n' : '',
-          '`/help` - Lista comandos admin',
+          '**Comandos de Admin:**',
+          '`/help` - Lista todos os comandos',
           '`/info` - Informacoes sobre salas abertas',
-          '`/meminfo` - Uso de memoria',
+          '`/meminfo` - Uso de memoria e CPU',
           '`/metrics` - Metricas do servidor',
           '`/open <bot> <token> [setting]` - Abre sala com bot',
           '`/close <pid|all>` - Fecha sala(s)',
           '`/reload` - Recarrega configuracao',
-          '`/exit` - Desliga o bot',
+          '`/exit` - Desliga o servidor',
           '`/tokenlink` - Gera link para token Haxball',
           '',
           '**Comandos de Autenticacao:**',
-          '`/authhelp` - Lista todos os comandos de auth',
-          '`/register <nick> <senha>` - Cria conta',
-          '`/linkdiscord <nick> <senha>` - Vincula Discord',
-          '`/profile [nick]` - Ver perfil',
+          '`/authhelp` - Lista detalhada de comandos de autenticacao',
+          '`/register <nick> <senha>` - Cria nova conta CIRS',
+          '`/linkdiscord <nick> <senha>` - Vincula Discord a conta existente',
+          '`/profile [nick]` - Ver perfil de jogador',
           '`/ranking [nick]` - Ver ranking (alias de profile)',
-          '`/top [criterio]` - Top jogadores',
+          '`/top [criterio]` - Top 10 jogadores (ranking ou pontos)',
+          '',
+          '**Comandos na Sala Haxball:**',
+          'Use `!help` dentro da sala para ver todos os comandos disponiveis',
+          'Comandos: `!login`, `!profile`, `!stats`, `!ranking`, `!top`, `!afk`, `!bb`, `!discord`',
+          'Chat: `t <mensagem>` (team chat), `@@ <nome> <mensagem>` (PM)',
         ].join('\n')
       )
       .setTimestamp(Date.now());
