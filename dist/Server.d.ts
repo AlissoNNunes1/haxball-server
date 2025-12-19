@@ -50,7 +50,10 @@ export declare class Server {
     private nextPid;
     private proxyServers;
     private db;
-    private hbInit;
+    private tokenInitTimes;
+    private tokenLocks;
+    private readonly TOKEN_INIT_COOLDOWN;
+    private hbInitLock;
     /**
      * Compatibilidade com codigo antigo que acessa browsers array
      * @deprecated Use rooms Map diretamente
@@ -72,6 +75,36 @@ export declare class Server {
      * @returns {Promise<any>} Funcao HBInit do haxball.js
      */
     private getHBInit;
+    /**
+     * Aguarda cooldown antes de reutilizar um token
+     * Evita erro "Can't init twice" do haxball.js
+     * @private
+     * @param {string} token - Token headless
+     */
+    private waitTokenCooldown;
+    /**
+     * Registra tempo de inicializacao de um token
+     * @private
+     * @param {string} token - Token headless
+     */
+    private recordTokenInit;
+    /**
+     * Serializa uso do mesmo token para evitar init concorrente
+     */
+    private withTokenLock;
+    /**
+     * Serializa execucao critica de HBInit para evitar condicao de corrida "Can't init twice"
+     * @private
+     */
+    private withHbInitLock;
+    /**
+     * Seleciona o melhor token para usar (rotacao automática)
+     * Prioriza tokens que nunca foram usados ou estao fora do cooldown
+     * @private
+     * @param {string[]} tokenArray - Array de tokens disponiveis
+     * @returns {string} Token selecionado
+     */
+    private selectBestToken;
     /**
      * Abre uma nova sala Haxball
      * @param {string} script - Codigo do bot script (JavaScript)

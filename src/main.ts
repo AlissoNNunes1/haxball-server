@@ -9,6 +9,7 @@
 
 import yargs from 'yargs';
 
+import { openChampionshipRoom } from './commands/openChampionship';
 import { openServer } from './commands/openServer';
 
 const args = yargs(process.argv.slice(2));
@@ -48,6 +49,61 @@ args.command({
   handler: async () => {
     console.log('SSH tunnel functionality has been removed in v5.0.0');
     console.log("Please use 'open' command for local room management with haxball.js");
+  },
+});
+
+args.command({
+  command: 'championship',
+  aliases: ['ch'],
+  describe: 'Abre uma sala temporaria de campeonato.',
+  builder: {
+    file: {
+      describe: 'Arquivo config.json (opcional).',
+      demandOption: false,
+      type: 'string',
+    },
+    preset: {
+      describe: 'Preset de campeonato (default, rs5, rs6, rs7, rs11).',
+      demandOption: true,
+      type: 'string',
+    },
+    token: {
+      describe: 'Token headless do Haxball.',
+      demandOption: true,
+      type: 'string',
+    },
+    home: {
+      describe: 'Time mandante.',
+      demandOption: true,
+      type: 'string',
+    },
+    away: {
+      describe: 'Time visitante.',
+      demandOption: true,
+      type: 'string',
+    },
+    spectators: {
+      describe: 'Permitir espectadores (padrao: true).',
+      demandOption: false,
+      type: 'boolean',
+      default: true,
+    },
+    password: {
+      describe: 'Senha opcional da sala.',
+      demandOption: false,
+      type: 'string',
+    },
+  },
+  handler: async (argv) => {
+    await openChampionshipRoom({
+      file: argv.file as string,
+      token: argv.token as string,
+      preset: argv.preset as string,
+      home: argv.home as string,
+      away: argv.away as string,
+      spectators: argv.spectators as boolean,
+      password: argv.password as string,
+    });
   },
 });
 

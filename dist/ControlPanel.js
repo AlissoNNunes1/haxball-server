@@ -49,6 +49,7 @@ const Bot_1 = require("./Bot");
 const AuthCommands_1 = require("./auth/AuthCommands");
 const registerSlashCommands_1 = require("./commands/registerSlashCommands");
 const RoomMonitor_1 = require("./debugging/RoomMonitor");
+const championship_1 = require("./utils/championship");
 const loadConfig_1 = require("./utils/loadConfig");
 const log_1 = require("./utils/log");
 class ControlPanel {
@@ -304,6 +305,9 @@ class ControlPanel {
             case 'open':
                 await this.handleOpenSlash(interaction);
                 break;
+            case 'championship':
+                await this.handleChampionshipSlash(interaction);
+                break;
             case 'close':
                 await this.handleCloseSlash(interaction);
                 break;
@@ -341,6 +345,7 @@ class ControlPanel {
             '`/info` - Informacoes sobre salas abertas',
             '`/meminfo` - Uso de memoria e CPU',
             '`/metrics` - Metricas do servidor',
+            '`/championship open <preset> <home> <away> <token>` - Abre sala de campeonato temporaria',
             '`/open <bot> <token> [setting]` - Abre sala com bot',
             '`/close <pid|all>` - Fecha sala(s)',
             '`/reload` - Recarrega configuracao',
@@ -442,6 +447,73 @@ class ControlPanel {
         catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
             await interaction.editReply({ content: `Erro ao abrir sala: ${errorMsg}` });
+        }
+    }
+    async handleChampionshipSlash(interaction) {
+        const subcommand = interaction.options.getSubcommand();
+        if (subcommand === 'close') {
+            const pidStr = interaction.options.getString('pid', true);
+            if (!pidStr) {
+                await interaction.reply({ content: 'PID invalido.', flags: discord_js_1.MessageFlags.Ephemeral });
+                return;
+            }
+            await this.handleCloseSlash(interaction);
+            return;
+        }
+        const preset = interaction.options.getString('preset', true);
+        const token = interaction.options.getString('token', true);
+        const home = interaction.options.getString('home', true);
+        const away = interaction.options.getString('away', true);
+        const allowSpectators = interaction.options.getBoolean('spectators') ?? true;
+        const password = interaction.options.getString('password') || undefined;
+        if (this.maxRooms != null && this.server.browsers.length >= this.maxRooms) {
+            await interaction.reply({
+                content: `Limite de salas (${this.maxRooms}) atingido. Feche uma sala antes de abrir outra.`,
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            return;
+        }
+        let championshipSettings;
+        let roomName;
+        try {
+            const built = (0, championship_1.buildChampionshipSettings)({
+                preset,
+                home,
+                away,
+                allowSpectators,
+                password,
+            });
+            championshipSettings = built.settings;
+            roomName = built.roomName;
+        }
+        catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            await interaction.reply({
+                content: `Erro no preset: ${errorMsg}`,
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            return;
+        }
+        await interaction.deferReply();
+        try {
+            const botPath = (0, championship_1.resolveChampionshipBotPath)();
+            const bot = new Bot_1.Bot('cirs-championship', botPath, roomName);
+            const script = await bot.read();
+            const browser = await bot.run(this.server, script, [token], championshipSettings);
+            if (!browser) {
+                await interaction.editReply({ content: 'Erro ao abrir sala de campeonato.' });
+                return;
+            }
+            const embed = new Discord.EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle('Sala de Campeonato Aberta')
+                .setDescription(`Sala ${browser.link} aberta com sucesso!\nPID: ${browser.pid}\nPreset: ${preset}\nTimes: ${home} x ${away}`)
+                .setTimestamp(Date.now());
+            await interaction.editReply({ embeds: [embed] });
+        }
+        catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            await interaction.editReply({ content: `Erro ao abrir sala de campeonato: ${errorMsg}` });
         }
     }
     async handleCloseSlash(interaction) {

@@ -50,7 +50,7 @@ export class RoomAuthHandler {
           2
         );
         room.sendAnnouncement(
-          'Sua conta foi encontrada! Use /login <senha> para autenticar.',
+          'Sua conta foi encontrada! Use "!login <senha> para autenticar.',
           player.id,
           0xffaa00,
           'normal',

@@ -4,6 +4,17 @@
 const { announce, whisper } = require('../config/messages.cjs');
 const { formatPlayerName, findPlayerByName } = require('./playerHandlers.cjs');
 
+// authHandler sera passado nas funcoes que precisam
+let cachedAuthHandler = null;
+
+/**
+ * Define authHandler global para uso nas funcoes de chat
+ * @param {object} handler - authHandler da sala
+ */
+function setAuthHandler(handler) {
+  cachedAuthHandler = handler;
+}
+
 /**
  * Processa mensagem de chat de time (team chat)
  * Prefixo: "t " seguido da mensagem
@@ -27,7 +38,7 @@ function handleTeamChat(room, player, message) {
     return true;
   }
 
-  const senderName = formatPlayerName(room, player);
+  const senderName = formatPlayerName(room, player, cachedAuthHandler);
 
   // Espectadores tem chat proprio
   if (player.team === 0) {
@@ -109,8 +120,8 @@ function handlePrivateMessage(room, player, message) {
   }
 
   // Formata nomes com tags visuais
-  const senderName = formatPlayerName(room, player);
-  const targetDisplayName = formatPlayerName(room, targetPlayer);
+  const senderName = formatPlayerName(room, player, cachedAuthHandler);
+  const targetDisplayName = formatPlayerName(room, targetPlayer, cachedAuthHandler);
 
   // Envia PM para remetente (confirmacao)
   whisper(
@@ -146,10 +157,35 @@ function handleGlobalChat(room, player, message) {
   // Chat global e processado normalmente pelo Haxball
   // Esta funcao existe apenas para futuras customizacoes
 
-  const displayName = formatPlayerName(room, player);
+  const displayName = formatPlayerName(room, player, cachedAuthHandler);
   console.log(`[Chat] ${displayName}: ${message}`);
 
   return false; // Nao bloqueia processamento do chat
+}
+
+/**
+ * Formata e envia chat global com tag e nome, cancelando mensagem padrao
+ * @param {object} room - Instancia da sala Haxball
+ * @param {object} player - Jogador que enviou
+ * @param {string} message - Mensagem
+ * @returns {boolean} true se tratado
+ */
+function handleFormattedGlobalChat(room, player, message) {
+  if (!room || !player || typeof message !== 'string') return false;
+
+  const trimmed = message.trim();
+  if (!trimmed) return true;
+
+  try {
+    const displayName = formatPlayerName(room, player, cachedAuthHandler) || player.name;
+    room.sendChat(`${displayName}: ${trimmed}`);
+    console.log(`[Chat] ${displayName}: ${trimmed}`);
+  } catch (error) {
+    console.error('[Chat] Erro ao formatar mensagem:', error.message);
+    // Fallback: envia mensagem simples sem tag
+    room.sendChat(`${player.name}: ${trimmed}`);
+  }
+  return true;
 }
 
 /**
@@ -180,7 +216,9 @@ module.exports = {
   handleTeamChat,
   handlePrivateMessage,
   handleGlobalChat,
+  handleFormattedGlobalChat,
   processChatMessage,
+  setAuthHandler,
 };
 
 //   __  ____ ____ _  _

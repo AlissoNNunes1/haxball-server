@@ -64,7 +64,14 @@ class Server {
     nextPid = 1000;
     proxyServers;
     db = null;
-    hbInit = null;
+    // Rastreia tokens em uso para evitar "Can't init twice"
+    tokenInitTimes = new Map();
+    // Mutex por token para serializar inicializacao do mesmo token
+    tokenLocks = new Map();
+    // Tempo minimo entre inicializacoes do mesmo token (ms)
+    TOKEN_INIT_COOLDOWN = 6000;
+    // Mutex simples para serializar chamadas de HBInit e evitar "Can't init twice" mesmo com tokens diferentes
+    hbInitLock = Promise.resolve();
     /**
      * Compatibilidade com codigo antigo que acessa browsers array
      * @deprecated Use rooms Map diretamente
@@ -101,8 +108,6 @@ class Server {
      * @returns {Promise<any>} Funcao HBInit do haxball.js
      */
     async getHBInit() {
-        if (this.hbInit)
-            return this.hbInit;
         try {
             // Nota: HaxballJS nao suporta proxy diretamente
             // Proxy sera tratado a nivel do token headless ou HTTP client
@@ -111,14 +116,122 @@ class Server {
                 const mod = await Promise.resolve().then(() => __importStar(require('haxball.js')));
                 HaxballJS = (mod && (mod.default || mod));
             }
-            this.hbInit = await HaxballJS();
+            const hbInit = await HaxballJS();
             (0, log_1.log)('SERVER', 'haxball.js inicializado com sucesso');
-            return this.hbInit;
+            return hbInit;
         }
         catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
             throw new Error(`Falha ao inicializar haxball.js: ${errorMsg}`);
         }
+    }
+    /**
+     * Aguarda cooldown antes de reutilizar um token
+     * Evita erro "Can't init twice" do haxball.js
+     * @private
+     * @param {string} token - Token headless
+     */
+    async waitTokenCooldown(token) {
+        const lastInitTime = this.tokenInitTimes.get(token);
+        if (!lastInitTime)
+            return;
+        const elapsed = Date.now() - lastInitTime;
+        if (elapsed < this.TOKEN_INIT_COOLDOWN) {
+            const waitTime = this.TOKEN_INIT_COOLDOWN - elapsed;
+            (0, log_1.log)('SERVER', `Aguardando ${waitTime}ms para reutilizar token (evitar "Can't init twice")`);
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+    }
+    /**
+     * Registra tempo de inicializacao de um token
+     * @private
+     * @param {string} token - Token headless
+     */
+    recordTokenInit(token) {
+        this.tokenInitTimes.set(token, Date.now());
+    }
+    /**
+     * Serializa uso do mesmo token para evitar init concorrente
+     */
+    async withTokenLock(token, fn) {
+        const prevLock = this.tokenLocks.get(token) ?? Promise.resolve();
+        let release;
+        const currentLock = new Promise((resolve) => {
+            release = resolve;
+        });
+        this.tokenLocks.set(token, prevLock.then(() => currentLock));
+        await prevLock;
+        try {
+            return await fn();
+        }
+        finally {
+            release();
+            // Limpa se ninguem mais aguardando
+            const chain = this.tokenLocks.get(token);
+            if (chain === currentLock) {
+                this.tokenLocks.delete(token);
+            }
+        }
+    }
+    /**
+     * Serializa execucao critica de HBInit para evitar condicao de corrida "Can't init twice"
+     * @private
+     */
+    async withHbInitLock(fn) {
+        const prevLock = this.hbInitLock;
+        let release;
+        this.hbInitLock = new Promise((resolve) => {
+            release = resolve;
+        });
+        await prevLock;
+        try {
+            return await fn();
+        }
+        finally {
+            release();
+        }
+    }
+    /**
+     * Seleciona o melhor token para usar (rotacao automática)
+     * Prioriza tokens que nunca foram usados ou estao fora do cooldown
+     * @private
+     * @param {string[]} tokenArray - Array de tokens disponiveis
+     * @returns {string} Token selecionado
+     */
+    selectBestToken(tokenArray) {
+        if (tokenArray.length === 0) {
+            throw new Error('Nenhum token fornecido');
+        }
+        if (tokenArray.length === 1) {
+            return tokenArray[0];
+        }
+        // Encontrar token que nunca foi usado
+        for (const token of tokenArray) {
+            if (!this.tokenInitTimes.has(token)) {
+                return token;
+            }
+        }
+        // Se todos foram usados, encontrar o que esta fora do cooldown
+        for (const token of tokenArray) {
+            const lastInitTime = this.tokenInitTimes.get(token);
+            if (lastInitTime) {
+                const elapsed = Date.now() - lastInitTime;
+                if (elapsed >= this.TOKEN_INIT_COOLDOWN) {
+                    return token;
+                }
+            }
+        }
+        // Se todos estao em cooldown, retornar o que foi usado ha mais tempo
+        let oldestToken = tokenArray[0];
+        let oldestTime = this.tokenInitTimes.get(oldestToken) ?? Infinity;
+        for (const token of tokenArray.slice(1)) {
+            const time = this.tokenInitTimes.get(token) ?? Infinity;
+            if (time < oldestTime) {
+                oldestTime = time;
+                oldestToken = token;
+            }
+        }
+        return oldestToken;
     }
     /**
      * Abre uma nova sala Haxball
@@ -133,66 +246,90 @@ class Server {
      * console.log(`Sala aberta: ${result.link}`);
      */
     async open(script, tokens, name, settings, scriptPath) {
-        try {
-            const HBInit = await this.getHBInit();
-            // Converter tokens para array se necessario
-            const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
-            const token = tokenArray[0];
-            if (!token) {
-                throw new Error('Nenhum token fornecido');
+        return this.withHbInitLock(async () => {
+            try {
+                const HBInit = await this.getHBInit();
+                // Converter tokens para array se necessario
+                const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
+                // Selecionar melhor token com rotacao automatica
+                const token = this.selectBestToken(tokenArray);
+                return this.withTokenLock(token, async () => {
+                    // Aguardar cooldown para evitar "Can't init twice"
+                    await this.waitTokenCooldown(token);
+                    // Construir configuracao da sala
+                    const roomConfig = {
+                        roomName: name || 'Haxball Room',
+                        maxPlayers: settings?.['reserved.haxball.maxPlayers']
+                            ? Number(settings['reserved.haxball.maxPlayers'])
+                            : 16,
+                        public: settings?.['reserved.haxball.public'] !== false ? true : false,
+                        noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
+                        password: settings?.['reserved.haxball.password']
+                            ? String(settings['reserved.haxball.password'])
+                            : undefined,
+                        geo: settings?.['reserved.haxball.geo']
+                            ? JSON.parse(String(settings['reserved.haxball.geo']))
+                            : undefined,
+                        token: token,
+                    };
+                    // Remover undefined
+                    Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
+                        delete roomConfig[key]);
+                    // Abrir sala
+                    const room = HBInit(roomConfig);
+                    // Registrar tempo de inicializacao para evitar "Can't init twice"
+                    this.recordTokenInit(token);
+                    // Gerar PID ficticio para compatibilidade
+                    const pid = this.nextPid++;
+                    // Armazenar instancia (link sera atualizado via onRoomLink)
+                    const roomInstance = {
+                        room,
+                        pid,
+                        botName: name || 'Unknown',
+                        link: 'https://www.haxball.com/headless',
+                        createdAt: Date.now(),
+                        eventHandlers: new Map(),
+                    };
+                    this.rooms.set(pid, roomInstance);
+                    // Promise para aguardar link da sala
+                    const linkPromise = new Promise((resolve) => {
+                        const timeout = setTimeout(() => {
+                            resolve(roomInstance.link || 'https://www.haxball.com/headless');
+                        }, 10000); // Timeout de 10s
+                        const originalHandler = room.onRoomLink;
+                        room.onRoomLink = (link) => {
+                            clearTimeout(timeout);
+                            (0, log_1.log)('SERVER', `Sala ${pid} link recebido: ${link}`);
+                            roomInstance.link = link;
+                            if (link)
+                                this.roomsByLink.set(String(link), pid);
+                            if (typeof originalHandler === 'function') {
+                                originalHandler.call(room, link);
+                            }
+                            resolve(link);
+                        };
+                    });
+                    // Executa script do bot
+                    this.executeBotScript(room, script, settings, this.db, scriptPath);
+                    // Aplicar event handlers padrao (nao sobrescreve onRoomLink)
+                    this.setupDefaultEventHandlers(room, pid, name);
+                    // Aguarda link ficar disponivel
+                    const finalLink = await linkPromise;
+                    (0, log_1.log)('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${finalLink}`);
+                    Logger_1.logger.info('Server', `Sala aberta`, { pid, name, link: finalLink });
+                    return {
+                        link: finalLink,
+                        pid,
+                    };
+                });
             }
-            // Construir configuracao da sala
-            const roomConfig = {
-                roomName: name || 'Haxball Room',
-                maxPlayers: settings?.['reserved.haxball.maxPlayers']
-                    ? Number(settings['reserved.haxball.maxPlayers'])
-                    : 16,
-                public: settings?.['reserved.haxball.public'] !== false ? true : false,
-                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
-                password: settings?.['reserved.haxball.password']
-                    ? String(settings['reserved.haxball.password'])
-                    : undefined,
-                geo: settings?.['reserved.haxball.geo']
-                    ? JSON.parse(String(settings['reserved.haxball.geo']))
-                    : undefined,
-                token: token,
-            };
-            // Remover undefined
-            Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
-                delete roomConfig[key]);
-            // Abrir sala
-            const room = HBInit(roomConfig);
-            // Gerar PID ficticio para compatibilidade
-            const pid = this.nextPid++;
-            // Executa script do bot
-            this.executeBotScript(room, script, settings, this.db, scriptPath);
-            // Aplicar event handlers padrao
-            this.setupDefaultEventHandlers(room, pid, name);
-            // Armazenar instancia
-            const roomInstance = {
-                room,
-                pid,
-                botName: name || 'Unknown',
-                link: room.getLink?.() || 'https://www.haxball.com/headless',
-                createdAt: Date.now(),
-                eventHandlers: new Map(),
-            };
-            this.rooms.set(pid, roomInstance);
-            if (roomInstance.link)
-                this.roomsByLink.set(String(roomInstance.link), pid);
-            (0, log_1.log)('SERVER', `Sala aberta - PID: ${pid}, Nome: ${name}, Link: ${roomInstance.link}`);
-            Logger_1.logger.info('Server', `Sala aberta`, { pid, name, link: roomInstance.link });
-            return {
-                link: roomInstance.link,
-                pid,
-            };
-        }
-        catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            (0, log_1.log)('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
-            Logger_1.logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
-            throw error;
-        }
+            catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                (0, log_1.log)('SERVER', `ERRO ao abrir sala: ${errorMsg}`);
+                Logger_1.logger.error('Server', `Erro ao abrir sala`, { name, error: errorMsg });
+                throw error;
+            }
+        });
     }
     /**
      * Abre sala consumindo um modulo ESM ja carregado (init executado direto sem VM)
@@ -203,78 +340,102 @@ class Server {
      * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
      */
     async openWithModule(roomModule, tokens, name, settings) {
-        try {
-            const HBInit = await this.getHBInit();
-            const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
-            const token = tokenArray[0];
-            if (!token) {
-                throw new Error('Nenhum token fornecido');
-            }
-            const roomConfig = {
-                roomName: name || roomModule?.name || 'Haxball Room',
-                maxPlayers: settings?.['reserved.haxball.maxPlayers']
-                    ? Number(settings['reserved.haxball.maxPlayers'])
-                    : 16,
-                public: settings?.['reserved.haxball.public'] !== false ? true : false,
-                noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
-                password: settings?.['reserved.haxball.password']
-                    ? String(settings['reserved.haxball.password'])
-                    : undefined,
-                geo: settings?.['reserved.haxball.geo']
-                    ? JSON.parse(String(settings['reserved.haxball.geo']))
-                    : undefined,
-                token: token,
-            };
-            Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
-                delete roomConfig[key]);
-            const room = HBInit(roomConfig);
-            const pid = this.nextPid++;
+        return this.withHbInitLock(async () => {
             try {
-                if (typeof roomModule?.init === 'function') {
-                    // Parar anuncios periodicos antes de reavaliar/init do modulo
+                const HBInit = await this.getHBInit();
+                const tokenArray = Array.isArray(tokens) ? tokens : [tokens];
+                // Selecionar melhor token com rotacao automatica
+                const token = this.selectBestToken(tokenArray);
+                return this.withTokenLock(token, async () => {
+                    const roomConfig = {
+                        roomName: name || roomModule?.name || 'Haxball Room',
+                        maxPlayers: settings?.['reserved.haxball.maxPlayers']
+                            ? Number(settings['reserved.haxball.maxPlayers'])
+                            : 16,
+                        public: settings?.['reserved.haxball.public'] !== false ? true : false,
+                        noPlayer: settings?.['reserved.haxball.noPlayer'] !== false ? true : false,
+                        password: settings?.['reserved.haxball.password']
+                            ? String(settings['reserved.haxball.password'])
+                            : undefined,
+                        geo: settings?.['reserved.haxball.geo']
+                            ? JSON.parse(String(settings['reserved.haxball.geo']))
+                            : undefined,
+                        token: token,
+                    };
+                    Object.keys(roomConfig).forEach((key) => roomConfig[key] === undefined &&
+                        delete roomConfig[key]);
+                    // Aguardar cooldown de token para evitar 'Can't init twice'
+                    await this.waitTokenCooldown(token);
+                    const room = HBInit(roomConfig);
+                    this.recordTokenInit(token);
+                    const pid = this.nextPid++;
+                    // Armazenar instancia (link sera atualizado via onRoomLink)
+                    const roomInstance = {
+                        room,
+                        pid,
+                        botName: name || roomModule?.name || 'Unknown',
+                        link: 'https://www.haxball.com/headless',
+                        createdAt: Date.now(),
+                        eventHandlers: new Map(),
+                    };
+                    this.rooms.set(pid, roomInstance);
+                    // Promise para aguardar link da sala
+                    const linkPromise = new Promise((resolve) => {
+                        const timeout = setTimeout(() => {
+                            resolve(roomInstance.link || 'https://www.haxball.com/headless');
+                        }, 10000); // Timeout de 10s
+                        const originalHandler = room.onRoomLink;
+                        room.onRoomLink = (link) => {
+                            clearTimeout(timeout);
+                            (0, log_1.log)('SERVER', `Sala ESM ${pid} link recebido: ${link}`);
+                            roomInstance.link = link;
+                            if (link)
+                                this.roomsByLink.set(String(link), pid);
+                            if (typeof originalHandler === 'function') {
+                                originalHandler.call(room, link);
+                            }
+                            resolve(link);
+                        };
+                    });
                     try {
-                        stopCommunityAnnouncements(room);
+                        if (typeof roomModule?.init === 'function') {
+                            // Parar anuncios periodicos antes de reavaliar/init do modulo
+                            try {
+                                stopCommunityAnnouncements(room);
+                            }
+                            catch (_) { }
+                            roomModule.init({ room, settings: settings || {}, db: this.db });
+                        }
+                        else {
+                            (0, log_1.log)('SERVER', 'Modulo de sala sem init definido');
+                        }
                     }
-                    catch (_) { }
-                    roomModule.init({ room, settings: settings || {}, db: this.db });
-                }
-                else {
-                    (0, log_1.log)('SERVER', 'Modulo de sala sem init definido');
-                }
+                    catch (error) {
+                        const errorMsg = error instanceof Error ? error.message : String(error);
+                        (0, log_1.log)('SERVER', `AVISO: Erro ao executar modulo ESM: ${errorMsg.substring(0, 100)}`);
+                    }
+                    this.setupDefaultEventHandlers(room, pid, name || roomModule?.name);
+                    // Aguarda link ficar disponivel
+                    const finalLink = await linkPromise;
+                    (0, log_1.log)('SERVER', `Sala aberta (ESM) - PID: ${pid}, Nome: ${roomInstance.botName}, Link: ${finalLink}`);
+                    Logger_1.logger.info('Server', `Sala aberta ESM`, {
+                        pid,
+                        name: roomInstance.botName,
+                        link: finalLink,
+                    });
+                    return {
+                        link: finalLink,
+                        pid,
+                    };
+                });
             }
             catch (error) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                (0, log_1.log)('SERVER', `AVISO: Erro ao executar modulo ESM: ${errorMsg.substring(0, 100)}`);
+                (0, log_1.log)('SERVER', `ERRO ao abrir sala ESM: ${errorMsg}`);
+                Logger_1.logger.error('Server', `Erro ao abrir sala ESM`, { name, error: errorMsg });
+                throw error;
             }
-            this.setupDefaultEventHandlers(room, pid, name || roomModule?.name);
-            const roomInstance = {
-                room,
-                pid,
-                botName: name || roomModule?.name || 'Unknown',
-                link: room.getLink?.() || 'https://www.haxball.com/headless',
-                createdAt: Date.now(),
-                eventHandlers: new Map(),
-            };
-            this.rooms.set(pid, roomInstance);
-            if (roomInstance.link)
-                this.roomsByLink.set(String(roomInstance.link), pid);
-            (0, log_1.log)('SERVER', `Sala aberta (ESM) - PID: ${pid}, Nome: ${roomInstance.botName}, Link: ${roomInstance.link}`);
-            Logger_1.logger.info('Server', `Sala aberta ESM`, {
-                pid,
-                name: roomInstance.botName,
-                link: roomInstance.link,
-            });
-            return {
-                link: roomInstance.link,
-                pid,
-            };
-        }
-        catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            (0, log_1.log)('SERVER', `ERRO ao abrir sala ESM: ${errorMsg}`);
-            Logger_1.logger.error('Server', `Erro ao abrir sala ESM`, { name, error: errorMsg });
-            throw error;
-        }
+        });
     }
     /**
      * Fecha uma sala aberta
@@ -499,7 +660,9 @@ class Server {
     setupDefaultEventHandlers(room, pid, _botName) {
         try {
             // Evento: Link da sala disponivel
-            if (room.onRoomLink) {
+            // Nao sobrescrever se ja foi configurado na Promise de link
+            const hasLinkHandler = room.onRoomLink && typeof room.onRoomLink === 'function';
+            if (!hasLinkHandler && room.onRoomLink !== undefined) {
                 const originalHandler = room.onRoomLink;
                 room.onRoomLink = (link) => {
                     (0, log_1.log)('SERVER', `Sala ${pid} link atualizado: ${link}`);

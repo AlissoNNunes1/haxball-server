@@ -32,6 +32,7 @@ export declare class ControlPanel {
     private handleMemInfoSlash;
     private handleMetricsSlash;
     private handleOpenSlash;
+    private handleChampionshipSlash;
     private handleCloseSlash;
     private handleReloadSlash;
     private handleExitSlash;

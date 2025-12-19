@@ -4,6 +4,12 @@
 
 O Haxball Server e uma aplicacao Node.js que funciona como gerenciador de salas Haxball headless atraves de uma interface Discord Bot ou CLI, com sistema integrado de autenticacao e contas de jogadores.
 
+### Salas Temporarias de Campeonato
+
+- CLI `championship` (main.ts) e slash command `/championship open|close` permitem abrir/encerrar salas efemeras com nomes dinamicos (HOME x AWAY) usando presets em `shared/config/championship.cjs`.
+- Utilitario `src/utils/championship.ts` resolve presets com heranca, aplica chaves `reserved.haxball.*`, regras e mapa, e aponta para bot dedicado.
+- Bot `bots/cirs-championship.js` desativa balanceamento, aplica handlers globais e mapa customizado/padrao, mantendo monitoramento e auth existentes.
+
 Arquitetura em **camadas** com separacao clara de responsabilidades:
 
 ```

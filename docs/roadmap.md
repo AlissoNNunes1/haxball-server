@@ -39,6 +39,12 @@ Centralizar funcionalidades comuns em `shared/handlers/` para maxima reutilizaca
 
 O projeto **haxball-server** foi completamente modernizado com sucesso! Todas as fases criticas foram implementadas, resultando em um projeto robusto, seguro, testado e pronto para producao. Agora com sistema de autenticacao e balanceamento Elo hibrido!
 
+### Novidade - Salas de Campeonato (Temp)
+
+- ✅ Presets globais em `shared/config/championship.cjs` para formatos RS (5,6,7,11).
+- ✅ Bot dedicado `cirs-championship.js` com balanceamento desligado e handlers globais.
+- ✅ Comandos: CLI `championship` e slash `/championship open|close` para abrir/fechar salas com nomes dinamicos e senha opcional.
+
 ### Progresso Geral
 
 ✅ **CONCLUIDO - v5.2.0 Released**

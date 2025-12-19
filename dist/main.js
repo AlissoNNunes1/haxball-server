@@ -12,6 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const yargs_1 = __importDefault(require("yargs"));
+const openChampionship_1 = require("./commands/openChampionship");
 const openServer_1 = require("./commands/openServer");
 const args = (0, yargs_1.default)(process.argv.slice(2));
 /**
@@ -48,6 +49,60 @@ args.command({
     handler: async () => {
         console.log('SSH tunnel functionality has been removed in v5.0.0');
         console.log("Please use 'open' command for local room management with haxball.js");
+    },
+});
+args.command({
+    command: 'championship',
+    aliases: ['ch'],
+    describe: 'Abre uma sala temporaria de campeonato.',
+    builder: {
+        file: {
+            describe: 'Arquivo config.json (opcional).',
+            demandOption: false,
+            type: 'string',
+        },
+        preset: {
+            describe: 'Preset de campeonato (default, rs5, rs6, rs7, rs11).',
+            demandOption: true,
+            type: 'string',
+        },
+        token: {
+            describe: 'Token headless do Haxball.',
+            demandOption: true,
+            type: 'string',
+        },
+        home: {
+            describe: 'Time mandante.',
+            demandOption: true,
+            type: 'string',
+        },
+        away: {
+            describe: 'Time visitante.',
+            demandOption: true,
+            type: 'string',
+        },
+        spectators: {
+            describe: 'Permitir espectadores (padrao: true).',
+            demandOption: false,
+            type: 'boolean',
+            default: true,
+        },
+        password: {
+            describe: 'Senha opcional da sala.',
+            demandOption: false,
+            type: 'string',
+        },
+    },
+    handler: async (argv) => {
+        await (0, openChampionship_1.openChampionshipRoom)({
+            file: argv.file,
+            token: argv.token,
+            preset: argv.preset,
+            home: argv.home,
+            away: argv.away,
+            spectators: argv.spectators,
+            password: argv.password,
+        });
     },
 });
 args.demandCommand();

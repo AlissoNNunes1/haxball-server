@@ -3,7 +3,8 @@ import { log } from '../utils/log';
 
 /**
  * Registra todos os Slash Commands no Discord
- * Deve ser executado uma vez para registrar os comandos no servidor Discord
+ * Estrategia: Compara com comandos existentes e atualiza apenas os que mudaram
+ * Mais eficiente que deletar tudo toda vez
  */
 export async function registerSlashCommands(token: string, clientId: string, guildId?: string) {
   const commands = [
@@ -15,6 +16,57 @@ export async function registerSlashCommands(token: string, clientId: string, gui
     new SlashCommandBuilder().setName('meminfo').setDescription('Uso de CPU e memoria'),
 
     new SlashCommandBuilder().setName('metrics').setDescription('Metricas das salas'),
+
+    new SlashCommandBuilder()
+      .setName('championship')
+      .setDescription('Gerenciar salas de campeonato temporarias')
+      .addSubcommand((sub) =>
+        sub
+          .setName('open')
+          .setDescription('Abrir sala de campeonato')
+          .addStringOption((option) =>
+            option
+              .setName('preset')
+              .setDescription('Preset de campeonato (rs5, rs6, rs7, rs11, default)')
+              .setRequired(true)
+              .addChoices(
+                { name: 'default', value: 'default' },
+                { name: 'rs5', value: 'rs5' },
+                { name: 'rs6', value: 'rs6' },
+                { name: 'rs7', value: 'rs7' },
+                { name: 'rs11', value: 'rs11' }
+              )
+          )
+          .addStringOption((option) =>
+            option.setName('home').setDescription('Time mandante').setRequired(true)
+          )
+          .addStringOption((option) =>
+            option.setName('away').setDescription('Time visitante').setRequired(true)
+          )
+          .addStringOption((option) =>
+            option.setName('token').setDescription('Token do Haxball').setRequired(true)
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName('spectators')
+              .setDescription('Permitir espectadores (padrao: sim)')
+              .setRequired(false)
+          )
+          .addStringOption((option) =>
+            option.setName('password').setDescription('Senha opcional da sala').setRequired(false)
+          )
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName('close')
+          .setDescription('Fechar sala de campeonato')
+          .addStringOption((option) =>
+            option
+              .setName('pid')
+              .setDescription('PID da sala ou "all" para fechar todas')
+              .setRequired(true)
+          )
+      ),
 
     new SlashCommandBuilder()
       .setName('open')
@@ -110,24 +162,46 @@ export async function registerSlashCommands(token: string, clientId: string, gui
   const rest = new REST({ version: '10' }).setToken(token);
 
   try {
-    log('DISCORD', `Iniciando registro de ${commands.length} slash commands...`);
+    log('DISCORD', `Comparando ${commands.length} slash commands com registrados...`);
 
-    // Limpa TODOS os comandos antigos (guild E global) para prevenir duplicacao
+    // Busca comandos existentes (guild ou global)
+    let existingCommands: any[] = [];
     if (guildId) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
-      log('DISCORD', 'Comandos guild antigos removidos.');
-    }
-    await rest.put(Routes.applicationCommands(clientId), { body: [] });
-    log('DISCORD', 'Comandos globais antigos removidos.');
-
-    if (guildId) {
-      // Registro em servidor especifico (mais rapido para testes)
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-      log('DISCORD', `Slash commands registrados no servidor ${guildId}!`);
+      existingCommands = (await rest.get(
+        Routes.applicationGuildCommands(clientId, guildId)
+      )) as any[];
+      log('DISCORD', `Encontrados ${existingCommands.length} comandos no servidor.`);
     } else {
-      // Registro global (pode levar ate 1 hora para propagar)
+      existingCommands = (await rest.get(Routes.applicationCommands(clientId))) as any[];
+      log('DISCORD', `Encontrados ${existingCommands.length} comandos globais.`);
+    }
+
+    // Nomes dos novos comandos
+    const newCommandNames = new Set(commands.map((c: any) => c.name));
+
+    // Deleta apenas comandos que nao existem mais na nova lista
+    let deletedCount = 0;
+    for (const existing of existingCommands) {
+      if (!newCommandNames.has(existing.name)) {
+        if (guildId) {
+          await rest.delete(Routes.applicationGuildCommand(clientId, guildId, existing.id));
+        } else {
+          await rest.delete(Routes.applicationCommand(clientId, existing.id));
+        }
+        deletedCount++;
+      }
+    }
+    if (deletedCount > 0) {
+      log('DISCORD', `${deletedCount} comando(s) antigo(s) removido(s).`);
+    }
+
+    // Atualiza com lista completa (Discord faz merge automatico)
+    if (guildId) {
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+      log('DISCORD', `${commands.length} Slash commands atualizados no servidor ${guildId}!`);
+    } else {
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
-      log('DISCORD', 'Slash commands registrados globalmente!');
+      log('DISCORD', `${commands.length} Slash commands atualizados globalmente!`);
     }
 
     return true;

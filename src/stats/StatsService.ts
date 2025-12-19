@@ -432,8 +432,24 @@ export class StatsService {
       limit: 10000,
     });
 
-    console.log('[DEBUG] basicStats carregados do banco:', basicStats.map((s) => ({ matchId: s.matchId, goals: s.goals, assists: s.assists, saves: s.saves })));
-    console.log('[DEBUG] advancedStats carregados do banco:', advancedStatsData.map((s) => ({ matchId: s.matchId, goals: s.goals, assists: s.assists, saves: s.saves })));
+    console.log(
+      '[DEBUG] basicStats carregados do banco:',
+      basicStats.map((s) => ({
+        matchId: s.matchId,
+        goals: s.goals,
+        assists: s.assists,
+        saves: s.saves,
+      }))
+    );
+    console.log(
+      '[DEBUG] advancedStats carregados do banco:',
+      advancedStatsData.map((s) => ({
+        matchId: s.matchId,
+        goals: s.goals,
+        assists: s.assists,
+        saves: s.saves,
+      }))
+    );
 
     if (basicStats.length === 0 && advancedStatsData.length === 0) return;
 

@@ -74,11 +74,16 @@ Cirs Futsal 5X5,6x6,7x7(uma para cada): Salas abertas 24 horas focadas em partid
 
 CIRS Real Soccer 5x5,6x6,7x7(uma para cada podendo ir até 11x11): Salas abertas 24 horas focadas em partidas de real soccer com times fixos de 5,6 ou 7 jogadores por lado. Essas salas sao ideais para jogadores que querem praticar e competir em equipes menores,com todas as mecanicas e regras do real soccer adaptadas para times reduzidos .O sistema de balanceamento deve garantir que os times sejam equilibrados com base no ranking dos jogadores, proporcionando partidas justas e competitivas.Mas tambem deve garantir que todos tenham a oportunidade de jogar .De ver usado os mapas de real soccer presentes em shared\maps
 
-A comunidade tambem vai ter salas temporarias para campeonatos,ligas e eventos especiais como:
+A comunidade tambem vai ter salas temporarias para campeonatos,ligas,amistotos e eventos especiais como:
 
 CIRS Real Soccer - _Campeonato_ - _Time1 x Time2_ (Nomes adaptaveis que devem ser digitados no comando que abre a sala): Sala temporaria que sera aberta apenas durante os campeonatos e ligas oficiais da comunidade. A opção campeonato define o mapa e script da sala.A opções de time define os uniformes e lado de cada time.
 
-Cada sala sera configurada especificamente para o campeonato em questao,com regras,tempos,mapas e etc adaptados ao formato do evento.O sistema de balanceamento deve ser desativado nessas salas,ja que os times serao pre-definidos pelos organizadores do campeonato. As salas de campeonato devem ser abertas e fechadas manualmente pelos administradores via comandos do Discord, garantindo controle total sobre o andamento do evento.
+Cada sala sera configurada especificamente para o campeonato em questao,com regras,tempos,mapas e etc adaptados ao formato do evento.O sistema de balanceamento deve ser desativado nessas salas,ja que os times serao pre-definidos pelos organizadores do campeonato. As salas de campeonato devem ser abertas e fechadas manualmente pelos administradores via comandos do Discord, garantindo controle total sobre o andamento do evento.O sistema de estatisticas deve registrar todos os dados normalmente.Será possivel,depenendo do campeonato ou formato em questão ,permitir espectadores nas salas de campeonato ,permitir o mod draft e pick de jogadores para a partida em especifica.
+
+
+Salas dinamicas
+
+: CIRS Real Soccer Discord e CIRS Futsal Discord: Salas organizadas dinamicamente via comandos no Discord. Jogadores podem iniciar e  entrar numa fila para uma criar uma sala escolhendo posição e tipo de jogo, .O sistema deve criar a sala automaticamente com base nas solicitacoes recebidas,aplicando balanceamento conforme necessario.A sala deverá ser fechada automaticamente se não tiver jogadores suficientes após um tempo limite, ou permanecer aberta enquanto houver jogadores ativos.
 
 <!--
   __  ____ ____ _  _

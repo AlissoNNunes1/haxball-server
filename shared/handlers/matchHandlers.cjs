@@ -3,6 +3,306 @@
 
 const { announce } = require('../config/messages.cjs');
 const { formatGameTime } = require('./goalHandlers.cjs');
+const { createNamedInterval, clearNamedTimer } = require('../config/roomTimers.cjs');
+
+/**
+ * Ajusta automaticamente o mapa conforme quantidade de jogadores
+ * Usa getFutsalMap para escolher o bucket correto e aplica no room
+ *
+ * @param {object} room
+ * @param {object} gameState
+ * @param {function} getFutsalMap - funcao de maps compartilhada
+ */
+function autoAdjustMapForPlayerCount(room, gameState, getFutsalMap) {
+  if (!room || !gameState || typeof getFutsalMap !== 'function') return;
+
+  const playerList = room.getPlayerList().filter((p) => p.id !== 0);
+  const count = playerList.length;
+
+  let bucket;
+  let newMap;
+
+  if (count <= 2) {
+    bucket = 'tiny';
+    newMap = getFutsalMap(2);
+  } else if (count <= 6) {
+    bucket = 'small';
+    newMap = getFutsalMap(6);
+  } else if (count <= 12) {
+    bucket = 'mid';
+    newMap = getFutsalMap(12);
+  } else if (count <= 14) {
+    bucket = 'x7';
+    newMap = getFutsalMap(14);
+  } else {
+    bucket = 'x8';
+    newMap = getFutsalMap(16);
+  }
+
+  if (gameState.mapBucket !== bucket) {
+    gameState.mapBucket = bucket;
+    gameState.currentMap = newMap;
+    room.setCustomStadium(newMap);
+    announce(room, `🗺️ Mapa ajustado para ${count} jogadores`);
+  }
+}
+
+/**
+ * Verifica pronto para iniciar partida e agenda intervalo de AFK
+ * Minimos: ao menos 1 por time. Inicia jogo apos 3s.
+ * Cria named timer 'afk_check' para aplicar timeout AFK.
+ *
+ * @param {object} room
+ * @param {object} gameState
+ * @param {function} isPlayerAFK
+ * @param {function} isAFKTimeout
+ * @param {function} removeAFKPlayer
+ */
+function startGameIfReadyWithAfk(room, gameState, { isPlayerAFK, isAFKTimeout, removeAFKPlayer }) {
+  if (!room || !gameState || !isPlayerAFK || !isAFKTimeout || !removeAFKPlayer) return;
+
+  const players = room.getPlayerList().filter((p) => p.id !== 0);
+  const redCount = players.filter((p) => p.team === 1).length;
+  const blueCount = players.filter((p) => p.team === 2).length;
+
+  var AFK_CHECK_INTERVAL = globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000;
+  globalThis.__CIRS_AFK_CHECK_INTERVAL = AFK_CHECK_INTERVAL;
+
+  if (redCount >= 1 && blueCount >= 1 && !gameState.started) {
+    announce(room, '⚽ Iniciando partida em 3 segundos...', null, 0xffaa00);
+    setTimeout(() => {
+      room.startGame();
+      gameState.started = true;
+      announce(room, '🎮 BOA SORTE A TODOS!', null, 0x00ff00);
+    }, 3000);
+  }
+
+  createNamedInterval(
+    room,
+    'afk_check',
+    () => {
+      const plist = room.getPlayerList().filter((p) => p.id !== 0);
+      for (const player of plist) {
+        const isAdmin = player.admin || false;
+        if (isPlayerAFK(player.id) && isAFKTimeout(player.id, isAdmin)) {
+          announce(
+            room,
+            `${player.name} foi kickado por ficar AFK por mais de 10 minutos`,
+            null,
+            0xff0000
+          );
+          removeAFKPlayer(player.id);
+          room.kickPlayer(player.id, 'AFK timeout (10 minutos)', false);
+        }
+      }
+    },
+    globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000
+  );
+}
+
+/**
+ * Inicializa StatsCollector e registra jogadores autenticados
+ * Retorna objeto { statsCollector, gameState } atualizado
+ */
+function startStatsCollector(room, gameState, { StatsCollector }, authHandler, whisperFn) {
+  if (!room || !gameState || !StatsCollector) return { statsCollector: null };
+  let statsCollector = null;
+  try {
+    gameState.matchId = Date.now();
+    statsCollector = new StatsCollector(gameState.matchId, true);
+    gameState.statsEnabled = true;
+
+    const players = room.getPlayerList().filter((p) => p.id !== 0 && p.team !== 0);
+    let authenticatedCount = 0;
+
+    for (const player of players) {
+      if (authHandler && authHandler.isAuthenticated(player.id)) {
+        const account = authHandler.getAuthenticatedPlayer(player.id);
+        if (account && account.id) {
+          const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
+          statsCollector.registerPlayer(account.id, player.name, teamStr);
+          authenticatedCount++;
+          console.log(
+            `[STATS] Jogador ${player.name} (accountId ${account.id}) registrado no time ${teamStr}`
+          );
+        }
+      } else if (typeof whisperFn === 'function') {
+        whisperFn(
+          room,
+          '⚠️ Use !login <senha> para suas stats serem contabilizadas',
+          player.id,
+          0xffaa00,
+          'small',
+          1
+        );
+      }
+    }
+
+    console.log(
+      `[STATS] Coleta iniciada para matchId ${gameState.matchId} (${authenticatedCount}/${players.length} jogadores autenticados)`
+    );
+  } catch (error) {
+    console.error('[STATS] Erro ao inicializar statsCollector:', error.message);
+    gameState.statsEnabled = false;
+  }
+  return { statsCollector };
+}
+
+/**
+ * Finaliza partida e persiste estatisticas basicas/avancadas/eventos
+ * Aplica fallback basico quando necessario e atualiza agregados/Elo
+ */
+async function finalizeMatchStats(
+  room,
+  gameState,
+  winningTeam,
+  statsCollector,
+  statsService,
+  authHandler,
+  getAuthDb
+) {
+  if (!room || !gameState || !statsCollector || !statsService) return;
+  try {
+    statsCollector.endMatch(winningTeam);
+    const summary = statsCollector.getSummary();
+    console.log(`[STATS] Partida finalizada. ${summary.basicStats.length} jogadores rastreados.`);
+
+    if (summary.basicStats.length === 0) {
+      const fallbackStats = buildFallbackBasicStats(
+        room,
+        authHandler,
+        getAuthDb,
+        gameState.matchId,
+        winningTeam
+      );
+      summary.basicStats.push(...fallbackStats);
+    }
+
+    const savedAccountIds = new Set();
+    for (const basicStats of summary.basicStats) {
+      savedAccountIds.add(basicStats.accountId);
+      statsService.saveBasicStats(basicStats).catch((err) => {
+        console.error(
+          `[STATS] Erro ao salvar stats basicas do accountId ${basicStats.accountId}:`,
+          err.message
+        );
+      });
+    }
+
+    if (summary.advancedStats && summary.advancedStats.length > 0) {
+      for (const advStats of summary.advancedStats) {
+        statsService.saveAdvancedStats(advStats).catch((err) => {
+          console.error(
+            `[STATS] Erro ao salvar stats avancadas do accountId ${advStats.accountId}:`,
+            err.message
+          );
+        });
+      }
+    }
+
+    if (summary.events && summary.events.length > 0) {
+      for (const event of summary.events) {
+        statsService.saveEvent(event).catch((err) => {
+          console.error('[STATS] Erro ao salvar evento de partida:', err.message);
+        });
+      }
+    }
+
+    announce(
+      room,
+      `📊 Estatisticas salvas para ${summary.basicStats.length} jogadores`,
+      null,
+      0x00ff00
+    );
+
+    try {
+      const accountIdsToUpdate = Array.from(savedAccountIds);
+      if (accountIdsToUpdate.length > 0) {
+        console.log('[DEBUG] Atualizando agregados para accountIds:', accountIdsToUpdate);
+        await Promise.all(
+          accountIdsToUpdate.map((accId) =>
+            statsService.updatePlayerAggregate(accId).catch((err) => {
+              console.error(
+                '[STATS] Erro ao atualizar agregado do accountId ' + accId + ':',
+                err.message
+              );
+            })
+          )
+        );
+        console.log('[DEBUG] Agregados atualizados com sucesso');
+      }
+
+      if (typeof statsService.applyEloFromMatch === 'function') {
+        await statsService.applyEloFromMatch(summary.basicStats, winningTeam).catch((err) => {
+          console.error('[STATS] Erro ao atualizar ranking Elo:', err.message);
+        });
+      }
+
+      announce(
+        room,
+        `📊 Estatisticas salvas para ${summary.basicStats.length} jogadores`,
+        null,
+        0x00ff00
+      );
+    } catch (err) {
+      console.error('[STATS] Erro no processo de atualizacao de agregados:', err.message);
+    }
+  } catch (error) {
+    console.error('[STATS] Erro ao finalizar/salvar estatisticas:', error.message);
+  }
+}
+
+function ensureStatsRegistration(room, statsCollector, authHandler, gameState, player) {
+  if (!statsCollector || !gameState || !authHandler || !player) return null;
+  if (!gameState.statsEnabled) return null;
+  if (!authHandler.isAuthenticated(player.id)) return null;
+
+  const account = authHandler.getAuthenticatedPlayer(player.id);
+  if (!account || !account.id) return null;
+
+  const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
+  if (typeof statsCollector.hasPlayer === 'function' && statsCollector.hasPlayer(account.id)) {
+    return account.id;
+  }
+
+  statsCollector.registerPlayer(account.id, player.name, teamStr);
+  return account.id;
+}
+
+function buildFallbackBasicStats(room, authHandler, getAuthDb, matchId, winningTeam) {
+  if (!room || !matchId) return [];
+
+  const db = typeof getAuthDb === 'function' ? getAuthDb() : null;
+  const players = room.getPlayerList().filter((p) => p.id !== 0 && p.team !== 0);
+  const basics = [];
+
+  for (const player of players) {
+    const account =
+      authHandler && authHandler.isAuthenticated(player.id)
+        ? authHandler.getAuthenticatedPlayer(player.id)
+        : null;
+    const accountFromNick =
+      db && typeof db.getAccountByNick === 'function' ? db.getAccountByNick(player.name) : null;
+    const accountId = account && account.id ? account.id : accountFromNick && accountFromNick.id;
+    if (!accountId) continue;
+
+    const teamStr = player.team === 1 ? 'red' : 'blue';
+    basics.push({
+      accountId,
+      matchId,
+      goals: 0,
+      assists: 0,
+      saves: 0,
+      ownGoals: 0,
+      touches: 0,
+      timeInGame: 0,
+      team: teamStr,
+      won: teamStr === winningTeam,
+    });
+  }
+
+  return basics;
+}
 
 /**
  * Handler para inicio de partida
@@ -226,6 +526,12 @@ module.exports = {
   handlePause,
   handleUnpause,
   updateGameStatus,
+  ensureStatsRegistration,
+  buildFallbackBasicStats,
+  autoAdjustMapForPlayerCount,
+  startGameIfReadyWithAfk,
+  startStatsCollector,
+  finalizeMatchStats,
 };
 
 //   __  ____ ____ _  _

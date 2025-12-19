@@ -36,22 +36,61 @@ function findPlayerByName(room, playerName) {
 }
 
 /**
- * Formata nome do jogador com tag visual (se existir)
+ * Determina tag automatica baseada no cargo do jogador
+ * Hierarquia: Admin > Autenticado (com ranking) > Jogador
+ *
+ * @param {object} player - Objeto do jogador
+ * @param {object} authHandler - Handler de autenticacao (opcional)
+ * @returns {string|null} Tag automatica ou null
+ */
+function getRoleTag(player, authHandler) {
+  if (!player) return null;
+
+  // Admin tem prioridade maxima
+  if (player.admin) return 'ADM';
+
+  // Jogador autenticado com ranking
+  if (authHandler && authHandler.isAuthenticated && authHandler.isAuthenticated(player.id)) {
+    try {
+      const account = authHandler.getAuthenticatedPlayer(player.id);
+      if (account && account.ranking) {
+        return account.ranking; // Ex: S1, A1, B2, etc
+      }
+    } catch (error) {
+      // Fallback silencioso
+    }
+  }
+
+  return null; // Sem tag para jogadores normais
+}
+
+/**
+ * Formata nome do jogador com tag visual (manual ou automatica)
  * Adiciona prefixo visual entre colchetes antes do nome
- * Exemplo: Se jogador tem tag "VIP", retorna "[VIP] Lukra"
+ * Prioridade: Tag manual > Tag de cargo automatica > Nome simples
+ * Exemplo: "[ADM] Lukra" ou "[S1] Lukra" ou "Lukra"
  *
  * @param {object} room - Instancia da sala Haxball
  * @param {object} player - Objeto do jogador
+ * @param {object} authHandler - Handler de autenticacao (opcional)
  * @returns {string} Nome formatado com tag visual ou nome simples
  */
-function formatPlayerName(room, player) {
+function formatPlayerName(room, player, authHandler = null) {
   if (!room || !player) return '';
 
-  const tag = getPlayerTag(room, player.id);
-  if (tag && typeof tag === 'string' && tag.trim()) {
-    return `[${tag.trim()}] ${player.name}`;
+  // Prioridade 1: Tag manual definida explicitamente
+  const manualTag = getPlayerTag(room, player.id);
+  if (manualTag && typeof manualTag === 'string' && manualTag.trim()) {
+    return `[${manualTag.trim()}] ${player.name}`;
   }
 
+  // Prioridade 2: Tag automatica baseada em cargo
+  const roleTag = getRoleTag(player, authHandler);
+  if (roleTag && typeof roleTag === 'string' && roleTag.trim()) {
+    return `[${roleTag.trim()}] ${player.name}`;
+  }
+
+  // Sem tag
   return player.name;
 }
 
@@ -124,6 +163,7 @@ module.exports = {
   normalizePlayerName,
   findPlayerByName,
   formatPlayerName,
+  getRoleTag,
   handlePlayerJoin,
   handlePlayerLeave,
   applyVisualTag,

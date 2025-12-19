@@ -12,10 +12,75 @@ const {
   startRegistrationReminders,
 } = require('../../shared/config/messages.cjs');
 const { processCommand, authHandler } = require('../../shared/config/commands.cjs');
+const {
+  handleFormattedGlobalChat,
+  setAuthHandler,
+} = require('../../shared/handlers/chatHandlers.cjs');
+
+// Configura authHandler para sistema de tags automatico
+setAuthHandler(authHandler);
+
+//===========================================
+// FUNCAO LOCAL DE TAG (prioridade sobre a shared)
+//===========================================
+
+/**
+ * Determina tag do jogador: manual > admin > autenticado > nenhuma
+ */
+function getPlayerTag(player) {
+  if (!player) return null;
+
+  // Verifica tag manual definida
+  try {
+    const { getPlayerTag: getManualTag } = require('../../shared/config/utils.cjs');
+    const manualTag = getManualTag(room, player.id);
+    if (manualTag) return manualTag;
+  } catch (e) {
+    // Silent
+  }
+
+  // Admin da sala
+  if (player.admin) return 'ADM';
+
+  // Jogador autenticado
+  if (authHandler && authHandler.isAuthenticated && authHandler.isAuthenticated(player.id)) {
+    try {
+      const account = authHandler.getAuthenticatedPlayer(player.id);
+      if (account && account.ranking) {
+        return account.ranking; // S1, A1, B2, etc
+      }
+    } catch (e) {
+      // Silent
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Formata nome com tag
+ */
+function formatChatName(player) {
+  if (!player) return '';
+  const tag = getPlayerTag(player);
+  if (tag) {
+    return `[${tag}] ${player.name}`;
+  }
+  return player.name;
+}
 
 // Handlers globais reutilizaveis
 const { handleGoal } = require('../../shared/handlers/goalHandlers.cjs');
-const { handleMatchStart, handleMatchEnd } = require('../../shared/handlers/matchHandlers.cjs');
+const {
+  handleMatchStart,
+  handleMatchEnd,
+  ensureStatsRegistration,
+  buildFallbackBasicStats,
+  autoAdjustMapForPlayerCount,
+  startGameIfReadyWithAfk,
+  startStatsCollector,
+  finalizeMatchStats,
+} = require('../../shared/handlers/matchHandlers.cjs');
 const { goalCelebration, assistCelebration } = require('../../shared/utils/celebrationUtils.cjs');
 
 const { getAuthDb } = require('../../dist/database/auth-client');
@@ -86,57 +151,11 @@ let gameState = {
 //===========================================
 
 function updateMapForPlayerCount() {
-  const playerList = room.getPlayerList().filter((p) => p.id !== 0);
-  const count = playerList.length;
-
-  let bucket;
-  let newMap;
-
-  // Sincronizado com getFutsalMap
-  if (count <= 2) {
-    bucket = 'tiny';
-    newMap = getFutsalMap(2); // 1x1 ou 2x2
-  } else if (count <= 6) {
-    bucket = 'small';
-    newMap = getFutsalMap(6); // 3x3 ou 4x4
-  } else if (count <= 12) {
-    bucket = 'mid';
-    newMap = getFutsalMap(12); // 5x5 ou 6x6
-  } else if (count <= 14) {
-    bucket = 'x7';
-    newMap = getFutsalMap(14); // 7x7
-  } else {
-    bucket = 'x8';
-    newMap = getFutsalMap(16); // 8x8+
-  }
-
-  if (gameState.mapBucket !== bucket) {
-    gameState.mapBucket = bucket;
-    gameState.currentMap = newMap;
-    room.setCustomStadium(newMap);
-    announce(room, `🗺️ Mapa ajustado para ${count} jogadores`);
-  }
+  autoAdjustMapForPlayerCount(room, gameState, getFutsalMap);
 }
 
 function autoBalanceTeams() {
   balanceTeams(room, false);
-}
-
-function ensureStatsRegistration(player) {
-  if (!statsCollector || !gameState.statsEnabled || !authHandler) return null;
-  const isAuth = authHandler.isAuthenticated(player.id);
-  if (!isAuth) return null;
-
-  const account = authHandler.getAuthenticatedPlayer(player.id);
-  if (!account || !account.id) return null;
-
-  const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
-  if (typeof statsCollector.hasPlayer === 'function' && statsCollector.hasPlayer(account.id)) {
-    return account.id;
-  }
-
-  statsCollector.registerPlayer(account.id, player.name, teamStr);
-  return account.id;
 }
 
 function balanceTeamsWithScore() {
@@ -144,48 +163,7 @@ function balanceTeamsWithScore() {
 }
 
 function startGameIfReady() {
-  const players = room.getPlayerList().filter((p) => p.id !== 0);
-  const redCount = players.filter((p) => p.team === 1).length;
-  const blueCount = players.filter((p) => p.team === 2).length;
-
-  // Precisa pelo menos 1 jogadores em cada time
-
-  // Verificacao global de AFK timeout (10 minutos)
-  var AFK_CHECK_INTERVAL = globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000;
-  globalThis.__CIRS_AFK_CHECK_INTERVAL = AFK_CHECK_INTERVAL;
-
-  // Precisa pelo menos 1 jogadores em cada time
-  if (redCount >= 1 && blueCount >= 1 && !gameState.started) {
-    announce(room, '⚽ Iniciando partida em 3 segundos...', null, 0xffaa00);
-    setTimeout(() => {
-      room.startGame();
-      gameState.started = true;
-      announce(room, '🎮 BOA SORTE A TODOS!', null, 0x00ff00);
-    }, 3000);
-  }
-
-  createNamedInterval(
-    room,
-    'afk_check',
-    () => {
-      for (const player of players) {
-        // Admins podem ficar AFK por tempo ilimitado
-        const isAdmin = player.admin || false;
-
-        if (isPlayerAFK(player.id) && isAFKTimeout(player.id, isAdmin)) {
-          announce(
-            room,
-            `${player.name} foi kickado por ficar AFK por mais de 10 minutos`,
-            null,
-            0xff0000
-          );
-          removeAFKPlayer(player.id);
-          room.kickPlayer(player.id, 'AFK timeout (10 minutos)', false);
-        }
-      }
-    },
-    globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000
-  );
+  startGameIfReadyWithAfk(room, gameState, { isPlayerAFK, isAFKTimeout, removeAFKPlayer });
 }
 
 // Anuncios periodicos da comunidade (a cada 5 minutos)
@@ -197,13 +175,6 @@ startCommunityAnnouncements(room, globalThis.__CIRS_ANNOUNCEMENT_INTERVAL || 5 *
 
 // Lembretes de registro/login a cada 3 minutos
 startRegistrationReminders(room, authHandler, 3 * 60 * 1000, getAuthDb);
-
-// No onPlayerChat, ja processa automaticamente !discord e !dc
-room.onPlayerChat = function (player, message) {
-  const handled = processCommand(room, player, message);
-  if (handled) return false;
-  return true;
-};
 
 room.onPlayerJoin = function (player) {
   announce(room, `${player.name} entrou na sala!`, null, 0x00ff00);
@@ -292,10 +263,13 @@ room.onPlayerChat = function (player, message) {
   const commandHandled = processCommand(room, player, message);
   if (commandHandled) return false;
 
-  const msg = message.trim().toLowerCase();
+  const msg = message.trim();
+  if (!msg) return false;
 
-  // Comandos especificos da sala
-  if (msg === '!swap') {
+  const lower = msg.toLowerCase();
+
+  // Comando especifico da sala
+  if (lower === '!swap') {
     const p = room.getPlayer(player.id);
     if (p) {
       if (p.team === 1) {
@@ -309,7 +283,11 @@ room.onPlayerChat = function (player, message) {
     return false;
   }
 
-  return true;
+  // Formata e envia chat com tag
+  const formattedName = formatChatName(player);
+  room.sendChat(`${formattedName}: ${msg}`);
+  console.log(`[Chat] ${formattedName}: ${msg}`);
+  return true; // Bloqueia mensagem padrao
 };
 
 room.onPlayerBallKick = function (player) {
@@ -334,7 +312,13 @@ room.onPlayerBallKick = function (player) {
   // Rastreia toque na bola para stats
   if (statsCollector && gameState.statsEnabled) {
     try {
-      const accountId = ensureStatsRegistration(player);
+      const accountId = ensureStatsRegistration(
+        room,
+        statsCollector,
+        authHandler,
+        gameState,
+        player
+      );
       if (accountId) {
         statsCollector.trackTouch(accountId, Date.now());
       }
@@ -365,7 +349,9 @@ room.onTeamGoal = function (team) {
       ) {
         try {
           const scorerPlayer = room.getPlayer(goalInfo.scorer.id);
-          const accountId = scorerPlayer ? ensureStatsRegistration(scorerPlayer) : null;
+          const accountId = scorerPlayer
+            ? ensureStatsRegistration(room, statsCollector, authHandler, gameState, scorerPlayer)
+            : null;
           if (accountId) {
             statsCollector.trackGoal(accountId, Date.now(), false);
             console.log(`[STATS] Gol rastreado para accountId ${accountId}`);
@@ -387,49 +373,16 @@ room.onTeamGoal = function (team) {
 };
 
 room.onGameStart = function (byPlayer) {
-  // Usa handler global para logica de inicio
   handleMatchStart(room, gameState);
-
-  // Inicializa coleta de estatisticas (logica especifica da sala)
   if (StatsCollector && !statsCollector) {
-    try {
-      gameState.matchId = Date.now(); // ID unico baseado em timestamp
-      statsCollector = new StatsCollector(gameState.matchId, true); // true = advanced stats
-      gameState.statsEnabled = true;
-
-      // Registra jogadores autenticados na partida
-      const players = room.getPlayerList().filter((p) => p.id !== 0 && p.team !== 0);
-      let authenticatedCount = 0;
-      
-      for (const player of players) {
-        if (authHandler && authHandler.isAuthenticated(player.id)) {
-          const account = authHandler.getAuthenticatedPlayer(player.id);
-          if (account && account.id) {
-            const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
-            statsCollector.registerPlayer(account.id, player.name, teamStr);
-            authenticatedCount++;
-            console.log(
-              `[STATS] Jogador ${player.name} (accountId ${account.id}) registrado no time ${teamStr}`
-            );
-          }
-        } else {
-          // Lembra jogador nao autenticado que precisa fazer login para ter stats
-          whisper(
-            room,
-            '⚠️ Use !login <senha> para suas stats serem contabilizadas',
-            player.id,
-            0xffaa00,
-            'small',
-            1
-          );
-        }
-      }
-
-      console.log(`[STATS] Coleta iniciada para matchId ${gameState.matchId} (${authenticatedCount}/${players.length} jogadores autenticados)`);
-    } catch (error) {
-      console.error('[STATS] Erro ao inicializar statsCollector:', error.message);
-      gameState.statsEnabled = false;
-    }
+    const { statsCollector: sc } = startStatsCollector(
+      room,
+      gameState,
+      { StatsCollector },
+      authHandler,
+      whisper
+    );
+    statsCollector = sc || statsCollector;
   }
 };
 
@@ -464,129 +417,19 @@ room.onTeamVictory = async function (scores) {
   const score = `${scores.red} x ${scores.blue}`;
   const winningTeam = scores.red > scores.blue ? 'red' : 'blue';
 
-  // Salva estatisticas da partida
+  // Salva estatisticas da partida (agora via helper compartilhado)
   if (statsCollector && gameState.statsEnabled && statsService) {
-    try {
-      statsCollector.endMatch(winningTeam);
-
-      const summary = statsCollector.getSummary();
-      console.log(`[STATS] Partida finalizada. ${summary.basicStats.length} jogadores rastreados.`);
-
-      // Fallback: se nenhum jogador foi rastreado, gera stats minimas para autenticados
-      if (summary.basicStats.length === 0) {
-        const db = typeof getAuthDb === 'function' ? getAuthDb() : null;
-        const fallbackPlayers = room.getPlayerList().filter((p) => p.id !== 0 && p.team !== 0);
-
-        for (const player of fallbackPlayers) {
-          const account =
-            authHandler && authHandler.isAuthenticated(player.id)
-              ? authHandler.getAuthenticatedPlayer(player.id)
-              : null;
-          const accountFromNick =
-            db && typeof db.getAccountByNick === 'function'
-              ? db.getAccountByNick(player.name)
-              : null;
-          const accountId =
-            account && account.id ? account.id : accountFromNick && accountFromNick.id;
-          if (!accountId) continue;
-
-          summary.basicStats.push({
-            accountId,
-            matchId: gameState.matchId,
-            goals: 0,
-            assists: 0,
-            saves: 0,
-            ownGoals: 0,
-            touches: 0,
-            timeInGame: 0,
-            team: player.team === 1 ? 'red' : 'blue',
-            won: (player.team === 1 ? 'red' : 'blue') === winningTeam,
-          });
-        }
-      }
-
-      // Salva stats basicas de cada jogador
-      console.log('[DEBUG] Resumo basicStats antes de salvar:', summary.basicStats);
-      const savedAccountIds = new Set();
-      for (const basicStats of summary.basicStats) {
-        savedAccountIds.add(basicStats.accountId);
-        statsService.saveBasicStats(basicStats).catch((err) => {
-          console.error(
-            `[STATS] Erro ao salvar stats basicas do accountId ${basicStats.accountId}:`,
-            err.message
-          );
-        });
-      }
-
-      // Salva stats avancadas se disponiveis
-      if (summary.advancedStats && summary.advancedStats.length > 0) {
-        for (const advStats of summary.advancedStats) {
-          statsService.saveAdvancedStats(advStats).catch((err) => {
-            console.error(
-              `[STATS] Erro ao salvar stats avancadas do accountId ${advStats.accountId}:`,
-              err.message
-            );
-          });
-        }
-      }
-
-      // Persiste eventos da partida (gols, saves, etc)
-      if (summary.events && summary.events.length > 0) {
-        for (const event of summary.events) {
-          statsService.saveEvent(event).catch((err) => {
-            console.error('[STATS] Erro ao salvar evento de partida:', err.message);
-          });
-        }
-      }
-
-      announce(
-        room,
-        `📊 Estatisticas salvas para ${summary.basicStats.length} jogadores`,
-        null,
-        0x00ff00
-      );
-
-      // Atualiza agregados dos jogadores (recalcula stats globais por jogador) e aguarda concluicao
-      try {
-        const accountIdsToUpdate = Array.from(savedAccountIds);
-        if (accountIdsToUpdate.length > 0) {
-          console.log('[DEBUG] Atualizando agregados para accountIds:', accountIdsToUpdate);
-          await Promise.all(
-            accountIdsToUpdate.map((accId) =>
-              statsService.updatePlayerAggregate(accId).catch((err) => {
-                console.error(
-                  '[STATS] Erro ao atualizar agregado do accountId ' + accId + ':',
-                  err.message
-                );
-              })
-            )
-          );
-          console.log('[DEBUG] Agregados atualizados com sucesso');
-        }
-
-        // Aplica Elo apos os agregados atualizarem para garantir consistencia de leitura
-        if (typeof statsService.applyEloFromMatch === 'function') {
-          await statsService.applyEloFromMatch(summary.basicStats, winningTeam).catch((err) => {
-            console.error('[STATS] Erro ao atualizar ranking Elo:', err.message);
-          });
-        }
-
-        announce(
-          room,
-          `📊 Estatisticas salvas para ${summary.basicStats.length} jogadores`,
-          null,
-          0x00ff00
-        );
-      } catch (err) {
-        console.error('[STATS] Erro no processo de atualizacao de agregados:', err.message);
-      }
-
-      // Reseta collector para proxima partida
-      statsCollector = null;
-      gameState.statsEnabled = false;
-    } catch (error) {
-      console.error('[STATS] Erro ao finalizar/salvar estatisticas:', error.message);
-    }
+    await finalizeMatchStats(
+      room,
+      gameState,
+      winningTeam,
+      statsCollector,
+      statsService,
+      authHandler,
+      getAuthDb
+    );
+    statsCollector = null;
+    gameState.statsEnabled = false;
   }
 
   // Mensagem padrao de vitoria

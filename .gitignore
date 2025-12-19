@@ -52,6 +52,9 @@ Thumbs.db
 # Optional eslint cache
 .eslintcache
 
+*.md
+.md
+
 #    __  ____ ____ _  _ 
 #  / _\/ ___) ___) )( \
 # /    \___ \___ ) \/ (
