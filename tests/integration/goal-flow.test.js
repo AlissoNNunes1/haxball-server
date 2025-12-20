@@ -17,6 +17,9 @@ describe('Goal Flow Integration', () => {
   let avatarChanges;
 
   beforeEach(() => {
+    // Usar fake timers para controlar setTimeout
+    jest.useFakeTimers();
+
     announcements = [];
     avatarChanges = [];
 
@@ -27,6 +30,15 @@ describe('Goal Flow Integration', () => {
       }),
       setPlayerAvatar: jest.fn((playerId, avatar) => {
         avatarChanges.push({ playerId, avatar });
+      }),
+      getPlayer: jest.fn((playerId) => {
+        const players = [
+          { id: 1, name: 'Player1', team: 1 },
+          { id: 2, name: 'Player2', team: 1 },
+          { id: 3, name: 'Player3', team: 2 },
+          { id: 4, name: 'Player4', team: 2 },
+        ];
+        return players.find((p) => p.id === playerId) || null;
       }),
       getPlayerList: jest.fn(() => [
         { id: 1, name: 'Player1', team: 1 },
@@ -39,30 +51,41 @@ describe('Goal Flow Integration', () => {
 
     // Estado do jogo mockado
     gameState = {
-      lastTouchTeam: 1,
-      lastPlayersTouched: [
-        { player: { id: 1, name: 'Player1', team: 1 }, time: 180 },
-        { player: { id: 2, name: 'Player2', team: 1 }, time: 178 },
-      ],
+      lastKickerId: 1,
+      lastKickerName: 'Player1',
+      lastKickerTeam: 1,
+      secondLastKickerId: 2,
+      secondLastKickerName: 'Player2',
+      secondLastKickerTeam: 1,
     };
+  });
+
+  afterEach(() => {
+    // Restaurar timers reais
+    jest.useRealTimers();
+  });
+
+  afterEach(() => {
+    // Restaurar timers reais
+    jest.useRealTimers();
   });
 
   describe('Fluxo de Gol Normal com Assistencia', () => {
     test('deve processar gol completo com celebracoes', async () => {
-      const callbacks = {
-        onScorerCelebration: jest.fn((room, scorer) => {
-          avatarCelebration(room, scorer, { duration: 500 });
-        }),
-        onAssisterCelebration: jest.fn((room, assister) => {
-          assistCelebration(room, assister, { duration: 300 });
-        }),
-      };
+      const onGoalCallback = jest.fn((room, goalInfo) => {
+        // Simula celebracoes
+        if (goalInfo.scorer) {
+          avatarCelebration(room, goalInfo.scorer, { duration: 500 });
+        }
+        if (goalInfo.assister) {
+          assistCelebration(room, goalInfo.assister, { duration: 300 });
+        }
+      });
 
-      handleGoal(room, 1, gameState, {}, callbacks);
+      handleGoal(room, 1, gameState, { onGoal: onGoalCallback });
 
-      // Verifica se callbacks foram chamados
-      expect(callbacks.onScorerCelebration).toHaveBeenCalled();
-      expect(callbacks.onAssisterCelebration).toHaveBeenCalled();
+      // Verifica se callback foi chamado
+      expect(onGoalCallback).toHaveBeenCalled();
 
       // Verifica anuncios de gol
       const goalAnnouncements = announcements.filter((a) => a.msg.includes('GOL'));
@@ -82,7 +105,9 @@ describe('Goal Flow Integration', () => {
     });
 
     test('deve processar gol sem assistencia', () => {
-      gameState.lastPlayersTouched = [{ player: { id: 1, name: 'Player1', team: 1 }, time: 180 }];
+      gameState.secondLastKickerId = undefined;
+      gameState.secondLastKickerName = undefined;
+      gameState.secondLastKickerTeam = undefined;
 
       handleGoal(room, 1, gameState);
 
@@ -102,8 +127,12 @@ describe('Goal Flow Integration', () => {
 
   describe('Fluxo de Gol Contra', () => {
     test('deve detectar e processar gol contra', () => {
-      // Time 1 marcou contra si mesmo (gol para time 2)
-      gameState.lastTouchTeam = 1;
+      // Jogador do time 1 chuta no proprio gol (time 2 marca)
+      gameState = {
+        lastKickerId: 1,
+        lastKickerName: 'Player1',
+        lastKickerTeam: 1,
+      };
 
       handleGoal(room, 2, gameState);
 
@@ -119,13 +148,20 @@ describe('Goal Flow Integration', () => {
     });
 
     test('deve usar mensagens customizadas para gol contra', () => {
-      gameState.lastTouchTeam = 1;
-
-      const customMessages = {
-        ownGoal: 'Esses bagres estao evoluindo...',
+      gameState = {
+        lastKickerId: 1,
+        lastKickerName: 'Player1',
+        lastKickerTeam: 1,
       };
 
-      handleGoal(room, 2, gameState, customMessages);
+      const customMessages = {
+        ownGoal: {
+          red: 'Esses bagres estao evoluindo...',
+          blue: 'Esses bagres estao evoluindo...',
+        },
+      };
+
+      handleGoal(room, 2, gameState, { customMessages });
 
       const customMentions = announcements.filter((a) => a.msg.includes('bagres'));
       expect(customMentions.length).toBeGreaterThan(0);
@@ -133,18 +169,25 @@ describe('Goal Flow Integration', () => {
   });
 
   describe('Celebracoes de Gol', () => {
-    test('deve executar celebracao de time', async () => {
-      await goalCelebration(room, 1, { duration: 300 });
+    test('deve executar celebracao de time', () => {
+      goalCelebration(room, 1, { duration: 300 });
+
+      // Avanca timers para executar setTimeout
+      jest.runAllTimers();
 
       // Verifica mudancas de avatar do time vermelho (team 1)
       const team1Changes = avatarChanges.filter((c) => c.playerId === 1 || c.playerId === 2);
       expect(team1Changes.length).toBeGreaterThan(0);
     });
 
-    test('deve executar celebracao de assister', async () => {
+    test('deve executar celebracao de assister', () => {
       const assister = { id: 2, name: 'Player2', team: 1 };
 
-      await assistCelebration(room, assister, { duration: 200 });
+      // assistCelebration espera apenas o playerId, nao o objeto completo
+      assistCelebration(room, assister.id, { duration: 200 });
+
+      // Avanca timers para executar setTimeout
+      jest.runAllTimers();
 
       // Verifica mudancas de avatar do assister
       const assisterChanges = avatarChanges.filter((c) => c.playerId === 2);
@@ -155,11 +198,14 @@ describe('Goal Flow Integration', () => {
   describe('Integracao com Mensagens Customizadas', () => {
     test('deve permitir sobrescrever mensagens padrao', () => {
       const customMessages = {
-        goal: '⚽⚽⚽ GOOOOOLAÇO!!! ⚽⚽⚽',
+        goal: {
+          red: '⚽⚽⚽ GOOOOOLAÇO!!! ⚽⚽⚽',
+          blue: '⚽⚽⚽ GOOOOOLAÇO!!! ⚽⚽⚽',
+        },
         assist: 'Assistencia linda de: {player}',
       };
 
-      handleGoal(room, 1, gameState, customMessages);
+      handleGoal(room, 1, gameState, { customMessages });
 
       const customGoalMsg = announcements.find((a) => a.msg.includes('GOOOOOLAÇO'));
       expect(customGoalMsg).toBeDefined();
@@ -197,18 +243,35 @@ describe('Goal Flow Integration', () => {
   describe('Multiplos Gols em Sequencia', () => {
     test('deve processar multiplos gols corretamente', () => {
       // Primeiro gol
+      gameState = {
+        lastKickerId: 1,
+        lastKickerName: 'Player1',
+        lastKickerTeam: 1,
+        secondLastKickerId: 2,
+        secondLastKickerName: 'Player2',
+        secondLastKickerTeam: 1,
+      };
       handleGoal(room, 1, gameState);
       const firstGoalCount = announcements.length;
 
       // Limpa anuncios
       announcements.length = 0;
 
-      // Segundo gol
+      // Segundo gol (sem scorer para testar variacao)
+      gameState = {
+        lastKickerId: undefined,
+        lastKickerName: undefined,
+        lastKickerTeam: undefined,
+        secondLastKickerId: undefined,
+        secondLastKickerName: undefined,
+        secondLastKickerTeam: undefined,
+      };
       room.getScores = jest.fn(() => ({ red: 2, blue: 0, time: 200, timeLimit: 300 }));
       handleGoal(room, 1, gameState);
 
       expect(announcements.length).toBeGreaterThan(0);
-      expect(announcements.length).toBeCloseTo(firstGoalCount, 2);
+      // Sem scorer, menos anuncios (sem nome de jogador)
+      expect(announcements.length).toBeLessThan(firstGoalCount);
     });
 
     test('deve processar gols de times diferentes', () => {
@@ -219,8 +282,14 @@ describe('Goal Flow Integration', () => {
       announcements.length = 0;
 
       // Gol time 2
-      gameState.lastTouchTeam = 2;
-      gameState.lastPlayersTouched = [{ player: { id: 3, name: 'Player3', team: 2 }, time: 180 }];
+      gameState = {
+        lastKickerId: 3,
+        lastKickerName: 'Player3',
+        lastKickerTeam: 2,
+        secondLastKickerId: undefined,
+        secondLastKickerName: undefined,
+        secondLastKickerTeam: undefined,
+      };
       room.getScores = jest.fn(() => ({ red: 1, blue: 1, time: 190, timeLimit: 300 }));
 
       handleGoal(room, 2, gameState);

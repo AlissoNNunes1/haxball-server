@@ -31,23 +31,52 @@ function sleep(time) {
 function avatarCelebration(room, playerId, avatar, options = {}) {
   const { duration = 3250, interval = 250 } = options;
 
+  // Valida parametros basicos
+  if (!room || !room.setPlayerAvatar) {
+    console.error('[CELEBRATION] Room invalida ou sem setPlayerAvatar');
+    return;
+  }
+
+  if (playerId === undefined || playerId === null) {
+    console.error('[CELEBRATION] playerId invalido:', playerId);
+    return;
+  }
+
+  // Verifica se jogador existe (apenas se getPlayer estiver disponivel)
+  if (room.getPlayer) {
+    const player = room.getPlayer(playerId);
+    if (!player) {
+      console.error('[CELEBRATION] Jogador nao encontrado:', playerId);
+      return;
+    }
+  }
+
   // Calcula numero de piscadas baseado na duracao e intervalo
   const blinks = Math.floor(duration / interval);
 
-  // Cria sequencia de piscadas
+  // Cria sequencia de piscadas usando setTimeout nativo
   for (let i = 0; i < blinks; i++) {
     const delay = i * interval;
     const showAvatar = i % 2 === 0; // Alterna entre mostrar e esconder
 
-    sleep(delay).then(() => {
+    setTimeout(() => {
+      // Verifica novamente se jogador ainda existe (se metodo disponivel)
+      if (room.getPlayer) {
+        const currentPlayer = room.getPlayer(playerId);
+        if (!currentPlayer) return;
+      }
       room.setPlayerAvatar(playerId, showAvatar ? avatar : null);
-    });
+    }, delay);
   }
 
   // Garante que avatar final esta visivel
-  sleep(duration).then(() => {
+  setTimeout(() => {
+    if (room.getPlayer) {
+      const currentPlayer = room.getPlayer(playerId);
+      if (!currentPlayer) return;
+    }
     room.setPlayerAvatar(playerId, avatar);
-  });
+  }, duration);
 }
 
 /**

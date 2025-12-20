@@ -45,7 +45,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Server = void 0;
 // Import haxball.js lazily to avoid creating network handles during test import
 let HaxballJS = null;
-const module_1 = require("module");
 const path_1 = __importDefault(require("path"));
 const log_1 = require("./utils/log");
 const Logger_1 = require("./utils/Logger");
@@ -65,6 +64,7 @@ class Server {
     proxyServers;
     db = null;
     // Rastreia tokens em uso para evitar "Can't init twice"
+    tokensInUse = new Map();
     tokenInitTimes = new Map();
     // Mutex por token para serializar inicializacao do mesmo token
     tokenLocks = new Map();
@@ -202,17 +202,21 @@ class Server {
         if (tokenArray.length === 0) {
             throw new Error('Nenhum token fornecido');
         }
-        if (tokenArray.length === 1) {
-            return tokenArray[0];
+        const availableTokens = tokenArray.filter((t) => !this.tokensInUse.has(t));
+        if (availableTokens.length === 0) {
+            throw new Error('Todos os tokens fornecidos estao em uso; forneca um token diferente para abrir outra sala');
+        }
+        if (availableTokens.length === 1) {
+            return availableTokens[0];
         }
         // Encontrar token que nunca foi usado
-        for (const token of tokenArray) {
+        for (const token of availableTokens) {
             if (!this.tokenInitTimes.has(token)) {
                 return token;
             }
         }
         // Se todos foram usados, encontrar o que esta fora do cooldown
-        for (const token of tokenArray) {
+        for (const token of availableTokens) {
             const lastInitTime = this.tokenInitTimes.get(token);
             if (lastInitTime) {
                 const elapsed = Date.now() - lastInitTime;
@@ -222,9 +226,9 @@ class Server {
             }
         }
         // Se todos estao em cooldown, retornar o que foi usado ha mais tempo
-        let oldestToken = tokenArray[0];
+        let oldestToken = availableTokens[0];
         let oldestTime = this.tokenInitTimes.get(oldestToken) ?? Infinity;
-        for (const token of tokenArray.slice(1)) {
+        for (const token of availableTokens.slice(1)) {
             const time = this.tokenInitTimes.get(token) ?? Infinity;
             if (time < oldestTime) {
                 oldestTime = time;
@@ -581,14 +585,15 @@ class Server {
                 : undefined;
             // Se temos um caminho de script, tentar usar require diretamente
             if (scriptPath) {
-                const scriptDir = path_1.default.dirname(scriptPath);
-                let requireFn;
                 try {
-                    // Criar um require funcao para o diretorio do script
-                    requireFn = (0, module_1.createRequire)(path_1.default.join(scriptDir, '__placeholder__.js'));
+                    // Resolver caminho absoluto do script
+                    const absoluteScriptPath = path_1.default.isAbsolute(scriptPath)
+                        ? scriptPath
+                        : path_1.default.resolve(process.cwd(), scriptPath);
+                    (0, log_1.log)('SERVER', `Carregando script: ${absoluteScriptPath}`);
                     // Limpar cache se existir
-                    if (require.cache[scriptPath]) {
-                        delete require.cache[scriptPath];
+                    if (require.cache[absoluteScriptPath]) {
+                        delete require.cache[absoluteScriptPath];
                     }
                     // Injetar contexto global antes de carregar
                     globalThis.room = room;
@@ -596,35 +601,31 @@ class Server {
                     globalThis.db = safeDb;
                     globalThis.HBInit = (_config) => room;
                     // Executar o script com require nativo
-                    requireFn(scriptPath);
-                    (0, log_1.log)('SERVER', `Bot script carregado com sucesso: ${path_1.default.basename(scriptPath)}`);
+                    try {
+                        require(absoluteScriptPath);
+                        (0, log_1.log)('SERVER', `Bot script carregado com sucesso: ${path_1.default.basename(absoluteScriptPath)}`);
+                    }
+                    catch (innerError) {
+                        // Capturar stack trace completo para debugging
+                        if (innerError instanceof Error && innerError.stack) {
+                            (0, log_1.log)('SERVER', `Stack trace completo: ${innerError.stack}`);
+                        }
+                        throw innerError;
+                    }
                 }
                 catch (requireError) {
-                    (0, log_1.log)('SERVER', `Erro ao carregar via require, usando eval: ${requireError instanceof Error ? requireError.message : String(requireError)}`);
-                    // Injetar globais para eval
-                    globalThis.room = room;
-                    globalThis.customSettings = settings || {};
-                    globalThis.db = safeDb;
-                    globalThis.HBInit = (_config) => room;
-                    // Definir require especifico do diretorio do script para que require() resolva corretamente
-                    let localRequire;
-                    if (typeof requireFn !== 'undefined') {
-                        localRequire = requireFn;
-                    }
-                    try {
-                        if (localRequire) {
-                            const wrappedScript = `(function(require, module, exports){\n${script}\n})(localRequire, module, exports)`;
-                            // Avaliar com require local
-                            eval(wrappedScript);
-                        }
-                        else {
-                            eval(script);
-                        }
-                        (0, log_1.log)('SERVER', 'Bot script carregado com eval como fallback');
-                    }
-                    finally {
-                        // Nao ha mais injecoes de require global
-                    }
+                    (0, log_1.log)('SERVER', `Erro ao carregar script: ${requireError instanceof Error ? requireError.message : String(requireError)}`);
+                    // Se require falhou, lancar o erro original ao inves de tentar eval
+                    // eval nao consegue resolver requires de modulos externos
+                    const errorDetails = requireError instanceof Error ? requireError.message : String(requireError);
+                    throw new Error(`Falha ao carregar script via require: ${errorDetails}. Script precisa ser um modulo CJS valido.`);
+                }
+                finally {
+                    // Limpar injecoes globais
+                    delete globalThis.room;
+                    delete globalThis.customSettings;
+                    delete globalThis.db;
+                    delete globalThis.HBInit;
                 }
             }
             else {

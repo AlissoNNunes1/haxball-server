@@ -95,7 +95,44 @@ room.onPlayerChat = function (player, message) {
 [PM] [VIP] Bagre: oi mano                 (para destinatario)
 ```
 
-#### Usar Tudo de Uma Vez
+#### Chat Unificado com Processamento de Comandos (`handlePlayerChat`)
+
+**NOVO HANDLER (2025-12-20):** Use `handlePlayerChat` para processar chat com comandos, formatacao e validacoes de forma centralizada.
+
+```javascript
+const {
+  handlePlayerChat,
+  createSwapCommand,
+  setAuthHandler,
+} = require('../../shared/handlers/chatHandlers.cjs');
+
+// Setup
+setAuthHandler(authHandler);
+
+room.onPlayerChat = (player, message) => {
+  return handlePlayerChat(room, player, message, {
+    processGlobalCommand: (room, player, message) => processCommand(room, player, message),
+    customCommands: {
+      ...createSwapCommand(), // !swap ja incluido
+      hello: (room, player, args) => room.sendChat(`Ola ${player.name}!`),
+    },
+    tag: '[STADIUM]', // Prefixo para formatar mensagens
+  });
+};
+```
+
+**Beneficios:**
+
+- ✅ Processa comandos globais (autenticacao, etc)
+- ✅ Processa !swap automaticamente
+- ✅ Formata: `[STADIUM] Nome: mensagem`
+- ✅ Cancela original + envia formatada via sendChat
+- ✅ Suporta validacoes customizadas (sala mutada, etc)
+- ✅ 90% menos codigo duplicado entre salas
+
+**Veja `CHAT_HANDLER.md` para documentacao completa e exemplos avancados.**
+
+#### Usar Tudo de Uma Vez (Simples)
 
 ```javascript
 room.onPlayerChat = function (player, message) {
@@ -300,7 +337,96 @@ console.log(normalized); // "Lukra Fifa Pro"
 
 ---
 
-## 🔧 Integracao com commands.cjs
+## � Stats Registration (`ensureStatsRegistration`)
+
+#### O Problema
+
+Rastrear stats de um jogador requer multiplas validacoes:
+
+1. Existe statsCollector?
+2. Stats estao habilitadas para essa partida?
+3. Jogador esta autenticado?
+4. Conta foi recuperada com sucesso?
+5. Jogador ja esta registrado ou precisa registrar?
+
+Fazer isso manualmente em **trackGoal**, **trackTouch**, **trackSave** causa:
+
+- ❌ Codigo duplicado
+- ❌ Risco de esquecer uma validacao
+- ❌ Inconsistencia entre rastreamento de gol e toque
+
+#### A Solucao
+
+Usar `ensureStatsRegistration` antes de qualquer rastreamento:
+
+```javascript
+const { ensureStatsRegistration } = require('../../shared/handlers/matchHandlers.cjs');
+
+// Rastrear gol
+room.onTeamGoal = function (team) {
+  handleGoal(room, team, gameState, {
+    onGoal: (room, goalInfo) => {
+      if (!statsCollector || !gameState.statsEnabled) return;
+
+      const scorerPlayer = room.getPlayer(goalInfo.scorer.id);
+      if (!scorerPlayer) return;
+
+      // PADRAO: Registrar antes de trackGoal
+      const accountId = ensureStatsRegistration(
+        room,
+        statsCollector,
+        authHandler,
+        gameState,
+        scorerPlayer
+      );
+
+      if (accountId) {
+        statsCollector.trackGoal(accountId, Date.now(), false);
+        console.log(`[STATS] Gol rastreado para ${scorerPlayer.name}`);
+      }
+    },
+  });
+};
+```
+
+```javascript
+// Rastrear toque na bola
+room.onPlayerBallKick = function (player) {
+  if (statsCollector && gameState.statsEnabled) {
+    // PADRAO: Registrar antes de trackTouch
+    const accountId = ensureStatsRegistration(room, statsCollector, authHandler, gameState, player);
+
+    if (accountId) {
+      statsCollector.trackTouch(accountId, Date.now());
+    }
+  }
+};
+```
+
+#### Como Funciona
+
+```
+Validacoes em Ordem (Fail-Fast):
+├─ Parametros nao-nulos?          → null se falhar
+├─ statsEnabled = true?            → null se falhar
+├─ Jogador autenticado?            → null se falhar
+├─ Conta recuperada (account.id)?  → null se falhar
+├─ Ja registrado?                  → return accountId
+└─ Nao registrado:
+   └─ statsCollector.registerPlayer()
+      └─ return accountId
+```
+
+#### Retorno
+
+| Retorno              | Significado                       | Acao                          |
+| -------------------- | --------------------------------- | ----------------------------- |
+| `string` (accountId) | Jogador registrado, pode rastrear | Use trackGoal/trackTouch      |
+| `null`               | Falhou em alguma validacao        | Nao rastreia (seguro ignorar) |
+
+---
+
+## �🔧 Integracao com commands.cjs
 
 O arquivo `shared/config/commands.cjs` ja esta integrado com os chat handlers. Voce nao precisa fazer nada adicional para usar team chat e PM globalmente:
 

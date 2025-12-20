@@ -155,6 +155,37 @@ export async function registerSlashCommands(token: string, clientId: string, gui
       ),
 
     new SlashCommandBuilder()
+      .setName('amistoso')
+      .setDescription('Abrir sala de amistoso (qualquer usuario)')
+      .addStringOption((option) =>
+        option
+          .setName('tipo')
+          .setDescription('Tipo de partida')
+          .setRequired(true)
+          .addChoices(
+            { name: 'futsal', value: 'futsal' },
+            { name: 'real-soccer', value: 'real-soccer' }
+          )
+      )
+      .addStringOption((option) =>
+        option
+          .setName('tamanho')
+          .setDescription('Tamanho do jogo')
+          .setRequired(true)
+          .addChoices(
+            { name: '5v5', value: '5' },
+            { name: '6v6', value: '6' },
+            { name: '7v7', value: '7' }
+          )
+      )
+      .addStringOption((option) =>
+        option
+          .setName('token')
+          .setDescription('Token do Haxball (deixe em branco para usar em cache)')
+          .setRequired(false)
+      ),
+
+    new SlashCommandBuilder()
       .setName('authhelp')
       .setDescription('Ajuda sobre sistema de autenticacao'),
   ].map((command) => command.toJSON());

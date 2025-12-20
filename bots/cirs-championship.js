@@ -107,7 +107,7 @@ require('../shared/handlers/matchHandlers.cjs');
 
 // Inicializa coleta ao comecar partida
 const originalGameStart = room.onGameStart;
-room.onGameStart = function() {
+room.onGameStart = function () {
   if (originalGameStart) originalGameStart();
 
   // Inicia StatsCollector se disponivel
@@ -141,7 +141,7 @@ room.onGameStart = function() {
 
 // Finaliza coleta ao terminar partida
 const originalGameStop = room.onGameStop;
-room.onGameStop = function(byServer) {
+room.onGameStop = function (byServer) {
   if (originalGameStop) originalGameStop(byServer);
 
   if (gameState.statsEnabled && statsCollector && statsService) {

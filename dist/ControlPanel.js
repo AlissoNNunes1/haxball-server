@@ -49,6 +49,8 @@ const Bot_1 = require("./Bot");
 const AuthCommands_1 = require("./auth/AuthCommands");
 const registerSlashCommands_1 = require("./commands/registerSlashCommands");
 const RoomMonitor_1 = require("./debugging/RoomMonitor");
+const TokenManager_1 = require("./utils/TokenManager");
+const RoleManager_1 = require("./utils/RoleManager");
 const championship_1 = require("./utils/championship");
 const loadConfig_1 = require("./utils/loadConfig");
 const log_1 = require("./utils/log");
@@ -59,6 +61,7 @@ class ControlPanel {
     prefix;
     token;
     mastersDiscordId = [];
+    moderatorIds = [];
     adminChannelId;
     generalChannelId;
     guildId;
@@ -71,6 +74,8 @@ class ControlPanel {
     esmRoomsCache = [];
     panelConfig;
     authCommands;
+    tokenManager;
+    roleManager;
     constructor(server, config, fileName) {
         this.server = server;
         this.fileName = fileName;
@@ -78,10 +83,19 @@ class ControlPanel {
         this.prefix = config.discordPrefix;
         this.token = config.discordToken;
         this.mastersDiscordId = config.mastersDiscordId ?? [];
+        this.moderatorIds = config.moderatorIds ?? [];
         this.adminChannelId = config.adminChannelId;
         this.generalChannelId = config.generalChannelId;
         this.guildId = config.guildId;
         this.maxRooms = config.maxRooms;
+        // Inicializa gerenciadores
+        this.tokenManager = new TokenManager_1.TokenManager();
+        this.tokenManager.startPeriodicCleanup();
+        this.roleManager = new RoleManager_1.RoleManager();
+        for (const masterId of this.mastersDiscordId) {
+            this.roleManager.setUserRole(masterId, 'master');
+        }
+        this.roleManager.setModerators(this.moderatorIds);
         this.mem = node_os_utils_1.default.mem;
         this.cpu = node_os_utils_1.default.cpu;
         this.client = new Discord.Client({
@@ -260,22 +274,44 @@ class ControlPanel {
     async handleSlashCommand(interaction) {
         const commandName = interaction.commandName;
         // Comandos de autenticacao (sem necessidade de master check)
-        if (['register', 'linkdiscord', 'profile', 'ranking', 'top', 'authhelp'].includes(commandName)) {
-            // Verifica canal geral se configurado
-            if (this.generalChannelId && interaction.channelId !== this.generalChannelId) {
+        if (['register', 'linkdiscord', 'profile', 'ranking', 'top', 'authhelp', 'amistoso'].includes(commandName)) {
+            // Verifica canal geral se configurado (amistoso pode ser em geral)
+            if (commandName === 'amistoso') {
+                // Amistoso pode ser em qualquer canal
+                await this.handleAmistosoSlash(interaction);
+            }
+            else if (this.generalChannelId && interaction.channelId !== this.generalChannelId) {
                 await interaction.reply({
                     content: `Comandos de autenticacao devem ser usados no canal <#${this.generalChannelId}>.`,
                     flags: discord_js_1.MessageFlags.Ephemeral,
                 });
                 return;
             }
-            await this.authCommands.handleInteraction(interaction);
+            else {
+                await this.authCommands.handleInteraction(interaction);
+            }
             return;
         }
-        // Verifica permissao master para comandos admin
-        if (!this.mastersDiscordId.includes(interaction.user.id)) {
+        // Verifica permissao baseada em roles
+        const userRole = this.roleManager.getUserRole(interaction.user.id);
+        // Mapeamento de comandos para permissoes necessarias
+        const commandPermissions = {
+            open: 'canOpenRooms',
+            close: 'canCloseRooms',
+            reload: 'canReload',
+            exit: 'canExit',
+            championship: 'canManageChampionship',
+            help: 'canViewMetrics',
+            info: 'canViewMetrics',
+            meminfo: 'canViewMetrics',
+            metrics: 'canViewMetrics',
+            tokenlink: 'canOpenRooms',
+        };
+        const requiredPermission = commandPermissions[commandName];
+        if (requiredPermission && !this.roleManager.hasPermission(interaction.user.id, requiredPermission)) {
+            const roleEmoji = userRole === 'master' ? '👑' : userRole === 'moderator' ? '🛡️' : '👤';
             await interaction.reply({
-                content: 'Sem permissao. Apenas masters podem usar comandos admin.',
+                content: `${roleEmoji} Sem permissao. Seu role (${userRole}) nao pode executar este comando.`,
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
             return;
@@ -416,7 +452,7 @@ class ControlPanel {
     }
     async handleOpenSlash(interaction) {
         const botName = interaction.options.getString('bot', true);
-        const token = interaction.options.getString('token', true);
+        let token = interaction.options.getString('token', true);
         const setting = interaction.options.getString('setting') || 'default';
         const bot = this.bots.find((b) => b.name === botName);
         if (!bot) {
@@ -425,6 +461,55 @@ class ControlPanel {
                 flags: discord_js_1.MessageFlags.Ephemeral,
             });
             return;
+        }
+        // Verifica cache de tokens
+        const tokenKey = token.substring(0, 20);
+        const cachedToken = this.tokenManager.getToken(tokenKey);
+        const tokenInfo = this.tokenManager.getTokenInfo(tokenKey);
+        if (cachedToken && tokenInfo) {
+            // Token esta em cache e valido
+            const hoursSinceCreation = tokenInfo.hoursSinceCreation;
+            // Avisa se token precisa ser renovado logo
+            if (hoursSinceCreation > 22) {
+                const embed = new Discord.EmbedBuilder()
+                    .setColor('#FFA500')
+                    .setTitle('⚠️  Token Vencendo')
+                    .setDescription(`Seu token esta vencendo em breve (${(24 - hoursSinceCreation).toFixed(1)}h restantes).`)
+                    .addFields([
+                    {
+                        name: 'Obter novo token',
+                        value: `[Clique aqui](${this.tokenManager.getTokenLink()}) para obter um novo token`,
+                    },
+                ])
+                    .setTimestamp(Date.now());
+                await interaction.reply({ embeds: [embed], flags: discord_js_1.MessageFlags.Ephemeral });
+            }
+            token = cachedToken;
+        }
+        else if (tokenInfo) {
+            // Token expirou no cache, precisa novo
+            const tokenLink = this.tokenManager.getTokenLink();
+            const embed = new Discord.EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('🔴 Token Expirado')
+                .setDescription('Seu token expirou. Voce precisa de um novo token para abrir salas.')
+                .addFields([
+                {
+                    name: 'Obter novo token',
+                    value: `[Clique aqui](${tokenLink}) para obter um novo token`,
+                },
+                {
+                    name: 'Como fazer',
+                    value: '1. Clique no link acima\n2. Realize o CAPTCHA\n3. Copie o token gerado\n4. Envie `/open <bot> <novo_token>`',
+                },
+            ])
+                .setTimestamp(Date.now());
+            await interaction.reply({ embeds: [embed], flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        else {
+            // Novo token, armazena no cache
+            this.tokenManager.storeToken(token, botName);
         }
         await interaction.deferReply();
         try {
@@ -447,6 +532,90 @@ class ControlPanel {
         catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
             await interaction.editReply({ content: `Erro ao abrir sala: ${errorMsg}` });
+        }
+    }
+    async handleAmistosoSlash(interaction) {
+        const tipo = interaction.options.getString('tipo', true);
+        const tamanho = interaction.options.getString('tamanho', true);
+        const tokenInput = interaction.options.getString('token');
+        let token = tokenInput;
+        // Se nao forneceu token, tenta pegar do cache
+        if (!token) {
+            // Avisa que precisa de token
+            const tokenLink = this.tokenManager.getTokenLink();
+            const embed = new Discord.EmbedBuilder()
+                .setColor('#FFA500')
+                .setTitle('🔑 Token Necessário')
+                .setDescription('Voce precisa fornecer um token do Haxball para abrir um amistoso.')
+                .addFields([
+                {
+                    name: 'Como obter token',
+                    value: `1. [Clique aqui](${tokenLink}) para ir ao site\n2. Realize o CAPTCHA\n3. Copie o token gerado\n4. Use: \`/amistoso <tipo> <tamanho> <token>\``,
+                },
+            ])
+                .setTimestamp(Date.now());
+            await interaction.reply({ embeds: [embed], flags: discord_js_1.MessageFlags.Ephemeral });
+            return;
+        }
+        // Verifica cache
+        const tokenKey = token.substring(0, 20);
+        const cachedToken = this.tokenManager.getToken(tokenKey);
+        if (cachedToken) {
+            token = cachedToken;
+        }
+        else {
+            this.tokenManager.storeToken(token, `amistoso-${tipo}-${tamanho}`);
+        }
+        if (this.maxRooms != null && this.server.browsers.length >= this.maxRooms) {
+            await interaction.reply({
+                content: `Limite de salas (${this.maxRooms}) atingido. Aguarde uma sala fechar.`,
+                flags: discord_js_1.MessageFlags.Ephemeral,
+            });
+            return;
+        }
+        await interaction.deferReply();
+        try {
+            // Seleciona bot baseado no tipo
+            const botName = tipo === 'futsal' ? 'futsal-dinâmico' : 'real-soccer-dinâmico';
+            const bot = this.bots.find((b) => b.name === botName);
+            if (!bot) {
+                await interaction.editReply({
+                    content: `Bot '${botName}' nao encontrado. Tente novo em breve.`,
+                });
+                return;
+            }
+            const script = await bot.read();
+            const customSettings = {
+                gameType: tipo,
+                playerCount: parseInt(tamanho) * 2,
+                autoBalance: true,
+                autoStart: true,
+            };
+            const browser = await bot.run(this.server, script, [token], customSettings);
+            if (!browser) {
+                await interaction.editReply({
+                    content: 'Erro ao abrir sala de amistoso. Tente com um novo token.',
+                });
+                return;
+            }
+            const embed = new Discord.EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('⚽ Amistoso Aberto')
+                .setDescription(`Sala de amistoso criada com sucesso!`)
+                .addFields([
+                { name: 'Tipo', value: tipo, inline: true },
+                { name: 'Tamanho', value: `${tamanho}v${tamanho}`, inline: true },
+                { name: 'Link', value: browser.link, inline: false },
+                { name: 'Acesso', value: `Entre no seu jogo e procure por esta sala`, inline: false },
+            ])
+                .setTimestamp(Date.now());
+            await interaction.editReply({ embeds: [embed] });
+        }
+        catch (e) {
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            await interaction.editReply({
+                content: `Erro ao abrir amistoso: ${errorMsg}\nTente com um novo token.`,
+            });
         }
     }
     async handleChampionshipSlash(interaction) {

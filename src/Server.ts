@@ -7,7 +7,6 @@
 
 // Import haxball.js lazily to avoid creating network handles during test import
 let HaxballJS: any = null;
-import { createRequire } from 'module';
 import path from 'path';
 import { CustomSettings, ServerConfig } from './Global';
 import { log } from './utils/log';
@@ -32,6 +31,7 @@ export interface RoomInstance {
   link: string;
   createdAt: number;
   eventHandlers: Map<string, Function>;
+  token?: string;
 }
 
 /**
@@ -62,6 +62,7 @@ export class Server {
   private proxyServers: string[];
   private db: any | null = null;
   // Rastreia tokens em uso para evitar "Can't init twice"
+  private tokensInUse: Map<string, number> = new Map();
   private tokenInitTimes: Map<string, number> = new Map();
   // Mutex por token para serializar inicializacao do mesmo token
   private tokenLocks: Map<string, Promise<void>> = new Map();
@@ -163,7 +164,10 @@ export class Server {
     const currentLock = new Promise<void>((resolve) => {
       release = resolve;
     });
-    this.tokenLocks.set(token, prevLock.then(() => currentLock));
+    this.tokenLocks.set(
+      token,
+      prevLock.then(() => currentLock)
+    );
 
     await prevLock;
     try {
@@ -210,19 +214,26 @@ export class Server {
       throw new Error('Nenhum token fornecido');
     }
 
-    if (tokenArray.length === 1) {
-      return tokenArray[0];
+    const availableTokens = tokenArray.filter((t) => !this.tokensInUse.has(t));
+    if (availableTokens.length === 0) {
+      throw new Error(
+        'Todos os tokens fornecidos estao em uso; forneca um token diferente para abrir outra sala'
+      );
+    }
+
+    if (availableTokens.length === 1) {
+      return availableTokens[0];
     }
 
     // Encontrar token que nunca foi usado
-    for (const token of tokenArray) {
+    for (const token of availableTokens) {
       if (!this.tokenInitTimes.has(token)) {
         return token;
       }
     }
 
     // Se todos foram usados, encontrar o que esta fora do cooldown
-    for (const token of tokenArray) {
+    for (const token of availableTokens) {
       const lastInitTime = this.tokenInitTimes.get(token);
       if (lastInitTime) {
         const elapsed = Date.now() - lastInitTime;
@@ -233,10 +244,10 @@ export class Server {
     }
 
     // Se todos estao em cooldown, retornar o que foi usado ha mais tempo
-    let oldestToken = tokenArray[0];
+    let oldestToken = availableTokens[0];
     let oldestTime = this.tokenInitTimes.get(oldestToken) ?? Infinity;
 
-    for (const token of tokenArray.slice(1)) {
+    for (const token of availableTokens.slice(1)) {
       const time = this.tokenInitTimes.get(token) ?? Infinity;
       if (time < oldestTime) {
         oldestTime = time;
@@ -653,15 +664,17 @@ export class Server {
 
       // Se temos um caminho de script, tentar usar require diretamente
       if (scriptPath) {
-        const scriptDir = path.dirname(scriptPath);
-        let requireFn: NodeRequire | undefined;
         try {
-          // Criar um require funcao para o diretorio do script
-          requireFn = createRequire(path.join(scriptDir, '__placeholder__.js')) as NodeRequire;
+          // Resolver caminho absoluto do script
+          const absoluteScriptPath = path.isAbsolute(scriptPath)
+            ? scriptPath
+            : path.resolve(process.cwd(), scriptPath);
+
+          log('SERVER', `Carregando script: ${absoluteScriptPath}`);
 
           // Limpar cache se existir
-          if (require.cache[scriptPath]) {
-            delete require.cache[scriptPath];
+          if (require.cache[absoluteScriptPath]) {
+            delete require.cache[absoluteScriptPath];
           }
 
           // Injetar contexto global antes de carregar
@@ -671,41 +684,37 @@ export class Server {
           (globalThis as any).HBInit = (_config: any) => room;
 
           // Executar o script com require nativo
-          requireFn(scriptPath);
-          log('SERVER', `Bot script carregado com sucesso: ${path.basename(scriptPath)}`);
+          try {
+            require(absoluteScriptPath);
+            log('SERVER', `Bot script carregado com sucesso: ${path.basename(absoluteScriptPath)}`);
+          } catch (innerError) {
+            // Capturar stack trace completo para debugging
+            if (innerError instanceof Error && innerError.stack) {
+              log('SERVER', `Stack trace completo: ${innerError.stack}`);
+            }
+            throw innerError;
+          }
         } catch (requireError) {
           log(
             'SERVER',
-            `Erro ao carregar via require, usando eval: ${
+            `Erro ao carregar script: ${
               requireError instanceof Error ? requireError.message : String(requireError)
             }`
           );
 
-          // Injetar globais para eval
-          (globalThis as any).room = room;
-          (globalThis as any).customSettings = settings || {};
-          (globalThis as any).db = safeDb;
-          (globalThis as any).HBInit = (_config: any) => room;
-
-          // Definir require especifico do diretorio do script para que require() resolva corretamente
-          let localRequire: NodeRequire | undefined;
-          if (typeof requireFn !== 'undefined') {
-            localRequire = requireFn;
-          }
-
-          try {
-            if (localRequire) {
-              const wrappedScript = `(function(require, module, exports){\n${script}\n})(localRequire, module, exports)`;
-              // Avaliar com require local
-              eval(wrappedScript);
-            } else {
-              eval(script);
-            }
-
-            log('SERVER', 'Bot script carregado com eval como fallback');
-          } finally {
-            // Nao ha mais injecoes de require global
-          }
+          // Se require falhou, lancar o erro original ao inves de tentar eval
+          // eval nao consegue resolver requires de modulos externos
+          const errorDetails =
+            requireError instanceof Error ? requireError.message : String(requireError);
+          throw new Error(
+            `Falha ao carregar script via require: ${errorDetails}. Script precisa ser um modulo CJS valido.`
+          );
+        } finally {
+          // Limpar injecoes globais
+          delete (globalThis as any).room;
+          delete (globalThis as any).customSettings;
+          delete (globalThis as any).db;
+          delete (globalThis as any).HBInit;
         }
       } else {
         // Fallback para eval se nao temos caminho

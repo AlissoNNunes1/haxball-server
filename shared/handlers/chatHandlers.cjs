@@ -35,7 +35,7 @@ function handleTeamChat(room, player, message) {
 
   if (!teamMsg) {
     whisper(room, 'Uso: t <mensagem>', player.id, 0xff0000, 'normal', 1);
-    return true;
+    return false;
   }
 
   const senderName = formatPlayerName(room, player, cachedAuthHandler);
@@ -53,7 +53,7 @@ function handleTeamChat(room, player, message) {
 
   // Chat de time (vermelho ou azul)
   const teammates = room.getPlayerList().filter((p) => p.team === player.team);
-  const teamColor = player.team === 1 ? 0xed6a5a : 0x5995ed;
+  const teamColor = player.team === 1 ? 0xe56e56 : 0x5689e5;
 
   teammates.forEach((teammate) => {
     announce(room, `[Team] ${senderName}: ${teamMsg}`, teammate.id, teamColor, 'normal', 1);
@@ -212,12 +212,145 @@ function processChatMessage(room, player, message) {
   return false;
 }
 
+/**
+ * Handler principal para processamento de chat com suporte a comandos e formatacao
+ * Centraliza toda logica de processamento de mensagens incluindo:
+ * - Processamento de comandos globais (commands.cjs)
+ * - Comandos locais (!swap, etc)
+ * - Formatacao [TAG] Nome: mensagem
+ * - Cancelamento de mensagem original + envio via sendChat
+ *
+ * Exemplo de uso:
+ * room.onPlayerChat = (player, message) => {
+ *   return handlePlayerChat(room, player, message, {
+ *     processGlobalCommand: (room, player, message) => processCommand(room, player, message),
+ *     customCommands: {
+ *       'hello': (room, player, args) => room.sendChat('Ola ' + player.name),
+ *       'swap': (room, player, args) => { ... }
+ *     },
+ *     tag: '[STADIUM]'
+ *   });
+ * };
+ *
+ * @param {object} room - Instancia da sala Haxball
+ * @param {object} player - Jogador que enviou mensagem
+ * @param {string} message - Mensagem do jogador
+ * @param {object} options - Opcoes de configuracao
+ * @param {function} options.processGlobalCommand - Callback para processar comandos globais (commands.cjs)
+ * @param {object} options.customCommands - Map de comandos customizados {cmd: callback}
+ * @param {string} options.tag - Tag para formatar mensagens (ex: '[STADIUM]')
+ * @param {function} options.shouldBlockChat - Callback para validar se chat deve ser bloqueado
+ * @param {function} options.formatMessage - Callback custom para formatar mensagem
+ * @returns {boolean} true se bloqueou a mensagem, false caso contrario
+ */
+function handlePlayerChat(room, player, message, options = {}) {
+  if (!room || !player || typeof message !== 'string') return false;
+
+  // Normaliza entrada
+  message = message.trim();
+  if (!message) return false;
+
+  // Extrair opcoes com defaults
+  const processGlobalCommand = options.processGlobalCommand || (() => false);
+  const customCommands = options.customCommands || {};
+  const tag = options.tag || '';
+  const shouldBlockChat = options.shouldBlockChat || (() => false);
+  const formatMessage = options.formatMessage || null;
+
+  // Bloquear chat se necessario (ex: sala mutada)
+  if (shouldBlockChat(room, player, message)) return false;
+
+  // PROCESSA COMANDOS GLOBAIS PRIMEIRO (commands.cjs - autenticacao, etc)
+  if (processGlobalCommand(room, player, message)) return false;
+
+  // Determina se e comando (comeca com !)
+  const isCommand = message.startsWith('!');
+
+  if (isCommand) {
+    // Extrai comando e argumentos
+    const content = message.substring(1).trim();
+    const parts = content.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    // Processa comandos customizados da sala
+    if (customCommands[cmd]) {
+      try {
+        customCommands[cmd](room, player, args, message);
+      } catch (error) {
+        console.error(`[Chat] Erro ao processar comando !${cmd}:`, error.message);
+      }
+      return false; // Bloqueia mensagem original
+    }
+
+    // Comando desconhecido - deixa passar
+    return false;
+  }
+
+  // Chat normal - formata e envia via sendChat
+  try {
+    let formattedMessage;
+
+    if (formatMessage) {
+      // Usar callback custom de formatacao
+      formattedMessage = formatMessage(room, player, message);
+    } else {
+      // Formatacao padrao: [TAG] Nome: mensagem
+      const displayName = formatPlayerName(room, player, cachedAuthHandler) || player.name;
+      formattedMessage = tag ? `${tag} ${displayName}: ${message}` : `${displayName}: ${message}`;
+    }
+
+    // Envia mensagem formatada e bloqueia original
+    room.sendChat(formattedMessage);
+    console.log(`[Chat] ${formattedMessage}`);
+  } catch (error) {
+    console.error('[Chat] Erro ao formatar/enviar mensagem:', error.message);
+    // Fallback: envia simples
+    const fallback = tag ? `${tag} ${player.name}: ${message}` : `${player.name}: ${message}`;
+    room.sendChat(fallback);
+  }
+
+  return false; // Bloqueia mensagem original (ja enviamos formatada)
+}
+
+/**
+ * Cria um conjunto de comandos swap padrao
+ * Uso: mergeObjects(customCommands, createSwapCommand())
+ *
+ * @returns {object} Map com comando 'swap'
+ */
+function createSwapCommand() {
+  return {
+    swap: (room, player, args) => {
+      if (!player.admin) {
+        room.sendChat('Comando apenas de Admin');
+        return;
+      }
+
+      const players = room.getPlayerList().filter((p) => p.id !== 0);
+      if (players.length === 0) return;
+
+      players.forEach((p) => {
+        if (p.team === 1) {
+          room.setPlayerTeam(p.id, 2);
+        } else if (p.team === 2) {
+          room.setPlayerTeam(p.id, 1);
+        }
+      });
+
+      room.sendChat('Times foram trocados');
+    },
+  };
+}
+
 module.exports = {
   handleTeamChat,
   handlePrivateMessage,
   handleGlobalChat,
   handleFormattedGlobalChat,
   processChatMessage,
+  handlePlayerChat,
+  createSwapCommand,
   setAuthHandler,
 };
 

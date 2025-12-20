@@ -1,10 +1,11 @@
 import { PerformanceTracker } from './PerformanceTracker';
 import { PositionRating } from './PositionRating';
-import { BalanceConfig, BalanceResult, PlayerForBalance, Position } from './types';
+import { BalanceConfig, BalanceResult, GameState, PlayerForBalance, Position } from './types';
 
 /**
  * Algoritmo de balanceamento de times
  * Implementa estrategias greedy e genetica para criar times equilibrados
+ * Considera forma recente, preferencias de posicao e estado atual do jogo
  */
 export class BalanceAlgorithm {
   private positionRating: PositionRating;
@@ -25,22 +26,25 @@ export class BalanceAlgorithm {
       considerRecentForm: true,
       formWeight: 0.1,
       positionPreferenceWeight: 0.2,
+      considerGameState: false,
+      gameStateWeight: 0.15,
       ...config,
     };
   }
 
   /**
-   * Balanceia jogadores em dois times
+   * Balanceia jogadores em dois times, considerando estado do jogo
    * @param players Lista de jogadores para balancear
+   * @param gameState Estado atual do jogo (opcional)
    * @returns Resultado com times balanceados e metricas
    */
-  balanceTeams(players: PlayerForBalance[]): BalanceResult {
+  balanceTeams(players: PlayerForBalance[], gameState?: GameState): BalanceResult {
     if (players.length < 2) {
       throw new Error('Minimo 2 jogadores necessarios para balanceamento');
     }
 
     // Valida e ajusta ratings considerando forma
-    const adjustedPlayers = this.adjustPlayersForBalance(players);
+    const adjustedPlayers = this.adjustPlayersForBalance(players, gameState);
 
     // Executa estrategia escolhida
     let team1: PlayerForBalance[];
@@ -56,7 +60,6 @@ export class BalanceAlgorithm {
     const team1WithPositions = this.assignPositions(team1);
     const team2WithPositions = this.assignPositions(team2);
 
-   
     // Calcula ratings dos times
     const team1Rating = this.calculateTeamRating(team1WithPositions);
     const team2Rating = this.calculateTeamRating(team2WithPositions);
@@ -85,9 +88,12 @@ export class BalanceAlgorithm {
   }
 
   /**
-   * Ajusta ratings considerando forma recente e preferencias
+   * Ajusta ratings considerando forma recente e estado do jogo
    */
-  private adjustPlayersForBalance(players: PlayerForBalance[]): PlayerForBalance[] {
+  private adjustPlayersForBalance(
+    players: PlayerForBalance[],
+    gameState?: GameState
+  ): PlayerForBalance[] {
     return players.map((player) => {
       let effectiveRating = player.rating.overall;
 
@@ -97,6 +103,12 @@ export class BalanceAlgorithm {
           player.recentPerformance
         );
         effectiveRating = Math.round(effectiveRating * formFactor);
+      }
+
+      // Aplica ajuste baseado no estado do jogo se habilitado
+      if (this.config.considerGameState && gameState) {
+        const gameStateFactor = this.calculateGameStateAdjustment(gameState);
+        effectiveRating = Math.round(effectiveRating * gameStateFactor);
       }
 
       return {
@@ -231,7 +243,7 @@ export class BalanceAlgorithm {
    * Penaliza jogadores muito fora de suas melhores posicoes
    */
   private calculatePositionPenalty(players: PlayerForBalance[]): number {
-      if (players.length === 0) return 0; // Defensive check for empty players array
+    if (players.length === 0) return 0; // Defensive check for empty players array
     let penalty = 0;
 
     for (const player of players) {
@@ -363,10 +375,7 @@ export class BalanceAlgorithm {
         let bestRating = 0;
 
         for (let i = 0; i < remaining.length; i++) {
-          const rating = this.positionRating.getRatingForPosition(
-            remaining[i].rating,
-            position
-          );
+          const rating = this.positionRating.getRatingForPosition(remaining[i].rating, position);
           if (rating > bestRating) {
             bestRating = rating;
             bestIndex = i;
@@ -425,9 +434,8 @@ export class BalanceAlgorithm {
     const averageRating = (team1Rating + team2Rating) / 2;
 
     // Protecoes para evitar divisao por zero e valores invalidos
-    const normalizedDifference = averageRating > 0 && isFinite(averageRating)
-      ? ratingDifference / averageRating
-      : 1;
+    const normalizedDifference =
+      averageRating > 0 && isFinite(averageRating) ? ratingDifference / averageRating : 1;
 
     // Transforma em porcentagem (0-100) e calcula score como complemento
     let score = Math.max(0, Math.round(100 - normalizedDifference * 100));
@@ -481,6 +489,56 @@ export class BalanceAlgorithm {
       fairnessScore,
       strategy: 'manual',
     };
+  }
+  /**
+   * Calcula fator de ajuste baseado no estado atual do jogo
+   * Considera placar e nivel dos times para balanceamento dinamico
+   *
+   * @param gameState Estado atual do jogo
+   * @returns Fator de ajuste (multiplicador de rating, tipicamente 0.85-1.15)
+   */
+  private calculateGameStateAdjustment(gameState: GameState): number {
+    const weight = this.config.gameStateWeight ?? 0.15;
+
+    // Se nao houver placar ou ratings, retorna fator neutro
+    if (
+      gameState.redScore === undefined ||
+      gameState.blueScore === undefined ||
+      !gameState.redTeamAverageRating ||
+      !gameState.blueTeamAverageRating
+    ) {
+      return 1.0;
+    }
+
+    const scoreDiff = Math.abs(gameState.redScore - gameState.blueScore);
+    const ratingDiff = Math.abs(gameState.redTeamAverageRating - gameState.blueTeamAverageRating);
+
+    // Se placar esta equilibrado e ratings proximos, nao ajusta
+    if (scoreDiff <= 1 && ratingDiff <= 50) {
+      return 1.0;
+    }
+
+    // Determina time que esta perdendo/mais fraco
+    const losingTeam = gameState.redScore < gameState.blueScore ? 'red' : 'blue';
+    const weakerTeam =
+      gameState.redTeamAverageRating < gameState.blueTeamAverageRating ? 'red' : 'blue';
+
+    // Se time perdendo e tambem mais fraco, aplica boost maior
+    if (losingTeam === weakerTeam) {
+      // Boost progressivo baseado na diferenca de placar
+      const scoreFactor = Math.min(scoreDiff / 5, 1.0); // Max 1.0 para diferenca >= 5 gols
+      const boost = 1.0 + weight * scoreFactor;
+      return Math.min(boost, 1.15); // Limita boost maximo em 15%
+    }
+
+    // Se time perdendo e mais forte, aplica penalidade leve
+    if (losingTeam !== weakerTeam) {
+      const scoreFactor = Math.min(scoreDiff / 10, 0.5); // Penalidade mais suave
+      const penalty = 1.0 - weight * scoreFactor * 0.5;
+      return Math.max(penalty, 0.9); // Limita penalidade em 10%
+    }
+
+    return 1.0;
   }
 }
 

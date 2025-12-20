@@ -52,6 +52,34 @@ args.command({
   },
 });
 
+/**
+ * Comando 'token' - Gerencia tokens Haxball
+ * Subcomandos: add, show, status, clear, help
+ */
+args.command({
+  command: 'token <subcommand> [token]',
+  aliases: ['t'],
+  describe: 'Gerencia tokens do Haxball',
+  builder: {
+    subcommand: {
+      describe: 'Subcomando (add, show, status, clear, help)',
+      demandOption: true,
+      type: 'string',
+    },
+    token: {
+      describe: 'Token para adicionar (usado com add)',
+      demandOption: false,
+      type: 'string',
+    },
+  },
+  handler: async (argv) => {
+    const { tokenCommand } = await import('./commands/token');
+    const subArgs = [argv.subcommand as string];
+    if (argv.token) subArgs.push(argv.token as string);
+    await tokenCommand(subArgs);
+  },
+});
+
 args.command({
   command: 'championship',
   aliases: ['ch'],

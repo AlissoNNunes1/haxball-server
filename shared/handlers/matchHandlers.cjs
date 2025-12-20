@@ -252,19 +252,68 @@ async function finalizeMatchStats(
   }
 }
 
+/**
+ * Garante que um jogador autenticado esteja registrado no StatsCollector
+ * Antes de rastrear gols, toques ou outras stats.
+ *
+ * Fluxo de validacao:
+ * 1. Valida parametros nao-nulos
+ * 2. Verifica se stats sao habilitados (gameState.statsEnabled)
+ * 3. Valida autenticacao do jogador
+ * 4. Recupera conta autenticada
+ * 5. Se nao registrado, registra automaticamente
+ *
+ * USO OBRIGATORIO:
+ * - Antes de trackGoal: accountId = ensureStatsRegistration(...)
+ * - Antes de trackTouch: accountId = ensureStatsRegistration(...)
+ * - Antes de trackSave: accountId = ensureStatsRegistration(...)
+ *
+ * @param {object} room - Room do Haxball
+ * @param {object} statsCollector - StatsCollector instance
+ * @param {object} authHandler - AuthHandler com getAuthenticatedPlayer
+ * @param {object} gameState - GameState com propriedade statsEnabled
+ * @param {object} player - Player do room (team 1, 2, ou 0 para spec)
+ *
+ * @returns {string|null} accountId se sucesso, null se falha em qualquer validacao
+ *
+ * @example
+ * // Rastrear toque com stats
+ * const accountId = ensureStatsRegistration(room, statsCollector, authHandler, gameState, player);
+ * if (accountId) {
+ *   statsCollector.trackTouch(accountId, Date.now());
+ * }
+ *
+ * @example
+ * // Rastrear gol com stats
+ * const scorerPlayer = room.getPlayer(goalInfo.scorer.id);
+ * const accountId = ensureStatsRegistration(room, statsCollector, authHandler, gameState, scorerPlayer);
+ * if (accountId) {
+ *   statsCollector.trackGoal(accountId, Date.now(), false);
+ * }
+ */
 function ensureStatsRegistration(room, statsCollector, authHandler, gameState, player) {
+  // Validar parametros nao-nulos (fail-fast)
   if (!statsCollector || !gameState || !authHandler || !player) return null;
+
+  // Stats desabilitadas para essa partida
   if (!gameState.statsEnabled) return null;
+
+  // Jogador nao esta autenticado
   if (!authHandler.isAuthenticated(player.id)) return null;
 
+  // Recuperar conta autenticada
   const account = authHandler.getAuthenticatedPlayer(player.id);
   if (!account || !account.id) return null;
 
+  // Mapear time: 1 = red, 2 = blue, 0 = spectator
   const teamStr = player.team === 1 ? 'red' : player.team === 2 ? 'blue' : 'spectator';
+
+  // Se ja registrado, retornar ID
   if (typeof statsCollector.hasPlayer === 'function' && statsCollector.hasPlayer(account.id)) {
     return account.id;
   }
 
+  // Registrar novo jogador na primeira vez
   statsCollector.registerPlayer(account.id, player.name, teamStr);
   return account.id;
 }

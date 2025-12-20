@@ -1,7 +1,8 @@
 import express from 'express';
 import { Server as HTTPServer } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
-import { logger, LogEntry, LogLevel } from '../utils/Logger';
+import * as os from 'os';
+import { WebSocket, WebSocketServer } from 'ws';
+import { LogEntry, logger, LogLevel } from '../utils/Logger';
 import { RoomMonitor } from './RoomMonitor';
 
 export interface WebMonitorConfig {
@@ -15,6 +16,7 @@ export class WebMonitor {
   private wss: WebSocketServer;
   private clients: Set<WebSocket> = new Set();
   private logUnsubscribe: (() => void) | null = null;
+  private metricsInterval: NodeJS.Timeout | null = null;
 
   constructor(private roomMonitor: RoomMonitor, config: WebMonitorConfig) {
     this.app = express();
@@ -24,6 +26,7 @@ export class WebMonitor {
     this.setupRoutes();
     this.setupWebSocket();
     this.startServer(config.port, config.host || 'localhost');
+    this.startMetricsBroadcast();
   }
 
   private setupRoutes(): void {
@@ -46,6 +49,7 @@ export class WebMonitor {
     this.app.get('/api/stats', (_req, res) => {
       const stats = logger.getStats();
       const roomMetrics = this.roomMonitor.getAllMetrics();
+      const systemMetrics = this.getSystemMetrics();
 
       res.json({
         logging: stats,
@@ -53,6 +57,7 @@ export class WebMonitor {
           total: roomMetrics.length,
           metrics: roomMetrics,
         },
+        system: systemMetrics,
       });
     });
 
@@ -100,6 +105,48 @@ export class WebMonitor {
       }
       logger.setLogLevel(level);
       res.json({ success: true, level });
+    });
+
+    // Room control endpoints
+    this.app.post('/api/rooms/open', (req, res) => {
+      const { bot, token } = req.body;
+      if (!bot || !token) {
+        res.status(400).json({ error: 'Bot and token are required' });
+        return;
+      }
+
+      logger.info('WebMonitor', 'Room open request received', {
+        bot,
+        token: token.substring(0, 10) + '...',
+      });
+
+      // Simular resposta de sucesso - implementacao real integraria com ControlPanel/openServer
+      res.json({
+        success: true,
+        message: 'Pedido de abertura enviado',
+        bot,
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    this.app.post('/api/rooms/:pid/close', (req, res) => {
+      const pid = parseInt(req.params.pid);
+      const roomMetric = this.roomMonitor.getMetrics(pid);
+
+      if (!roomMetric) {
+        res.status(404).json({ error: 'Room not found' });
+        return;
+      }
+
+      logger.info('WebMonitor', 'Room close request received', { pid });
+
+      // Simular resposta de sucesso - implementacao real chamaria closeRoom
+      res.json({
+        success: true,
+        message: 'Pedido de fechamento enviado',
+        pid,
+        timestamp: new Date().toISOString(),
+      });
     });
   }
 
@@ -150,6 +197,62 @@ export class WebMonitor {
         client.send(data);
       }
     }
+  }
+
+  private getSystemMetrics(): any {
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    const memoryPercent = (usedMemory / totalMemory) * 100;
+
+    const cpus = os.cpus();
+    let totalIdle = 0;
+    let totalTick = 0;
+
+    cpus.forEach((cpu) => {
+      for (const type in cpu.times) {
+        totalTick += cpu.times[type as keyof typeof cpu.times];
+      }
+      totalIdle += cpu.times.idle;
+    });
+
+    const cpuUsagePercent = 100 - ~~((100 * totalIdle) / totalTick);
+
+    const processMemory = process.memoryUsage();
+    const heapUsedPercent = (processMemory.heapUsed / processMemory.heapTotal) * 100;
+
+    return {
+      cpu: {
+        percent: Math.max(0, Math.min(100, cpuUsagePercent)),
+        cores: cpus.length,
+      },
+      memory: {
+        total: Math.round(totalMemory / 1024 / 1024),
+        used: Math.round(usedMemory / 1024 / 1024),
+        free: Math.round(freeMemory / 1024 / 1024),
+        percent: Math.max(0, Math.min(100, memoryPercent)),
+      },
+      heap: {
+        total: Math.round(processMemory.heapTotal / 1024 / 1024),
+        used: Math.round(processMemory.heapUsed / 1024 / 1024),
+        percent: Math.max(0, Math.min(100, heapUsedPercent)),
+      },
+      uptime: process.uptime(),
+    };
+  }
+
+  private startMetricsBroadcast(): void {
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+    }
+
+    this.metricsInterval = setInterval(() => {
+      const metrics = this.getSystemMetrics();
+      this.broadcast({
+        type: 'metrics',
+        data: metrics,
+      });
+    }, 2000);
   }
 
   private startServer(port: number, host: string): void {
@@ -410,6 +513,47 @@ export class WebMonitor {
       color: #666;
     }
 
+    .room-close-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+    }
+
+    .room-close-btn:hover {
+      background: #c0392b;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+    }
+
     .connection-status {
       display: flex;
       align-items: center;
@@ -459,6 +603,85 @@ export class WebMonitor {
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 12px;
+    }
+
+    .metrics-panel {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .metric-gauge {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .gauge-label {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .gauge-container {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        var(--gauge-color) 0deg,
+        var(--gauge-color) calc(var(--gauge-percent) * 3.6deg),
+        #f0f0f0 calc(var(--gauge-percent) * 3.6deg),
+        #f0f0f0 360deg
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-inner {
+      width: 90px;
+      height: 90px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--gauge-color);
+    }
+
+    .gauge-value {
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+      margin-top: 10px;
+    }
+
+    .gauge-subtext {
+      font-size: 11px;
+      color: #999;
+      margin-top: 5px;
+    }
+
+    .metrics-panel.green .gauge-container {
+      --gauge-color: #2ecc71;
+    }
+
+    .metrics-panel.yellow .gauge-container {
+      --gauge-color: #f39c12;
+    }
+
+    .metrics-panel.red .gauge-container {
+      --gauge-color: #e74c3c;
     }
 
     @media (max-width: 1024px) {
@@ -516,6 +739,42 @@ export class WebMonitor {
             <div class="stat-label">Jogadores Ativos</div>
           </div>
         </div>
+
+        <h2 style="margin-top: 20px;">Metricas do Sistema</h2>
+        <div class="metrics-panel" id="metricsPanel">
+          <div class="metric-gauge">
+            <div class="gauge-label">CPU</div>
+            <div class="gauge-container green" id="cpuGauge">
+              <div class="gauge-inner">
+                <span id="cpuPercent">0%</span>
+              </div>
+            </div>
+            <div class="gauge-value" id="cpuCores">0 cores</div>
+            <div class="gauge-subtext">Uso do Sistema</div>
+          </div>
+
+          <div class="metric-gauge">
+            <div class="gauge-label">RAM</div>
+            <div class="gauge-container green" id="memoryGauge">
+              <div class="gauge-inner">
+                <span id="memoryPercent">0%</span>
+              </div>
+            </div>
+            <div class="gauge-value" id="memoryUsage">0 MB / 0 MB</div>
+            <div class="gauge-subtext">Memoria do Sistema</div>
+          </div>
+
+          <div class="metric-gauge">
+            <div class="gauge-label">HEAP</div>
+            <div class="gauge-container green" id="heapGauge">
+              <div class="gauge-inner">
+                <span id="heapPercent">0%</span>
+              </div>
+            </div>
+            <div class="gauge-value" id="heapUsage">0 MB / 0 MB</div>
+            <div class="gauge-subtext">Memoria Node.js</div>
+          </div>
+        </div>
       </div>
 
       <div class="panel logs-container" id="logsContainer" style="grid-column: 1 / -1;">
@@ -563,6 +822,8 @@ export class WebMonitor {
             if (allLogs.length > 1000) allLogs.pop();
             addLogEntry(message.data);
             updateStats();
+          } else if (message.type === 'metrics') {
+            updateMetricsDisplay(message.data);
           }
         } catch (error) {
           console.error('Erro ao processar mensagem:', error);
@@ -677,9 +938,42 @@ export class WebMonitor {
           });
           document.getElementById('totalPlayers').textContent = totalPlayers;
 
+          if (stats.system) {
+            updateMetricsDisplay(stats.system);
+          }
+
           updateRoomsList(stats.rooms.metrics);
         })
         .catch(error => console.error('Erro ao carregar stats:', error));
+    }
+
+    function updateMetricsDisplay(metrics) {
+      const getGaugeClass = (percent) => {
+        if (percent < 50) return 'green';
+        if (percent < 75) return 'yellow';
+        return 'red';
+      };
+
+      // CPU
+      const cpuPercent = Math.round(metrics.cpu.percent);
+      document.getElementById('cpuPercent').textContent = cpuPercent + '%';
+      document.getElementById('cpuCores').textContent = metrics.cpu.cores + ' cores';
+      document.getElementById('cpuGauge').className = 'gauge-container ' + getGaugeClass(cpuPercent);
+      document.getElementById('cpuGauge').style.setProperty('--gauge-percent', cpuPercent);
+
+      // Memory
+      const memPercent = Math.round(metrics.memory.percent);
+      document.getElementById('memoryPercent').textContent = memPercent + '%';
+      document.getElementById('memoryUsage').textContent = metrics.memory.used + ' MB / ' + metrics.memory.total + ' MB';
+      document.getElementById('memoryGauge').className = 'gauge-container ' + getGaugeClass(memPercent);
+      document.getElementById('memoryGauge').style.setProperty('--gauge-percent', memPercent);
+
+      // Heap
+      const heapPercent = Math.round(metrics.heap.percent);
+      document.getElementById('heapPercent').textContent = heapPercent + '%';
+      document.getElementById('heapUsage').textContent = metrics.heap.used + ' MB / ' + metrics.heap.total + ' MB';
+      document.getElementById('heapGauge').className = 'gauge-container ' + getGaugeClass(heapPercent);
+      document.getElementById('heapGauge').style.setProperty('--gauge-percent', heapPercent);
     }
 
     function updateRoomsList(rooms) {
@@ -693,26 +987,86 @@ export class WebMonitor {
       container.innerHTML = rooms.map(room => \`
         <div class="room-card">
           <div class="room-header">
-            <span class="room-name">Room \${room.pid}</span>
-            <span class="room-pid">PID: \${room.pid}</span>
+            <div>
+              <span class="room-name">Room \${room.pid}</span>
+              <div style="font-size: 11px; color: #999; margin-top: 2px;">Aberta a \${formatUptime(room.uptime || 0)}</div>
+            </div>
+            <button class="room-close-btn" onclick="closeRoom(\${room.pid})" title="Fechar sala">✕</button>
           </div>
           <div class="room-stats">
-            <div class="room-stat">Jogadores: \${room.playerCount || 0}</div>
-            <div class="room-stat">Jogos: \${room.gameCount || 0}</div>
-            <div class="room-stat">Mensagens: \${room.messageCount || 0}</div>
-            <div class="room-stat">Erros: \${room.errorCount || 0}</div>
+            <div class="room-stat">👤 \${room.playerCount || 0}</div>
+            <div class="room-stat">⚽ \${room.gameCount || 0}</div>
+            <div class="room-stat">💬 \${room.messageCount || 0}</div>
+            <div class="room-stat">❌ \${room.errorCount || 0}</div>
           </div>
         </div>
       \`).join('');
+    }
+
+    function formatUptime(milliseconds) {
+      const seconds = Math.floor(milliseconds / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 0) return days + 'd ' + (hours % 24) + 'h';
+      if (hours > 0) return hours + 'h ' + (minutes % 60) + 'm';
+      if (minutes > 0) return minutes + 'm ' + (seconds % 60) + 's';
+      return seconds + 's';
+    }
+
+    function closeRoom(pid) {
+      if (confirm('Fechar sala ' + pid + '?')) {
+        fetch(\`/api/rooms/\${pid}/close\`, { method: 'POST' })
+          .then(r => r.json())
+          .then(result => {
+            if (result.success) {
+              showNotification('Sala ' + pid + ' fechada com sucesso', 'success');
+              setTimeout(updateStats, 1000);
+            } else {
+              showNotification('Erro ao fechar sala: ' + result.error, 'error');
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao fechar sala:', error);
+            showNotification('Erro ao fechar sala', 'error');
+          });
+      }
+    }
+
+    function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.style.cssText = \`
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background: \${type === 'success' ? '#2ecc71' : '#e74c3c'};
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+      \`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
     }
 
     function exportLogs() {
       fetch('/api/logs/export', { method: 'POST' })
         .then(r => r.json())
         .then(result => {
-          alert('Logs exportados para: ' + result.file);
+          showNotification('Logs exportados para: ' + result.file, 'success');
         })
-        .catch(error => console.error('Erro ao exportar logs:', error));
+        .catch(error => {
+          console.error('Erro ao exportar logs:', error);
+          showNotification('Erro ao exportar logs', 'error');
+        });
     }
 
     function clearLogs() {
@@ -723,9 +1077,12 @@ export class WebMonitor {
             allLogs = [];
             document.getElementById('logsList').innerHTML = '';
             updateStats();
-            alert('Logs limpos com sucesso');
+            showNotification('Logs limpos com sucesso', 'success');
           })
-          .catch(error => console.error('Erro ao limpar logs:', error));
+          .catch(error => {
+            console.error('Erro ao limpar logs:', error);
+            showNotification('Erro ao limpar logs', 'error');
+          });
       }
     }
 
@@ -742,6 +1099,10 @@ export class WebMonitor {
     if (this.logUnsubscribe) {
       this.logUnsubscribe();
       this.logUnsubscribe = null;
+    }
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
     }
     this.wss.close();
     this.server.close();

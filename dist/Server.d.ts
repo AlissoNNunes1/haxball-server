@@ -22,6 +22,7 @@ export interface RoomInstance {
     link: string;
     createdAt: number;
     eventHandlers: Map<string, Function>;
+    token?: string;
 }
 /**
  * Interface compativel com codigo antigo (Puppeteer)
@@ -50,6 +51,7 @@ export declare class Server {
     private nextPid;
     private proxyServers;
     private db;
+    private tokensInUse;
     private tokenInitTimes;
     private tokenLocks;
     private readonly TOKEN_INIT_COOLDOWN;

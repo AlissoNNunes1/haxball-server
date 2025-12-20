@@ -71,7 +71,7 @@ describe('chatHandlers', () => {
       handleTeamChat(mockRoom, mockPlayer, 't teste');
 
       const firstMessage = announceMessages[0];
-      expect(firstMessage.color).toBe(0xed6a5a);
+      expect(firstMessage.color).toBe(0xe56e56);
     });
 
     it('deve processar team chat de espectador', () => {

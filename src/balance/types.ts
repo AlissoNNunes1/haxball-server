@@ -135,6 +135,20 @@ export interface BalanceConfig {
   formWeight?: number;
   positionPreferenceWeight?: number;
   iterations?: number;
+  considerGameState?: boolean; // Considerar placar e nivel atual dos times
+  gameStateWeight?: number; // Peso do estado do jogo no balanceamento (0-1)
+}
+
+/**
+ * Estado atual do jogo para balanceamento dinamico
+ */
+export interface GameState {
+  redScore: number;
+  blueScore: number;
+  redTeamAverageRating?: number;
+  blueTeamAverageRating?: number;
+  timeElapsedMs?: number;
+  totalTimeMs?: number;
 }
 
 /**
