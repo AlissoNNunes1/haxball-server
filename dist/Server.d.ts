@@ -1,28 +1,31 @@
 /**
  * Gerenciador de instancias de servidores Haxball com haxball.js
  * Implementacao moderna usando WebRTC nativo sem necessidade de Chrome/Chromium
+ * IMPORTANTE: Cada sala roda em processo Node.js separado para evitar "Can't init twice"
  * @module Server
- * @version 6.0.0 (Fase 8 - Migracao haxball.js)
+ * @version 6.0.0 (Fase 8 - Migracao haxball.js + Child Processes)
  */
+import { ChildProcess } from 'child_process';
 import { CustomSettings, ServerConfig } from './Global';
 /**
  * Representa uma instancia de sala Haxball aberta
  * @interface RoomInstance
- * @property {any} room - Objeto de sala do haxball.js
- * @property {number} pid - ID de processo (ficticio para compatibilidade com ControlPanel)
+ * @property {ChildProcess} process - Processo filho que executa a sala
+ * @property {number} pid - ID do processo filho
  * @property {string} botName - Nome do bot que abriu a sala
  * @property {string} link - Link de acesso da sala
  * @property {number} createdAt - Timestamp de criacao
- * @property {Map} eventHandlers - Handlers de eventos aplicados
+ * @property {string} token - Token usado pela sala
  */
 export interface RoomInstance {
-    room: any;
+    process: ChildProcess;
     pid: number;
     botName: string;
     link: string;
     createdAt: number;
-    eventHandlers: Map<string, Function>;
     token?: string;
+    room?: any;
+    eventHandlers?: Map<string, Function>;
 }
 /**
  * Interface compativel com codigo antigo (Puppeteer)
@@ -40,9 +43,8 @@ export interface BrowserInfo {
     pages?: () => Promise<unknown[]>;
 }
 /**
- * Gerenciador de salas Haxball usando haxball.js
- * 70-80% reducao de memoria comparado a Puppeteer
- * Sem necessidade de Chrome/Chromium
+ * Gerenciador de salas Haxball usando child processes
+ * Cada sala roda em processo separado para evitar "Can't init twice"
  * @class Server
  */
 export declare class Server {
@@ -51,12 +53,7 @@ export declare class Server {
     private nextPid;
     private proxyServers;
     private db;
-    private hbInitInstance;
-    private hbInitPromise;
-    private tokenInitTimes;
-    private tokenLocks;
-    private readonly TOKEN_INIT_COOLDOWN;
-    private hbInitLock;
+    private workerPath;
     /**
      * Compatibilidade com codigo antigo que acessa browsers array
      * @deprecated Use rooms Map diretamente
@@ -69,7 +66,6 @@ export declare class Server {
     /**
      * Inicializa o gerenciador de salas Haxball
      * @param {ServerConfig} config - Configuracao do servidor
-     * @throws {Error} Se inicializacao de haxball.js falhar
      */
     constructor(config: ServerConfig, db?: any);
     /**
@@ -80,43 +76,6 @@ export declare class Server {
      * @private
      * @returns {Promise<any>} Funcao HBInit do haxball.js (cache apos primeira chamada)
      */
-    private getHBInit;
-    /**
-     * Executa a inicializacao real do haxball.js
-     * @private
-     */
-    private initializeHBInit;
-    /**
-     * Aguarda cooldown antes de reutilizar um token
-     * Evita erro "Can't init twice" do haxball.js
-     * @private
-     * @param {string} token - Token headless
-     */
-    private waitTokenCooldown;
-    /**
-     * Registra tempo de inicializacao de um token
-     * @private
-     * @param {string} token - Token headless
-     */
-    private recordTokenInit;
-    /**
-     * Serializa uso do mesmo token para evitar init concorrente
-     */
-    private withTokenLock;
-    /**
-     * Serializa execucao critica de HBInit para evitar condicao de corrida "Can't init twice"
-     * @private
-     */
-    private withHbInitLock;
-    /**
-     * Seleciona o melhor token para usar
-     * Suporta ilimitadas salas com o mesmo token (serializadas via lock)
-     * Distribui entre multiplos tokens se disponivel
-     * @private
-     * @param {string[]} tokenArray - Array de tokens disponiveis
-     * @returns {string} Token selecionado
-     */
-    private selectBestToken;
     /**
      * Abre uma nova sala Haxball
      * @param {string} script - Codigo do bot script (JavaScript)
@@ -128,6 +87,16 @@ export declare class Server {
      * @example
      * const result = await server.open(botScript, 'thr1.xxx.xxx', 'Minha Sala');
      * console.log(`Sala aberta: ${result.link}`);
+     */
+    /**
+     * Abre uma sala Haxball em processo separado (child process)
+     * Resolve problema "Can't init twice" do haxball.js
+     * @param {string} script - Script do bot (nao usado no modo fork, apenas scriptPath)
+     * @param {string|string[]} tokens - Token(s) headless do Haxball
+     * @param {string} [name] - Nome da sala
+     * @param {CustomSettings} [settings] - Configuracoes personalizadas
+     * @param {string} [scriptPath] - Caminho do script do bot
+     * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
      */
     open(script: string, tokens: string | string[], name?: string, settings?: CustomSettings, scriptPath?: string): Promise<{
         link: string;
@@ -142,14 +111,18 @@ export declare class Server {
      * @param {CustomSettings} [settings] - Configuracoes personalizadas
      * @returns {Promise<{link: string, pid: number}>} Info da sala aberta
      */
-    openWithModule(roomModule: {
+    /**
+     * METODO DEPRECATED: openWithModule nao e suportado com child process architecture
+     * Use open() com script de bot ao inves disso
+     */
+    openWithModule(_roomModule: {
         init?: ({ room, settings, db }: {
             room: any;
             settings?: CustomSettings;
             db?: any;
         }) => any;
         name?: string;
-    }, tokens: string | string[], name?: string, settings?: CustomSettings): Promise<{
+    }, _tokens: string | string[], _name?: string, _settings?: CustomSettings): Promise<{
         link: string;
         pid: number;
         remotePort?: number;
@@ -161,6 +134,11 @@ export declare class Server {
      * @example
      * const success = await server.close(1000);
      * if (success) console.log('Sala fechada com sucesso');
+     */
+    /**
+     * Fecha uma sala aberta (encerra o processo filho)
+     * @param {string|number} pidOrTitle - PID da sala
+     * @returns {Promise<boolean>} true se sala foi fechada
      */
     close(pidOrTitle: string | number): Promise<boolean>;
     /**
@@ -211,21 +189,4 @@ export declare class Server {
      * @returns {number} Quantidade de salas
      */
     getRoomCount(): number;
-    /**
-     * Executa script do bot no contexto da sala
-     * @private
-     * @param {any} room - Objeto de sala
-     * @param {string} script - Codigo JavaScript do bot (caminho ou conteudo)
-     * @param {CustomSettings} [settings] - Configuracoes disponidas no contexto
-     * @param {string} [scriptPath] - Caminho do script para require
-     */
-    private executeBotScript;
-    /**
-     * Aplica event handlers padrao para logging e monitoramento
-     * @private
-     * @param {any} room - Objeto de sala
-     * @param {number} pid - ID da sala
-     * @param {string} [_botName] - Nome do bot (para futuro uso em logging)
-     */
-    private setupDefaultEventHandlers;
 }

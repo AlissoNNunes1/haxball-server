@@ -126,12 +126,13 @@ Veja **[QUICK_START.md](QUICK_START.md)** para mais detalhes de como usar sem np
   - Comandos: `/open`, `/close`, `/reload`, `/info`, `/meminfo`, `/metrics`, `/exit`, `/championship`, `/tokenlink`
 
 - **generalChannelId** (opcional): Canal publico para comandos gerais
+
   - Todos os usuarios podem usar
   - Comandos: `/register`, `/linkdiscord`, `/profile`, `/ranking`, `/top`, `/authhelp`
 
 - **`/help` funciona em AMBOS os canais com conteudo diferente:**
   - No canal admin: Lista comandos administrativos
-  - No canal geral: Lista todos os outros comandos que podem ser usados pelos usuarios comuns 
+  - No canal geral: Lista todos os outros comandos que podem ser usados pelos usuarios comuns
   - Em outro canal: Mostra lista completa de todos os comandos
 
 Se os canais NAO forem configurados, comandos funcionam em qualquer canal (com restricoes de permissao).
@@ -180,6 +181,7 @@ haxball-server open  # Procura por config.json no CWD
 Use `/help` no Discord para ver todos os comandos disponiveis (Slash Commands).
 
 O comando `/help` se adapta ao canal onde e usado:
+
 - **Canal Admin:** Mostra comandos administrativos (/open, /close, /reload, etc)
 - **Canal Geral:** Mostra comandos de autenticacao (/register, /profile, /top, etc)
 - **Outro canal:** Mostra lista completa de todos os comandos

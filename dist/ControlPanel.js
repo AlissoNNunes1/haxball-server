@@ -392,7 +392,7 @@ class ControlPanel {
             // Conteudo para canal geral
             description = [
                 '**Comandos de Autenticacao (Canal Geral):**',
-                '`/register <nick> <senha>` - Cria nova conta CIRS',
+                '`/register <nick> <senha>` - Cria nova conta CHA',
                 '`/linkdiscord <nick> <senha>` - Vincula Discord a conta existente',
                 '`/profile [nick]` - Ver perfil de jogador',
                 '`/ranking [nick]` - Ver ranking (alias de profile)',
@@ -439,7 +439,7 @@ class ControlPanel {
                 '',
                 '**Comandos de Autenticacao:**',
                 '`/authhelp` - Lista detalhada de comandos de autenticacao',
-                '`/register <nick> <senha>` - Cria nova conta CIRS',
+                '`/register <nick> <senha>` - Cria nova conta CHA',
                 '`/linkdiscord <nick> <senha>` - Vincula Discord a conta existente',
                 '`/profile [nick]` - Ver perfil de jogador',
                 '`/ranking [nick]` - Ver ranking (alias de profile)',
@@ -453,7 +453,7 @@ class ControlPanel {
         }
         const embed = new Discord.EmbedBuilder()
             .setColor('#0099ff')
-            .setTitle('Comandos CIRS Haxball Server')
+            .setTitle('Comandos CHA Haxball Server')
             .setDescription(description)
             .setTimestamp(Date.now());
         await interaction.reply({ embeds: [embed] });
@@ -606,7 +606,8 @@ class ControlPanel {
         catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
             // Mensagem de erro mais clara para token invalido
-            if (errorMsg.toLowerCase().includes('invalid token') || errorMsg.toLowerCase().includes('forbidden')) {
+            if (errorMsg.toLowerCase().includes('invalid token') ||
+                errorMsg.toLowerCase().includes('forbidden')) {
                 await interaction.editReply({
                     content: '❌ **Token Inválido ou Expirado**\nO token fornecido nao e valido ou expirou.\n\nObtenha um novo token em: https://www.haxball.com/headlesstoken',
                 });
@@ -716,7 +717,8 @@ class ControlPanel {
         catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
             // Mensagem de erro mais clara para token invalido
-            if (errorMsg.toLowerCase().includes('invalid token') || errorMsg.toLowerCase().includes('forbidden')) {
+            if (errorMsg.toLowerCase().includes('invalid token') ||
+                errorMsg.toLowerCase().includes('forbidden')) {
                 await interaction.editReply({
                     content: '❌ **Token Inválido ou Expirado**\nO token fornecido nao e valido ou expirou.\n\nObtenha um novo token em: https://www.haxball.com/headlesstoken',
                 });
@@ -776,7 +778,7 @@ class ControlPanel {
         await interaction.deferReply();
         try {
             const botPath = (0, championship_1.resolveChampionshipBotPath)();
-            const bot = new Bot_1.Bot('cirs-championship', botPath, roomName);
+            const bot = new Bot_1.Bot('cha-championship', botPath, roomName);
             const script = await bot.read();
             const browser = await bot.run(this.server, script, [token], championshipSettings);
             if (!browser) {
@@ -891,7 +893,7 @@ class ControlPanel {
                 channelInfo.push(`**Canal Geral:** <#${this.generalChannelId}>`);
             }
             embed
-                .setTitle('Help - CIRS Haxball Server')
+                .setTitle('Help - CHA Haxball Server')
                 .setDescription('⚠️ **AVISO**: Comandos com prefixo (!) estao DEPRECATED. Use Slash Commands (/) para maior seguranca.\n\n' +
                 (channelInfo.length > 0 ? channelInfo.join('\n') + '\n' : ''))
                 .addFields({ name: '\u200B', value: '**Comandos de Admin** (use /comando)', inline: false }, { name: '!help', value: 'Lista de comandos ➜ `/help`', inline: true }, { name: '!info', value: 'Informacoes do servidor ➜ `/info`', inline: true }, { name: '!meminfo', value: 'Uso de CPU e memoria ➜ `/meminfo`', inline: true }, { name: '!metrics', value: 'Metricas das salas ➜ `/metrics`', inline: true }, { name: '!open', value: 'Abrir uma sala ➜ `/open`', inline: true }, { name: '!close', value: 'Fechar uma sala ➜ `/close`', inline: true }, { name: '!esm-rooms', value: 'Listar modulos de sala', inline: true }, { name: '!reload', value: 'Recarregar configuracao ➜ `/reload`', inline: true }, { name: '!exit', value: 'Desligar servidor ➜ `/exit`', inline: true }, { name: '!tokenlink', value: 'Link para token Haxball ➜ `/tokenlink`', inline: true }, {

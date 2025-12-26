@@ -652,12 +652,16 @@ function getFutsalMap(playerCount) {
   }
 
   try {
-    const mapData = fs.readFileSync(mapFile, 'utf8');
+    let mapData = fs.readFileSync(mapFile, 'utf8');
+    // Sanitizar quebras de linha literais no JSON que quebram o parser
+    mapData = mapData.replace(/\n/g, ' ').replace(/\r/g, '');
     return mapData;
   } catch (error) {
     console.error(`[MAPS] Erro ao carregar mapa: ${error.message}`);
     // Fallback para mapa medio
-    return fs.readFileSync(path.join(__dirname, '../maps/futsal_5x5_6x6.hbs'), 'utf8');
+    let fallbackData = fs.readFileSync(path.join(__dirname, '../maps/futsal_5x5_6x6.hbs'), 'utf8');
+    fallbackData = fallbackData.replace(/\n/g, ' ').replace(/\r/g, '');
+    return fallbackData;
   }
 }
 

@@ -56,7 +56,6 @@ Forneca contexto do projeto e diretrizes de codificacao que a IA deve seguir ao 
 - Evite criar documentacao para pequenas mudancas; priorize atualizar docs ja existentes.
 - Sempre adicione ao final de cada codigo a assinatura ASCII padrao, conforme a linguagem do arquivo:
 - comandos haxball prefixo é "!" comandos discord é slash-command
-- Um token Haxball só pode ter uma sala aberta por vez .Usar tokens diferentes para salas diferentes.Facilitar a gestao de tokens e experencia do usuario. Informar no discord caso o token ja esteja em uso,nao abrir a sala e pedir para usar outro token.
 
 ## Comunidade e Salas Haxball
 
