@@ -39,12 +39,12 @@ Cada sala tem sua propria pasta:
 
 ```
 bots/
-├── cirs-stadium/                # CIRS Stadium (Real Soccer)
+├── cha-stadium/                # CHA Stadium (Real Soccer)
 │   ├── handlers.cjs             # Handlers de eventos
 │   ├── rules.cjs                # Regras, formacoes, impedimento
 │   ├── messages.cjs             # announce, whisper especificos
 │   └── main.cjs                 # Logica principal
-├── cirs-stadium.js              # Entry point CIRS
+├── cha-stadium.js              # Entry point CHA
 ├── todos_jogam/                 # Todos Jogam (Futsal)
 │   └── handlers.cjs             # Handlers simplificados
 └── todos_jogam.js               # Entry point Todos Jogam

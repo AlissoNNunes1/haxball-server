@@ -9,7 +9,7 @@ import {
 } from './types';
 
 /**
- * Servico de autenticacao e gerenciamento de contas CIRS
+ * Servico de autenticacao e gerenciamento de contas CHA
  */
 export class AuthService {
   private config: AuthConfig = {

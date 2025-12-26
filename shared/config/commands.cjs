@@ -514,7 +514,7 @@ function handleGeneralHelp(room, player) {
 function handleDiscord(room, player) {
   room.sendAnnouncement('', player.id, null, null, 0);
   room.sendAnnouncement('═══════════════════════════════════', player.id, 0x55aaff, 'bold', 2);
-  room.sendAnnouncement('🔗 DISCORD DA COMUNIDADE CIRS', player.id, 0x00ff00, 'bold', 2);
+  room.sendAnnouncement('🔗 DISCORD DA COMUNIDADE CHA', player.id, 0x00ff00, 'bold', 2);
   room.sendAnnouncement('═══════════════════════════════════', player.id, 0x55aaff, 'bold', 2);
   room.sendAnnouncement('', player.id, null, null, 0);
   room.sendAnnouncement('Entre no nosso Discord:', player.id, 0xaaaaaa, 'normal', 1);

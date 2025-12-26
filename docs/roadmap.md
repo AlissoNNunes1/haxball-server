@@ -7,7 +7,7 @@
 
 ### Objetivo
 
-Centralizar funcionalidades comuns em `shared/handlers/` para maxima reutilizacao entre todas as salas CIRS, eliminando duplicacao de codigo e padronizando experiencia do jogador.
+Centralizar funcionalidades comuns em `shared/handlers/` para maxima reutilizacao entre todas as salas CHA, eliminando duplicacao de codigo e padronizando experiencia do jogador.
 
 ### Acoes Principais
 
@@ -17,7 +17,7 @@ Centralizar funcionalidades comuns em `shared/handlers/` para maxima reutilizaca
 - ⏳ Criar `shared/handlers/matchHandlers.cjs` - Inicio, fim e acrescimos
 - ⏳ Criar `shared/handlers/playerHandlers.cjs` - Join, leave e sistema de tags visuais
 - ⏳ Implementar **sistema de tag visual** para jogadores (NOVO)
-- ⏳ Migrar e deprecar `cirsbase.js` para novo padrao modular
+- ⏳ Migrar e deprecar `chabase.js` para novo padrao modular
 
 ### Impacto Esperado
 
@@ -30,7 +30,7 @@ Centralizar funcionalidades comuns em `shared/handlers/` para maxima reutilizaca
 
 1. **Fase 1:** Criar handlers globais (chatHandlers, goalHandlers, matchHandlers, playerHandlers)
 2. **Fase 2:** Criar utilitarios de comemoracao (celebrationUtils)
-3. **Fase 3:** Atualizar salas existentes (cirs-stadium, todos_jogam)
+3. **Fase 3:** Atualizar salas existentes (cha-stadium, todos_jogam)
 4. **Fase 4:** Integracao, testes e documentacao
 
 ---
@@ -42,7 +42,7 @@ O projeto **haxball-server** foi completamente modernizado com sucesso! Todas as
 ### Novidade - Salas de Campeonato (Temp)
 
 - ✅ Presets globais em `shared/config/championship.cjs` para formatos RS (5,6,7,11).
-- ✅ Bot dedicado `cirs-championship.js` com balanceamento desligado e handlers globais.
+- ✅ Bot dedicado `cha-championship.js` com balanceamento desligado e handlers globais.
 - ✅ Comandos: CLI `championship` e slash `/championship open|close` para abrir/fechar salas com nomes dinamicos e senha opcional.
 
 ### Progresso Geral
@@ -806,7 +806,7 @@ O haxball-server foi completamente modernizado e agora e um projeto robusto, seg
 
 - ✅ Registro de jogador via Discord, associando conta Discord ao nick Haxball
 - ✅ Login direto pelo Haxball usando senha (sem depender do Discord para login)
-- ✅ Conta unica CIRS: armazena pontos, ranking, moedas, stats, etc, e vale para qualquer sala da CIRS
+- ✅ Conta unica CHA: armazena pontos, ranking, moedas, stats, etc, e vale para qualquer sala da CHA
 - ✅ API segura para autenticar, registrar e consultar dados do jogador
 - ✅ Documentacao detalhada do fluxo de registro/login e estrutura de conta (docs/ACCOUNTS.md)
 

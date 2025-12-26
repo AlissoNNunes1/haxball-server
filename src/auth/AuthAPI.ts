@@ -3,7 +3,7 @@ import { AuthService } from '../auth/AuthService';
 import { initAuthDb } from '../database/auth-client';
 
 /**
- * API REST para sistema de autenticacao e contas CIRS
+ * API REST para sistema de autenticacao e contas CHA
  */
 export class AuthAPI {
   private app: express.Application;

@@ -14,7 +14,7 @@ let goalCoord_y;
 
 function getRealSoccerMap(map) {
   map = {
-    name: 'CIRS Stadium',
+    name: 'CHA Stadium',
 
     width: 1821,
 

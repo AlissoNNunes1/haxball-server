@@ -1,4 +1,8 @@
-const { startCommunityAnnouncements, stopCommunityAnnouncements, stopAllCommunityAnnouncements } = require('../../shared/config/messages.cjs');
+const {
+  startCommunityAnnouncements,
+  stopCommunityAnnouncements,
+  stopAllCommunityAnnouncements,
+} = require('../../shared/config/messages.cjs');
 
 describe('messages.startCommunityAnnouncements', () => {
   let mockRoom: any;
@@ -16,7 +20,7 @@ describe('messages.startCommunityAnnouncements', () => {
     startCommunityAnnouncements(mockRoom, 1000);
     startCommunityAnnouncements(mockRoom, 1000);
     // Access internal global Map
-    const key = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
+    const key = '__CHA_COMMUNITY_ANNOUNCEMENT_TIMERS__';
     const timers = (globalThis as any)[key];
     expect(timers).toBeDefined();
     expect(timers.has(mockRoom)).toBe(true);

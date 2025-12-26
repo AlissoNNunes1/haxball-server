@@ -1,4 +1,4 @@
-//Modulo para handlers de eventos da sala CIRS Stadium
+//Modulo para handlers de eventos da sala CHA Stadium
 
 const { announce, whisper, isAdminPresent, displayAdminMessage } = require('./messages.cjs');
 const room = globalThis.room;
@@ -104,7 +104,7 @@ room.onStadiumChange = function (newStadiumName, byPlayer) {
 
 room.onPlayerJoin = function (player) {
   console.log(player.name + ' joined the room');
-  whisper('Ola, seja bem vindo a CIRS! Um servidor de Real Soccer', player.id, 0x61ddff, 'bold', 0);
+  whisper('Ola, seja bem vindo a CHA! Um servidor de Real Soccer', player.id, 0x61ddff, 'bold', 0);
   whisper(' ██████╗██╗██████╗ ███████╗ ', player.id, 0x61ddff, 'bold', 0);
   whisper('██ ╔═══╝██║██╔══██╗██╔════╝ ', player.id, 0x61ddff, 'bold', 0);
   whisper('██ ║    	    ██║██████╔╝███████╗ ', player.id, 0x61ddff, 'bold', 0);
@@ -133,12 +133,12 @@ room.onPlayerJoin = function (player) {
     } else {
       // Conta nao encontrada - sugere registro
       whisper('', player.id, null, null, 0);
-      whisper('Voce ainda nao tem uma conta CIRS', player.id, 0xffaa00, 'normal', 1);
+      whisper('Voce ainda nao tem uma conta CHA', player.id, 0xffaa00, 'normal', 1);
       whisper('Registre-se no Discord com /register', player.id, 0xaaaaaa, 'small', 1);
       whisper('Digite !help para ver comandos', player.id, 0xaaaaaa, 'small', 1);
     }
   } catch (error) {
-    console.error('[CIRS] Erro ao verificar conta:', error.message);
+    console.error('[CHA] Erro ao verificar conta:', error.message);
     whisper('Digite !help para ver comandos disponiveis', player.id, 0xaaaaaa, 'small', 1);
   }
 
@@ -634,7 +634,7 @@ room.onPlayerChat = function (player, message) {
       }
     } else if (args[0] == 'discord') {
       room.sendAnnouncement(
-        'Link do discord:Discord CIRS: https://discord.gg/mWzatsxjTA | Discord Parceiros: https://discord.gg/mWzatsxjTA ',
+        'Link do discord:Discord CHA: https://discord.gg/mWzatsxjTA | Discord Parceiros: https://discord.gg/mWzatsxjTA ',
         player.id,
         verde,
         'bold',
@@ -1130,7 +1130,7 @@ function secondsToMinutes(time) {
 // Funcao avatarCelebration removida - agora usando shared/utils/celebrationUtils.cjs
 
 function anuncio() {
-  room.sendAnnouncement('Discord CIRS: https://discord.gg/RQhSBA3k', null, azul, 'bold', 0);
+  room.sendAnnouncement('Discord CHA: https://discord.gg/RQhSBA3k', null, azul, 'bold', 0);
 }
 try {
   const { createNamedInterval } = require('../../shared/config/roomTimers.cjs');

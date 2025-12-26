@@ -51,7 +51,8 @@ export declare class Server {
     private nextPid;
     private proxyServers;
     private db;
-    private tokensInUse;
+    private hbInitInstance;
+    private hbInitPromise;
     private tokenInitTimes;
     private tokenLocks;
     private readonly TOKEN_INIT_COOLDOWN;
@@ -73,10 +74,18 @@ export declare class Server {
     constructor(config: ServerConfig, db?: any);
     /**
      * Inicializa haxball.js de forma lazy (sob demanda)
+     * IMPORTANTE: HBInit() so pode ser chamado uma unica vez por instancia do modulo
+     * Por isso fazemos cache apos a primeira inicializacao
+     * Thread-safe: usa promise para evitar race condition
      * @private
-     * @returns {Promise<any>} Funcao HBInit do haxball.js
+     * @returns {Promise<any>} Funcao HBInit do haxball.js (cache apos primeira chamada)
      */
     private getHBInit;
+    /**
+     * Executa a inicializacao real do haxball.js
+     * @private
+     */
+    private initializeHBInit;
     /**
      * Aguarda cooldown antes de reutilizar um token
      * Evita erro "Can't init twice" do haxball.js
@@ -100,8 +109,9 @@ export declare class Server {
      */
     private withHbInitLock;
     /**
-     * Seleciona o melhor token para usar (rotacao automática)
-     * Prioriza tokens que nunca foram usados ou estao fora do cooldown
+     * Seleciona o melhor token para usar
+     * Suporta ilimitadas salas com o mesmo token (serializadas via lock)
+     * Distribui entre multiplos tokens se disponivel
      * @private
      * @param {string[]} tokenArray - Array de tokens disponiveis
      * @returns {string} Token selecionado
@@ -172,6 +182,18 @@ export declare class Server {
      * @returns {RoomInstance[]} Array de salas abertas
      */
     getAllRooms(): RoomInstance[];
+    /**
+     * Verifica se um token ja tem uma sala aberta
+     * @param token Token a verificar
+     * @returns {boolean} true se token ja esta em uso
+     */
+    isTokenInUse(token: string): boolean;
+    /**
+     * Retorna a sala aberta com um determinado token, se existir
+     * @param token Token a procurar
+     * @returns {RoomInstance | undefined} Sala aberta com esse token ou undefined
+     */
+    getRoomByToken(token: string): RoomInstance | undefined;
     /**
      * Recupera instancia da sala a partir do link (identificador estavel) se existente
      * @param link string

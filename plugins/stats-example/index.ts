@@ -8,7 +8,7 @@ export default class StatsExamplePlugin implements Plugin {
   name = 'stats-example';
   version = '1.0.0';
   description = 'Plugin de exemplo que rastreia stats basicas de salas';
-  author = 'CIRS Team';
+  author = 'CHA Team';
 
   private context!: PluginContext;
   private roomStats: Map<number, RoomStats>;

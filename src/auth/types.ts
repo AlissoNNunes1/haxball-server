@@ -1,10 +1,10 @@
 /**
- * Sistema de Autenticacao e Contas CIRS
+ * Sistema de Autenticacao e Contas CHA
  * Tipos e interfaces para gerenciamento de contas de jogadores
  */
 
 /**
- * Dados de conta de jogador CIRS
+ * Dados de conta de jogador CHA
  */
 export interface PlayerAccount {
   id: number;

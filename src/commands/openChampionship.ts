@@ -35,7 +35,7 @@ export async function openChampionshipRoom(args: ChampionshipCliArgs): Promise<v
   });
 
   const botPath = resolveChampionshipBotPath();
-  const bot = new Bot('cirs-championship', botPath, roomName);
+  const bot = new Bot('cha-championship', botPath, roomName);
   const script = await bot.read();
   const browser = await bot.run(server, script, [args.token], settings);
 

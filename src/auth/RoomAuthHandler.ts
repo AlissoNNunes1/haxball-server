@@ -67,7 +67,7 @@ export class RoomAuthHandler {
         // Nick nao cadastrado - sugestao de registro
         room.sendAnnouncement(`Ola, ${player.name}!`, player.id, 0xffaa00, 'bold', 2);
         room.sendAnnouncement(
-          'Voce ainda nao tem uma conta CIRS. Registre-se no Discord com !register',
+          'Voce ainda nao tem uma conta CHA. Registre-se no Discord com !register',
           player.id,
           0xaaaaaa,
           'normal',

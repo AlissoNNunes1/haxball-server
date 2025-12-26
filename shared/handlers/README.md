@@ -8,7 +8,7 @@
 
 ## 📋 Visao Geral
 
-Este diretorio contem **handlers globais reutilizaveis** para todas as salas Haxball do projeto CIRS. Os handlers centralizam funcionalidades comuns, eliminando duplicacao de codigo e garantindo experiencia consistente entre todas as salas.
+Este diretorio contem **handlers globais reutilizaveis** para todas as salas Haxball do projeto CHA. Os handlers centralizam funcionalidades comuns, eliminando duplicacao de codigo e garantindo experiencia consistente entre todas as salas.
 
 ### Beneficios
 
@@ -590,9 +590,9 @@ Os handlers tem testes unitarios em `tests/unit/handlers/`:
 
 ### Fase 3: Migracao de Salas (Pendente)
 
-- [ ] Atualizar `bots/cirs-stadium/handlers.cjs` para usar handlers globais
+- [ ] Atualizar `bots/cha-stadium/handlers.cjs` para usar handlers globais
 - [ ] Atualizar `bots/todos_jogam/handlers.cjs` para usar handlers globais
-- [ ] Deprecar `cirsbase.js`
+- [ ] Deprecar `chabase.js`
 
 ### Fase 4: Finalizacao (Pendente)
 

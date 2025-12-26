@@ -65,8 +65,8 @@ function startGameIfReadyWithAfk(room, gameState, { isPlayerAFK, isAFKTimeout, r
   const redCount = players.filter((p) => p.team === 1).length;
   const blueCount = players.filter((p) => p.team === 2).length;
 
-  var AFK_CHECK_INTERVAL = globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000;
-  globalThis.__CIRS_AFK_CHECK_INTERVAL = AFK_CHECK_INTERVAL;
+  var AFK_CHECK_INTERVAL = globalThis.__CHA_AFK_CHECK_INTERVAL || 30000;
+  globalThis.__CHA_AFK_CHECK_INTERVAL = AFK_CHECK_INTERVAL;
 
   if (redCount >= 1 && blueCount >= 1 && !gameState.started) {
     announce(room, '⚽ Iniciando partida em 3 segundos...', null, 0xffaa00);
@@ -96,7 +96,7 @@ function startGameIfReadyWithAfk(room, gameState, { isPlayerAFK, isAFKTimeout, r
         }
       }
     },
-    globalThis.__CIRS_AFK_CHECK_INTERVAL || 30000
+    globalThis.__CHA_AFK_CHECK_INTERVAL || 30000
   );
 }
 

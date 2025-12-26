@@ -12,8 +12,8 @@
 #### A) **Mensagens de Gol e Eventos de Partida**
 
 - **Localizacao atual:**
-  - `cirsbase.js` (linhas 1253-1301)
-  - `bots/cirs-stadium/handlers.cjs` (linhas 758-824)
+  - `chabase.js` (linhas 1253-1301)
+  - `bots/cha-stadium/handlers.cjs` (linhas 758-824)
 - **Funcionalidades:**
 
   - Anuncio de gol com scorer e assister
@@ -27,7 +27,7 @@
 #### B) **Chat de Time (Team Chat)**
 
 - **Localizacao atual:**
-  - `cirsbase.js` (linhas 1006-1027)
+  - `chabase.js` (linhas 1006-1027)
 - **Funcionalidades:**
   - Mensagem com prefixo `t` para chat de time
   - Filtragem de jogadores por time
@@ -37,7 +37,7 @@
 #### C) **Mensagem Privada (PM)**
 
 - **Localizacao atual:**
-  - `cirsbase.js` (linhas 1029-1051)
+  - `chabase.js` (linhas 1029-1051)
 - **Funcionalidades:**
   - Mensagem com prefixo `@@`
   - Suporte a nomes com espacos (`_` substitui espaco)
@@ -49,15 +49,15 @@
 - **Localizacao atual:**
   - `shared/config/utils.cjs` (funcoes `setPlayerTag`, `getPlayerTag`, `clearPlayerTag`)
 - **Problema identificado:**
-  - Em `cirsbase.js` nao ha uso de tags visuais no nome do jogador
+  - Em `chabase.js` nao ha uso de tags visuais no nome do jogador
   - Sistema existe mas nao esta sendo aplicado visualmente
   - Falta integracao com avatar/posicao do jogador
 
 #### E) **Comemoracao de Avatar**
 
 - **Localizacao atual:**
-  - `cirsbase.js` (funcao `avatarCelebration`, linhas 1827-1868)
-  - `bots/cirs-stadium/handlers.cjs` (funcao `avatarCelebration`, linhas 1155-1195)
+  - `chabase.js` (funcao `avatarCelebration`, linhas 1827-1868)
+  - `bots/cha-stadium/handlers.cjs` (funcao `avatarCelebration`, linhas 1155-1195)
 - **Funcionalidades:**
   - Animacao de avatar piscando
   - Sequencia de sleep com timings especificos
@@ -66,8 +66,8 @@
 #### F) **Mensagens de Acrescimo (Extra Time)**
 
 - **Localizacao atual:**
-  - `cirsbase.js` (funcao `extraTime`, linhas 1822-1825)
-  - `bots/cirs-stadium/handlers.cjs` (funcao `extraTime`, linhas 1030-1033)
+  - `chabase.js` (funcao `extraTime`, linhas 1822-1825)
+  - `bots/cha-stadium/handlers.cjs` (funcao `extraTime`, linhas 1030-1033)
 - **Funcionalidades:**
   - Calcula tempo adicional
   - Anuncia acrescimos
@@ -91,8 +91,8 @@
 
 **Fontes:**
 
-- Team chat de `cirsbase.js` (linhas 1006-1027)
-- PM de `cirsbase.js` (linhas 1029-1051)
+- Team chat de `chabase.js` (linhas 1006-1027)
+- PM de `chabase.js` (linhas 1029-1051)
 
 **Vantagens:**
 
@@ -117,8 +117,8 @@
 
 **Fontes:**
 
-- `cirsbase.js` (linhas 1253-1301)
-- `bots/cirs-stadium/handlers.cjs` (linhas 758-824)
+- `chabase.js` (linhas 1253-1301)
+- `bots/cha-stadium/handlers.cjs` (linhas 758-824)
 
 **Parametros necessarios:**
 
@@ -157,8 +157,8 @@ goalInfo = {
 
 **Fontes:**
 
-- `cirsbase.js` (funcao `extraTime`)
-- `bots/cirs-stadium/handlers.cjs` (onGameStart, onGameStop, extraTime)
+- `chabase.js` (funcao `extraTime`)
+- `bots/cha-stadium/handlers.cjs` (onGameStart, onGameStop, extraTime)
 - `bots/todos_jogam/handlers.cjs` (onGameStop com stats)
 
 ---
@@ -181,7 +181,7 @@ goalInfo = {
 - Exemplo: "Lukra" vira "[S1] Lukra" se tiver tag "S1"
 - Usar `room.setPlayerAvatar()` com emoji ou texto customizado
 
-**Logica de Tag (encontrada em cirsbase.js):**
+**Logica de Tag (encontrada em chabase.js):**
 
 - Nao existe logica explicita de tag visual no chat
 - Sistema de tag existe em `utils.cjs` mas nao e aplicado visualmente
@@ -200,8 +200,8 @@ goalInfo = {
 
 **Fontes:**
 
-- `cirsbase.js` (funcoes `avatarCelebration`, `ballWarning`)
-- `bots/cirs-stadium/handlers.cjs` (funcao `avatarCelebration`)
+- `chabase.js` (funcoes `avatarCelebration`, `ballWarning`)
+- `bots/cha-stadium/handlers.cjs` (funcao `avatarCelebration`)
 - `shared/config/utils.cjs` (funcao `ballWarning` ja existe mas pode ser melhorada)
 
 ---
@@ -244,14 +244,14 @@ shared/
     └── celebrationUtils.cjs # Celebracao e animacoes
 
 bots/
-├── cirs-stadium/
+├── cha-stadium/
 │   ├── handlers.cjs       # Handlers especificos da sala
 │   ├── main.cjs           # Inicializacao
 │   ├── messages.cjs       # Mensagens especificas
 │   └── rules.cjs          # Regras especificas (formacoes, offside)
 ├── todos_jogam/
 │   └── handlers.cjs       # Handlers especificos da sala
-└── cirsbase.js            # DEPRECADO - migrar funcionalidades
+└── chabase.js            # DEPRECADO - migrar funcionalidades
 ```
 
 ---
@@ -268,8 +268,8 @@ bots/
 
 - [x] 1.2 Criar `shared/handlers/goalHandlers.cjs`
 
-  - Migrar logica de gol de `cirsbase.js`
-  - Migrar logica de gol de `cirs-stadium/handlers.cjs`
+  - Migrar logica de gol de `chabase.js`
+  - Migrar logica de gol de `cha-stadium/handlers.cjs`
   - Padronizar mensagens
   - Adicionar testes unitarios
 
@@ -295,7 +295,7 @@ bots/
 
 **Status:** Concluido em 15/12/2025
 
-- [x] 3.1 Atualizar `bots/cirs-stadium/handlers.cjs`
+- [x] 3.1 Atualizar `bots/cha-stadium/handlers.cjs`
 
   - [x] Remover funcao `avatarCelebration` duplicada (~40 linhas)
   - [x] Importar `handleGoal` e celebracoes de handlers globais
@@ -310,7 +310,7 @@ bots/
   - [x] Manter integracao com StatsService
   - [x] Manter logica especifica (mapa dinamico, stats)
 
-- [ ] 3.3 Deprecar `cirsbase.js`
+- [ ] 3.3 Deprecar `chabase.js`
   - [ ] Documentar deprecacao
   - [ ] Criar guia de migracao
   - [ ] Manter arquivo como referencia historica
@@ -366,7 +366,7 @@ Os testes de integracao foram criados mas alguns requerem ajustes nos handlers p
 **Problema atual:**
 
 - Sistema de tag existe em `utils.cjs` mas nao e aplicado visualmente
-- Em `cirsbase.js` nao ha logica de tag no nome do jogador
+- Em `chabase.js` nao ha logica de tag no nome do jogador
 
 **Solucao proposta:**
 
@@ -412,8 +412,8 @@ function formatPlayerName(room, player) {
 
 **Mensagens atuais:**
 
-- `cirsbase.js`: "GOLAÇO!", "Gol contra mano, sério?", "Ala kkkkkk, gol contra!"
-- `cirs-stadium/handlers.cjs`: Similar mas com variacoes
+- `chabase.js`: "GOLAÇO!", "Gol contra mano, sério?", "Ala kkkkkk, gol contra!"
+- `cha-stadium/handlers.cjs`: Similar mas com variacoes
 
 **Mensagens padronizadas propostas:**
 

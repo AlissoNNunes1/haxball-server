@@ -40,7 +40,7 @@ const {
 } = require('./roomTimers.cjs');
 
 // Backwards-compat map used by tests and older code.
-const COMMUNITY_KEY = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
+const COMMUNITY_KEY = '__CHA_COMMUNITY_ANNOUNCEMENT_TIMERS__';
 if (!globalThis[COMMUNITY_KEY]) globalThis[COMMUNITY_KEY] = new Map();
 
 function startCommunityAnnouncements(room, intervalMs = 5 * 60 * 1000) {
@@ -52,7 +52,7 @@ function startCommunityAnnouncements(room, intervalMs = 5 * 60 * 1000) {
     () => {
       announce(room, '', null, null, 0);
       announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
-      announce(room, '🏆 COMUNIDADE CIRS - REAL SOCCER', null, 0x00ff00, 'bold', 2);
+      announce(room, '🏆 COMUNIDADE CHA - REAL SOCCER', null, 0x00ff00, 'bold', 2);
       announce(room, '═══════════════════════════════════', null, 0x55aaff, 'bold', 1);
       announce(
         room,
@@ -158,7 +158,7 @@ function startRegistrationReminders(room, authHandler, intervalMs = 5 * 60 * 100
               // Nao tem conta - pedir registro
               whisper(room, '', player.id, null, null, 0);
               whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
-              whisper(room, '📋 REGISTRE-SE NA COMUNIDADE CIRS!', player.id, 0xffaa00, 'bold', 2);
+              whisper(room, '📋 REGISTRE-SE NA COMUNIDADE CHA!', player.id, 0xffaa00, 'bold', 2);
               whisper(room, '═══════════════════════════════════', player.id, 0x55aaff, 'bold', 1);
               whisper(room, 'Entre no Discord e crie sua conta:', player.id, 0xaaaaaa, 'normal', 1);
               whisper(room, '🔗 https://discord.gg/b2km7nvHP7', player.id, 0x00ff00, 'bold', 1);

@@ -328,8 +328,12 @@ export class ControlPanel {
       return;
     }
 
-    // Verifica canal admin se configurado
-    if (this.adminChannelId && interaction.channelId !== this.adminChannelId) {
+    // Verifica canal admin se configurado (exceto /help que funciona em qualquer canal)
+    if (
+      commandName !== 'help' &&
+      this.adminChannelId &&
+      interaction.channelId !== this.adminChannelId
+    ) {
       await interaction.reply({
         content: `Comandos admin devem ser usados no canal <#${this.adminChannelId}>.`,
         flags: MessageFlags.Ephemeral,
@@ -378,47 +382,99 @@ export class ControlPanel {
   }
 
   private async handleHelpSlash(interaction: Discord.ChatInputCommandInteraction) {
-    const channelInfo: string[] = [];
-    if (this.adminChannelId) {
-      channelInfo.push(`**Canal Admin:** <#${this.adminChannelId}> (comandos admin)`);
-    }
-    if (this.generalChannelId) {
-      channelInfo.push(`**Canal Geral:** <#${this.generalChannelId}> (comandos auth)`);
+    const isAdminChannel = this.adminChannelId && interaction.channelId === this.adminChannelId;
+    const isGeneralChannel =
+      this.generalChannelId && interaction.channelId === this.generalChannelId;
+
+    let description: string;
+
+    if (isAdminChannel) {
+      // Conteudo para canal admin
+      description = [
+        '**Comandos de Admin (Canal Admin):**',
+        '`/help` - Lista de comandos disponiveis',
+        '`/info` - Informacoes sobre salas abertas',
+        '`/meminfo` - Uso de memoria e CPU',
+        '`/metrics` - Metricas do servidor',
+        '`/championship open <preset> <home> <away> <token>` - Abre campeonato',
+        '`/open <bot> <token> [setting]` - Abre sala com bot',
+        '`/close <pid|all>` - Fecha sala(s)',
+        '`/reload` - Recarrega configuracao',
+        '`/exit` - Desliga o servidor',
+        '`/tokenlink` - Gera link para token Haxball',
+        '',
+        '💡 **Dica:** Use `/help` no canal geral para ver comandos de autenticacao',
+      ].join('\n');
+    } else if (isGeneralChannel) {
+      // Conteudo para canal geral
+      description = [
+        '**Comandos de Autenticacao (Canal Geral):**',
+        '`/register <nick> <senha>` - Cria nova conta CHA',
+        '`/linkdiscord <nick> <senha>` - Vincula Discord a conta existente',
+        '`/profile [nick]` - Ver perfil de jogador',
+        '`/ranking [nick]` - Ver ranking (alias de profile)',
+        '`/top [criterio]` - Top 10 jogadores (ranking ou pontos)',
+        '`/authhelp` - Detalhes de autenticacao',
+        '',
+        '⚽ **Comandos na Sala Haxball:**',
+        '`!help` - Lista de comandos dentro da sala',
+        '`!login` - Faz login da sua conta',
+        '`!profile [nick]` - Ver perfil',
+        '`!stats` - Suas estatisticas',
+        '`!top` - Top jogadores',
+        '`!afk` - Marca como ausente',
+        '`!bb` - BomBom (reacao)',
+        '`!discord` - Link do Discord',
+        '',
+        '💬 **Chat:**',
+        '`t <mensagem>` - Team chat (apenas seu time)',
+        '`@@ <nome> <mensagem>` - Mensagem privada',
+      ].join('\n');
+    } else {
+      // Conteudo padrao (quando nenhum canal configurado ou em outro canal)
+      const channelInfo: string[] = [];
+      if (this.adminChannelId) {
+        channelInfo.push(`**Canal Admin:** <#${this.adminChannelId}>`);
+      }
+      if (this.generalChannelId) {
+        channelInfo.push(`**Canal Geral:** <#${this.generalChannelId}>`);
+      }
+
+      description = [
+        channelInfo.length > 0 ? channelInfo.join(' | ') + '\n' : '',
+        '**Comandos de Admin:**',
+        '`/help` - Lista todos os comandos',
+        '`/info` - Informacoes sobre salas abertas',
+        '`/meminfo` - Uso de memoria e CPU',
+        '`/metrics` - Metricas do servidor',
+        '`/championship open <preset> <home> <away> <token>` - Abre sala de campeonato temporaria',
+        '`/open <bot> <token> [setting]` - Abre sala com bot',
+        '`/close <pid|all>` - Fecha sala(s)',
+        '`/reload` - Recarrega configuracao',
+        '`/exit` - Desliga o servidor',
+        '`/tokenlink` - Gera link para token Haxball',
+        '',
+        '**Comandos de Autenticacao:**',
+        '`/authhelp` - Lista detalhada de comandos de autenticacao',
+        '`/register <nick> <senha>` - Cria nova conta CHA',
+        '`/linkdiscord <nick> <senha>` - Vincula Discord a conta existente',
+        '`/profile [nick]` - Ver perfil de jogador',
+        '`/ranking [nick]` - Ver ranking (alias de profile)',
+        '`/top [criterio]` - Top 10 jogadores (ranking ou pontos)',
+        '',
+        '**Comandos na Sala Haxball:**',
+        'Use `!help` dentro da sala para ver todos os comandos disponiveis',
+        'Comandos: `!login`, `!profile`, `!stats`, `!ranking`, `!top`, `!afk`, `!bb`, `!discord`',
+        'Chat: `t <mensagem>` (team chat), `@@ <nome> <mensagem>` (PM)',
+      ].join('\n');
     }
 
     const embed = new Discord.EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('Comandos CIRS Haxball Server')
-      .setDescription(
-        [
-          channelInfo.length > 0 ? channelInfo.join('\n') + '\n' : '',
-          '**Comandos de Admin:**',
-          '`/help` - Lista todos os comandos',
-          '`/info` - Informacoes sobre salas abertas',
-          '`/meminfo` - Uso de memoria e CPU',
-          '`/metrics` - Metricas do servidor',
-          '`/championship open <preset> <home> <away> <token>` - Abre sala de campeonato temporaria',
-          '`/open <bot> <token> [setting]` - Abre sala com bot',
-          '`/close <pid|all>` - Fecha sala(s)',
-          '`/reload` - Recarrega configuracao',
-          '`/exit` - Desliga o servidor',
-          '`/tokenlink` - Gera link para token Haxball',
-          '',
-          '**Comandos de Autenticacao:**',
-          '`/authhelp` - Lista detalhada de comandos de autenticacao',
-          '`/register <nick> <senha>` - Cria nova conta CIRS',
-          '`/linkdiscord <nick> <senha>` - Vincula Discord a conta existente',
-          '`/profile [nick]` - Ver perfil de jogador',
-          '`/ranking [nick]` - Ver ranking (alias de profile)',
-          '`/top [criterio]` - Top 10 jogadores (ranking ou pontos)',
-          '',
-          '**Comandos na Sala Haxball:**',
-          'Use `!help` dentro da sala para ver todos os comandos disponiveis',
-          'Comandos: `!login`, `!profile`, `!stats`, `!ranking`, `!top`, `!afk`, `!bb`, `!discord`',
-          'Chat: `t <mensagem>` (team chat), `@@ <nome> <mensagem>` (PM)',
-        ].join('\n')
-      )
+      .setTitle('Comandos CHA Haxball Server')
+      .setDescription(description)
       .setTimestamp(Date.now());
+
     await interaction.reply({ embeds: [embed] });
   }
 
@@ -537,10 +593,32 @@ export class ControlPanel {
 
       await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
       return;
-    } else {
-      // Novo token, armazena no cache
-      this.tokenManager.storeToken(token, botName);
     }
+
+    // Verifica se o token ja esta em uso
+    if (this.server.isTokenInUse(token)) {
+      const existingRoom = this.server.getRoomByToken(token);
+      const embed = new Discord.EmbedBuilder()
+        .setColor('#FF6600')
+        .setTitle('⚠️  Token em Uso')
+        .setDescription('Este token ja tem uma sala aberta no momento.')
+        .addFields([
+          {
+            name: 'Sala em Uso',
+            value: `PID: ${existingRoom?.pid}\nNome: ${existingRoom?.botName}\nLink: ${existingRoom?.link}`,
+          },
+          {
+            name: 'Solucao',
+            value: 'Feche a sala existente ou use um token diferente.',
+          },
+        ])
+        .setTimestamp(Date.now());
+
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    // Nota: Token nao e armazenado aqui - sera armazenado DEPOIS de validado
 
     await interaction.deferReply();
 
@@ -557,6 +635,9 @@ export class ControlPanel {
         return;
       }
 
+      // Armazenar token no cache APOS sucesso
+      this.tokenManager.storeToken(token, botName);
+
       const embed = new Discord.EmbedBuilder()
         .setColor('#0099ff')
         .setTitle('Sala Aberta')
@@ -565,7 +646,19 @@ export class ControlPanel {
       await interaction.editReply({ embeds: [embed] });
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      await interaction.editReply({ content: `Erro ao abrir sala: ${errorMsg}` });
+
+      // Mensagem de erro mais clara para token invalido
+      if (
+        errorMsg.toLowerCase().includes('invalid token') ||
+        errorMsg.toLowerCase().includes('forbidden')
+      ) {
+        await interaction.editReply({
+          content:
+            '❌ **Token Inválido ou Expirado**\nO token fornecido nao e valido ou expirou.\n\nObtenha um novo token em: https://www.haxball.com/headlesstoken',
+        });
+      } else {
+        await interaction.editReply({ content: `Erro ao abrir sala: ${errorMsg}` });
+      }
     }
   }
 
@@ -602,8 +695,29 @@ export class ControlPanel {
 
     if (cachedToken) {
       token = cachedToken;
-    } else {
-      this.tokenManager.storeToken(token, `amistoso-${tipo}-${tamanho}`);
+    }
+
+    // Verifica se o token ja esta em uso
+    if (this.server.isTokenInUse(token)) {
+      const existingRoom = this.server.getRoomByToken(token);
+      const embed = new Discord.EmbedBuilder()
+        .setColor('#FF6600')
+        .setTitle('⚠️  Token em Uso')
+        .setDescription('Este token ja tem uma sala aberta no momento.')
+        .addFields([
+          {
+            name: 'Sala em Uso',
+            value: `PID: ${existingRoom?.pid}\nNome: ${existingRoom?.botName}\nLink: ${existingRoom?.link}`,
+          },
+          {
+            name: 'Solucao',
+            value: 'Feche a sala existente com `/close <pid>` ou use um token diferente.',
+          },
+        ])
+        .setTimestamp(Date.now());
+
+      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      return;
     }
 
     if (this.maxRooms != null && this.server.browsers.length >= this.maxRooms) {
@@ -645,6 +759,9 @@ export class ControlPanel {
         return;
       }
 
+      // Armazenar token no cache APOS sucesso
+      this.tokenManager.storeToken(token, `amistoso-${tipo}-${tamanho}`);
+
       const embed = new Discord.EmbedBuilder()
         .setColor('#00FF00')
         .setTitle('⚽ Amistoso Aberto')
@@ -660,9 +777,21 @@ export class ControlPanel {
       await interaction.editReply({ embeds: [embed] });
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      await interaction.editReply({
-        content: `Erro ao abrir amistoso: ${errorMsg}\nTente com um novo token.`,
-      });
+
+      // Mensagem de erro mais clara para token invalido
+      if (
+        errorMsg.toLowerCase().includes('invalid token') ||
+        errorMsg.toLowerCase().includes('forbidden')
+      ) {
+        await interaction.editReply({
+          content:
+            '❌ **Token Inválido ou Expirado**\nO token fornecido nao e valido ou expirou.\n\nObtenha um novo token em: https://www.haxball.com/headlesstoken',
+        });
+      } else {
+        await interaction.editReply({
+          content: `Erro ao abrir amistoso: ${errorMsg}\nTente com um novo token.`,
+        });
+      }
     }
   }
 
@@ -720,7 +849,7 @@ export class ControlPanel {
 
     try {
       const botPath = resolveChampionshipBotPath();
-      const bot = new Bot('cirs-championship', botPath, roomName);
+      const bot = new Bot('cha-championship', botPath, roomName);
       const script = await bot.read();
       const browser = await bot.run(this.server, script, [token], championshipSettings);
 
@@ -850,7 +979,7 @@ export class ControlPanel {
       }
 
       embed
-        .setTitle('Help - CIRS Haxball Server')
+        .setTitle('Help - CHA Haxball Server')
         .setDescription(
           '⚠️ **AVISO**: Comandos com prefixo (!) estao DEPRECATED. Use Slash Commands (/) para maior seguranca.\n\n' +
             (channelInfo.length > 0 ? channelInfo.join('\n') + '\n' : '')

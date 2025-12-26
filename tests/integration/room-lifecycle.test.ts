@@ -218,7 +218,7 @@ describe('Room Lifecycle Integration Tests', () => {
       const mockRoom: any = { getLink: () => 'https://www.haxball.com/headless?c=cleanup' };
       // start announcements for room
       startCommunityAnnouncements(mockRoom, 1000);
-      const key = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
+      const key = '__CHA_COMMUNITY_ANNOUNCEMENT_TIMERS__';
       expect(Boolean((globalThis as any)[key])).toBe(true);
       const timers = (globalThis as any)[key] as Map<any, any>;
       expect(timers.has(mockRoom)).toBe(true);
@@ -244,7 +244,7 @@ describe('Room Lifecycle Integration Tests', () => {
 
     it('nao deve criar timers duplicados ao reavaliar scripts', async () => {
       const { startCommunityAnnouncements } = require('../../shared/config/messages.cjs');
-      const key = '__CIRS_COMMUNITY_ANNOUNCEMENT_TIMERS__';
+      const key = '__CHA_COMMUNITY_ANNOUNCEMENT_TIMERS__';
 
       const mockRoom: any = { getLink: () => 'https://www.haxball.com/headless?c=rereval' };
       const pid = 9920;
@@ -260,7 +260,7 @@ describe('Room Lifecycle Integration Tests', () => {
       // expose the function to the eval context
       (globalThis as any).startCommunityAnnouncements = startCommunityAnnouncements;
 
-      const script = "globalThis.startCommunityAnnouncements(room, 1000);";
+      const script = 'globalThis.startCommunityAnnouncements(room, 1000);';
       // run twice (should not duplicate timers)
       (server as any).executeBotScript(mockRoom, script, {}, undefined, undefined);
       (server as any).executeBotScript(mockRoom, script, {}, undefined, undefined);

@@ -2,7 +2,7 @@
 // Permite registrar e limpar timers (intervals/timeouts/immediates) associados a uma sala
 
 function _getRegistry() {
-  const key = '__CIRS_ROOM_TIMERS__';
+  const key = '__CHA_ROOM_TIMERS__';
   if (!globalThis[key]) globalThis[key] = new Map();
   return globalThis[key];
 }

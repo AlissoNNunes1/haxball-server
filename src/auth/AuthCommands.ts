@@ -80,7 +80,7 @@ export class AuthCommands {
       if (result.success) {
         embed
           .setTitle('\u2713 Conta Criada com Sucesso!')
-          .setDescription(`Sua conta CIRS foi criada e vinculada ao seu Discord.`)
+          .setDescription(`Sua conta CHA foi criada e vinculada ao seu Discord.`)
           .setColor('#00ff00')
           .addFields(
             { name: 'Nick Haxball', value: haxballNick, inline: true },
@@ -88,7 +88,7 @@ export class AuthCommands {
             { name: 'Ranking Inicial', value: '1000', inline: true },
             {
               name: 'Proximo Passo',
-              value: 'Entre em uma sala CIRS e use `/login <senha>` para autenticar.',
+              value: 'Entre em uma sala CHA e use `/login <senha>` para autenticar.',
             }
           );
       } else {
@@ -276,7 +276,7 @@ export class AuthCommands {
   private async handleAuthHelpSlash(interaction: Discord.ChatInputCommandInteraction) {
     const embed = new Discord.EmbedBuilder()
       .setColor('#0099ff')
-      .setTitle('Sistema de Autenticacao CIRS')
+      .setTitle('Sistema de Autenticacao CHA')
       .setDescription('Comandos disponiveis para gerenciar sua conta')
       .setTimestamp(Date.now())
       .addFields(

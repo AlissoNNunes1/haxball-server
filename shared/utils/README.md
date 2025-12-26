@@ -8,7 +8,7 @@
 
 ## 📋 Visao Geral
 
-Este modulo fornece **utilidades para comemoracao e efeitos visuais** nas salas Haxball do projeto CIRS. As funcoes permitem criar animacoes de avatar piscante e avisos visuais na bola, melhorando a experiencia do jogador com feedback visual imediato para eventos importantes.
+Este modulo fornece **utilidades para comemoracao e efeitos visuais** nas salas Haxball do projeto CHA. As funcoes permitem criar animacoes de avatar piscante e avisos visuais na bola, melhorando a experiencia do jogador com feedback visual imediato para eventos importantes.
 
 ### Beneficios
 
@@ -368,7 +368,7 @@ npm test -- tests/unit/utils/celebrationUtils.test.js
 
 ### Fase 3: Atualizar Salas Existentes
 
-- [ ] Atualizar `bots/cirs-stadium/handlers.cjs`
+- [ ] Atualizar `bots/cha-stadium/handlers.cjs`
   - Remover funcao `avatarCelebration` duplicada
   - Importar de `celebrationUtils.cjs`
 - [ ] Atualizar `bots/todos_jogam/handlers.cjs`

@@ -19,8 +19,8 @@ Transformar o codigo do projeto `haxball-server` em uma arquitetura **altamente 
 
 ```
 ❌ Codigo duplicado em 3+ arquivos
-   - cirsbase.js
-   - bots/cirs-stadium/handlers.cjs
+   - chabase.js
+   - bots/cha-stadium/handlers.cjs
    - bots/todos_jogam/handlers.cjs
 
 ❌ Logica de gol repetida em cada sala
@@ -88,7 +88,7 @@ Transformar o codigo do projeto `haxball-server` em uma arquitetura **altamente 
 - ✅ Remover codigo duplicado
 - ✅ Importar handlers globais
 - ✅ Manter apenas logica especifica de cada sala
-- ✅ Deprecar `cirsbase.js`
+- ✅ Deprecar `chabase.js`
 
 ---
 
@@ -134,9 +134,9 @@ Transformar o codigo do projeto `haxball-server` em uma arquitetura **altamente 
 ### Fase 3: Migrar Salas (3-4 dias)
 
 ```
-[x] Atualizar cirs-stadium/
+[x] Atualizar cha-stadium/
 [x] Atualizar todos_jogam/
-[x] Deprecar cirsbase.js
+[x] Deprecar chabase.js
 [x] Validar funcionamento
 ```
 
@@ -204,12 +204,12 @@ shared/
     └── celebrationUtils.cjs  # 🆕 NOVO
 
 bots/
-├── cirs-stadium/
+├── cha-stadium/
 │   ├── handlers.cjs  # 📝 SIMPLIFICADO - so logica especifica
 │   └── rules.cjs     # Formacoes, offside, etc
 ├── todos_jogam/
 │   └── handlers.cjs  # 📝 SIMPLIFICADO - so logica especifica
-└── cirsbase.js       # ⚠️ DEPRECADO
+└── chabase.js       # ⚠️ DEPRECADO
 ```
 
 ---
@@ -221,9 +221,9 @@ bots/
 ```javascript
 // bots/nova_sala/handlers.cjs
 
-// Copiar-colar team chat de cirsbase.js (30 linhas)
-// Copiar-colar PM de cirsbase.js (40 linhas)
-// Copiar-colar logica de gol de cirs-stadium (70 linhas)
+// Copiar-colar team chat de chabase.js (30 linhas)
+// Copiar-colar PM de chabase.js (40 linhas)
+// Copiar-colar logica de gol de cha-stadium (70 linhas)
 // Copiar-colar comemoracao de avatar (50 linhas)
 // ... e mais 310 linhas de logica duplicada
 
@@ -320,9 +320,9 @@ cp -r bots/template/ bots/minha_nova_sala/
 
 ### Fase 3: Migracao de Salas
 
-- [ ] Atualizar `bots/cirs-stadium/handlers.cjs`
+- [ ] Atualizar `bots/cha-stadium/handlers.cjs`
 - [ ] Atualizar `bots/todos_jogam/handlers.cjs`
-- [ ] Deprecar `cirsbase.js`
+- [ ] Deprecar `chabase.js`
 - [ ] Validar funcionamento de todas as salas
 
 ### Fase 4: Finalizacao

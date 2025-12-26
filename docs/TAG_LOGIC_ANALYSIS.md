@@ -1,7 +1,7 @@
 # Logica de Tag de Jogador - Analise e Correcao
 
 **Data:** 15/12/2025  
-**Arquivo analisado:** `cirsbase.js`  
+**Arquivo analisado:** `chabase.js`  
 **Status:** ✅ Logica identificada, ⏳ Correcao pendente
 
 ---
@@ -10,7 +10,7 @@
 
 ### 1. Sistema de Mensagem Privada (PM) com Tag
 
-**Localizacao:** `cirsbase.js` linha 1038
+**Localizacao:** `chabase.js` linha 1038
 
 ```javascript
 // Logica de PM com suporte a nomes com espacos/underscores
@@ -109,7 +109,7 @@ setPlayerTag(room, player.id, 'S1'); // Define tag "S1" para jogador
 
 **Problema:**
 
-- Logica de `replace(/_/g, ' ')` so existe no PM de `cirsbase.js`
+- Logica de `replace(/_/g, ' ')` so existe no PM de `chabase.js`
 - NAO existe em outras funcoes de chat
 - NAO esta em `shared/config/`
 
@@ -313,7 +313,7 @@ function announceGoal(room, goalInfo) {
 ❌ Logica de underscore so em PM
 ❌ Tag visual nao funciona
 ❌ Nomes aparecem simples: "Lukra: gol!"
-❌ Codigo duplicado em cirsbase.js
+❌ Codigo duplicado em chabase.js
 ```
 
 ### Depois (Correto)

@@ -8,7 +8,7 @@ O Haxball Server e uma aplicacao Node.js que funciona como gerenciador de salas 
 
 - CLI `championship` (main.ts) e slash command `/championship open|close` permitem abrir/encerrar salas efemeras com nomes dinamicos (HOME x AWAY) usando presets em `shared/config/championship.cjs`.
 - Utilitario `src/utils/championship.ts` resolve presets com heranca, aplica chaves `reserved.haxball.*`, regras e mapa, e aponta para bot dedicado.
-- Bot `bots/cirs-championship.js` desativa balanceamento, aplica handlers globais e mapa customizado/padrao, mantendo monitoramento e auth existentes.
+- Bot `bots/cha-championship.js` desativa balanceamento, aplica handlers globais e mapa customizado/padrao, mantendo monitoramento e auth existentes.
 
 Arquitetura em **camadas** com separacao clara de responsabilidades:
 
@@ -127,7 +127,7 @@ haxball-server/
 │       ├── celebrationUtils.cjs   # Animacoes e celebracoes
 │       └── README.md              # Documentacao das utilities
 ├── bots/                          # Scripts de salas Haxball
-│   ├── cirs-stadium/              # Sala principal CIRS
+│   ├── cha-stadium/              # Sala principal CHA
 │   │   ├── handlers.cjs           # Handlers especificos
 │   │   ├── main.cjs               # Inicializacao
 │   │   ├── messages.cjs           # Mensagens personalizadas
@@ -714,7 +714,7 @@ shared/
 - ✅ Ball/Warning Utils: ballWarning, offsideWarning, foulWarning
 - ✅ Sistema de comandos: t (team chat), @@ (PM), !help, !discord, etc
 - ✅ 66 testes unitarios + 2 suites de integracao
-- ✅ Migracao completa de cirs-stadium e todos_jogam
+- ✅ Migracao completa de cha-stadium e todos_jogam
 - ✅ ~100+ linhas de codigo duplicado eliminadas
 - ✅ Documentacao completa (docs/HANDLERS_GUIDE.md, docs/REFACTORING_PLAN.md)
 

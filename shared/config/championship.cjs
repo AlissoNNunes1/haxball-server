@@ -1,10 +1,10 @@
-// Presets globais de campeonatos CIRS
+// Presets globais de campeonatos CHA
 // Usar em salas temporarias de campeonato/ligas/eventos
 // Mantem compatibilidade com loadCustomSettings (estrutura semelhante a outras configs)
 
 const presets = {
   default: {
-    name: 'CIRS Real Soccer - Campeonato',
+    name: 'CHA Real Soccer - Campeonato',
     disableBalance: true,
     allowSpectators: true,
     draftEnabled: false,
@@ -32,28 +32,28 @@ const presets = {
 
   rs5: {
     extends: 'default',
-    name: 'CIRS Real Soccer 5x5',
+    name: 'CHA Real Soccer 5x5',
     format: '5x5',
     map: 'shared/maps/real_soccer_5x5.hbs',
   },
 
   rs6: {
     extends: 'default',
-    name: 'CIRS Real Soccer 6x6',
+    name: 'CHA Real Soccer 6x6',
     format: '6x6',
     map: 'shared/maps/real_soccer_6x6.hbs',
   },
 
   rs7: {
     extends: 'default',
-    name: 'CIRS Real Soccer 7x7',
+    name: 'CHA Real Soccer 7x7',
     format: '7x7',
     map: 'shared/maps/real_soccer_7x7.hbs',
   },
 
   rs11: {
     extends: 'default',
-    name: 'CIRS Real Soccer 11x11',
+    name: 'CHA Real Soccer 11x11',
     format: '11x11',
     map: 'shared/maps/real_soccer_11x11.hbs',
     rules: {

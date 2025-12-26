@@ -167,7 +167,7 @@ function startGameIfReady() {
 }
 
 // Anuncios periodicos da comunidade (a cada 5 minutos)
-startCommunityAnnouncements(room, globalThis.__CIRS_ANNOUNCEMENT_INTERVAL || 5 * 60 * 1000);
+startCommunityAnnouncements(room, globalThis.__CHA_ANNOUNCEMENT_INTERVAL || 5 * 60 * 1000);
 
 //===========================================
 // HANDLERS DE EVENTOS
@@ -188,7 +188,7 @@ room.onPlayerJoin = function (player) {
     const account = db.getAccountByNick(player.name);
 
     if (account) {
-      whisper(room, 'Conta encontrada no CIRS!', player.id, 0x00ff00, 'bold', 1);
+      whisper(room, 'Conta encontrada no CHA!', player.id, 0x00ff00, 'bold', 1);
       whisper(room, 'Use !login <senha> para autenticar', player.id, 0xffaa00, 'bold', 1);
       whisper(
         room,

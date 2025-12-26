@@ -5,13 +5,13 @@ describe('Todos Jogam - AFK integration', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date(0));
     // Reset global
-    (globalThis as any).__CIRS_AFK_CHECK_INTERVAL = 100; // 100ms for tests
+    (globalThis as any).__CHA_AFK_CHECK_INTERVAL = 100; // 100ms for tests
   });
 
   afterEach(() => {
     jest.useRealTimers();
     // Clear globals to avoid cross-test pollution
-    delete (globalThis as any).__CIRS_AFK_CHECK_INTERVAL;
+    delete (globalThis as any).__CHA_AFK_CHECK_INTERVAL;
     delete (globalThis as any).room;
   });
 

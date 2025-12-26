@@ -1,8 +1,8 @@
-//Arquivo principal do bot CIRS Stadium
+//Arquivo principal do bot CHA Stadium
 
-const { Game } = require('./cirs-stadium/rules.cjs');
+const { Game } = require('./cha-stadium/rules.cjs');
 const { getRealSoccerMap } = require('../shared/config/maps.cjs');
-const { announce, whisper } = require('./cirs-stadium/messages.cjs');
+const { announce, whisper } = require('./cha-stadium/messages.cjs');
 const { sleep } = require('../shared/config/utils.cjs');
 const {
   roomName,
@@ -31,7 +31,7 @@ if (typeof HBInit === 'function' && typeof room === 'undefined') {
 }
 
 // DEPOIS importa handlers (ja inclui commands.cjs com autenticacao)
-require('./cirs-stadium/handlers.cjs');
+require('./cha-stadium/handlers.cjs');
 
 //   __  ____ ____ _  _
 //  / _\/ ___) ___) )( \

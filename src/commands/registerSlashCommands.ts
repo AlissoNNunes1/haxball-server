@@ -105,7 +105,7 @@ export async function registerSlashCommands(token: string, clientId: string, gui
     // Comandos de Autenticacao (publicos)
     new SlashCommandBuilder()
       .setName('register')
-      .setDescription('Criar conta CIRS')
+      .setDescription('Criar conta CHA')
       .addStringOption((option) =>
         option.setName('nick').setDescription('Seu nick do Haxball').setRequired(true)
       )

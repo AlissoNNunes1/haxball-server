@@ -1,8 +1,8 @@
-# Sistema de Contas e Autenticacao CIRS
+# Sistema de Contas e Autenticacao CHA
 
 ## Visao Geral
 
-O Sistema de Contas CIRS permite que jogadores criem contas unificadas que funcionam em todas as salas da CIRS. Uma unica conta armazena:
+O Sistema de Contas CHA permite que jogadores criem contas unificadas que funcionam em todas as salas da CHA. Uma unica conta armazena:
 
 - **Pontos**: Sistema de pontuacao geral
 - **Ranking**: Elo baseado em desempenho

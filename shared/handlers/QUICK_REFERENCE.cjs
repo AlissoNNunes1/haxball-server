@@ -65,7 +65,7 @@ room.onPlayerChat = (player, message) => {
 │      room.sendChat('Ola ' + player.name);                             │
 │    },                                                                 │
 │    info: (room, player, args) => {                                    │
-│      room.sendChat('Saiba mais em: discord.gg/cirs');                 │
+│      room.sendChat('Saiba mais em: discord.gg/cha');                 │
 │    }                                                                  │
 │  };                                                                   │
 │                                                                        │
@@ -79,7 +79,7 @@ room.onPlayerChat = (player, message) => {
 │  };                                                                   │
 │                                                                        │
 │  ✓ !hello → Ola Lukra                                                │
-│  ✓ !info → Saiba mais em: discord.gg/cirs                            │
+│  ✓ !info → Saiba mais em: discord.gg/cha                            │
 │  ✓ !swap → Troca times                                               │
 │                                                                        │
 └────────────────────────────────────────────────────────────────────────┘

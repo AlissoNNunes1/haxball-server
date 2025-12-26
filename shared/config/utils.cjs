@@ -65,8 +65,8 @@ function clearAFKPlayers() {
 }
 
 // Sistema de tags por sala (persistente na memoria do processo)
-// Estrutura: globalThis.__CIRS_PLAYER_TAGS__ => Map<roomName, Map<playerId, tag>>
-globalThis.__CIRS_PLAYER_TAGS__ = globalThis.__CIRS_PLAYER_TAGS__ || new Map();
+// Estrutura: globalThis.__CHA_PLAYER_TAGS__ => Map<roomName, Map<playerId, tag>>
+globalThis.__CHA_PLAYER_TAGS__ = globalThis.__CHA_PLAYER_TAGS__ || new Map();
 
 /**
  * Define tag para um jogador sem alterar avatar
@@ -76,9 +76,9 @@ globalThis.__CIRS_PLAYER_TAGS__ = globalThis.__CIRS_PLAYER_TAGS__ || new Map();
  */
 function setPlayerTag(room, playerId, tag) {
   const name = room && room.name ? room.name : 'default';
-  const map = globalThis.__CIRS_PLAYER_TAGS__.get(name) || new Map();
+  const map = globalThis.__CHA_PLAYER_TAGS__.get(name) || new Map();
   map.set(playerId, tag);
-  globalThis.__CIRS_PLAYER_TAGS__.set(name, map);
+  globalThis.__CHA_PLAYER_TAGS__.set(name, map);
 }
 
 /**
@@ -89,7 +89,7 @@ function setPlayerTag(room, playerId, tag) {
  */
 function getPlayerTag(room, playerId) {
   const name = room && room.name ? room.name : 'default';
-  const map = globalThis.__CIRS_PLAYER_TAGS__.get(name);
+  const map = globalThis.__CHA_PLAYER_TAGS__.get(name);
   if (!map) return null;
   return map.get(playerId) || null;
 }
@@ -99,7 +99,7 @@ function getPlayerTag(room, playerId) {
  */
 function clearPlayerTag(room, playerId) {
   const name = room && room.name ? room.name : 'default';
-  const map = globalThis.__CIRS_PLAYER_TAGS__.get(name);
+  const map = globalThis.__CHA_PLAYER_TAGS__.get(name);
   if (!map) return;
   map.delete(playerId);
 }

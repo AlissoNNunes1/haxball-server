@@ -1,13 +1,13 @@
-//Arquivo principal do bot CIRS Stadium
+//Arquivo principal do bot CHA Stadium
 
-const { Game } = require('./cirs-rules');
+const { Game } = require('./cha-rules');
 const { getRealSoccerMap } = require('./maps');
-const { announce, whisper } = require('./cirs-messages');
+const { announce, whisper } = require('./cha-messages');
 const { sleep } = require('./utils');
 const { roomName, roomPassword, maxPlayers, roomPublic, token, gameTime } = require('./variables');
 
 // Import handlers
-require('./cirs-handlers');
+require('./cha-handlers');
 
 if (typeof HBInit === 'function' && typeof room === 'undefined') {
   room = HBInit({
@@ -25,7 +25,7 @@ if (typeof HBInit === 'function' && typeof room === 'undefined') {
   room.setTimeLimit(gameTime);
 }
 
-//   __  ____ ____ _  _ 
+//   __  ____ ____ _  _
 //  / _\/ ___) ___) )( \
 // /    \___ \___ ) \/ (
 // \_/\_(____(____|____/

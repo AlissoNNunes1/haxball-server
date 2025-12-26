@@ -51,7 +51,7 @@ export function buildChampionshipSettings(input: ChampionshipSettingsInput): {
 } {
   const preset = resolvePreset(input.preset);
   const reserved = (preset as any).reserved?.haxball || {};
-  const baseName = preset.name || 'CIRS Championship';
+  const baseName = preset.name || 'CHA Championship';
   const roomName = input.customName || `${baseName} - ${input.home} x ${input.away}`;
 
   const settings: CustomSettings = {
@@ -90,7 +90,7 @@ export function buildChampionshipSettings(input: ChampionshipSettingsInput): {
 }
 
 export function resolveChampionshipBotPath(): string {
-  return path.resolve(process.cwd(), 'bots', 'cirs-championship.js');
+  return path.resolve(process.cwd(), 'bots', 'cha-championship.js');
 }
 
 //   __  ____ ____ _  _

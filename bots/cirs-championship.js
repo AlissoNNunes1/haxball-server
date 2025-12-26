@@ -1,4 +1,4 @@
-// Bot de sala temporaria para campeonatos CIRS
+// Bot de sala temporaria para campeonatos CHA
 // Usa presets globais e desativa balanceamento automatico
 // Integrado com autenticacao e coleta de estatisticas
 
@@ -22,7 +22,7 @@ function parseGeo(geoValue) {
 }
 
 const settings = globalThis.customSettings || {};
-const roomName = settings['reserved.haxball.roomName'] || settings.name || 'CIRS Championship';
+const roomName = settings['reserved.haxball.roomName'] || settings.name || 'CHA Championship';
 const maxPlayers = Number(settings['reserved.haxball.maxPlayers'] || 30);
 const isPublic = settings['reserved.haxball.public'] !== false;
 const password = settings['reserved.haxball.password'] || '';
