@@ -30,6 +30,7 @@ class Game {
     this.extraTimeAnnounced = false;
     this.lastPlayAnnounced = false;
     this.boosterState;
+    this.boosterCount = 0;
     this.throwinKicked = false;
     this.pushedOut;
     this.lastKickerId;

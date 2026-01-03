@@ -839,6 +839,125 @@ function realSoccerRef() {
     announce('Last play', null, null, null, 1);
     game.lastPlayAnnounced = true;
   }
+
+  // Adiciona tempo extra para escanteios e tiros de meta
+  if (game.rsCorner == true || game.rsGoalKick == true) {
+    game.extraTimeCount++;
+  }
+
+  // Incrementa timer quando jogo nao esta ativo mas esta pronto
+  if (game.rsTimer < 99999 && game.paused == false && game.rsActive == false && game.rsReady == true) {
+    game.rsTimer++;
+  }
+
+  // Controla gravidade da bola apos chute (curva)
+  if (game.rsSwingTimer < 150 && game.rsCorner == false && game.rsGoalKick == false) {
+    game.rsSwingTimer++;
+    if (game.rsSwingTimer > 5) {
+      room.setDiscProperties(0, {
+        xgravity: room.getDiscProperties(0).xgravity * 0.97,
+        ygravity: room.getDiscProperties(0).ygravity * 0.97,
+      });
+    }
+    if (game.rsSwingTimer == 150) {
+      room.setDiscProperties(0, { xgravity: 0, ygravity: 0 });
+    }
+  }
+
+  // Controla estado de boost
+  if (game.boosterState == true) {
+    game.boosterCount++;
+  }
+
+  if (game.boosterCount > 30) {
+    game.boosterState = false;
+    game.boosterCount = 0;
+    room.setDiscProperties(0, { cMask: 63 });
+  }
+
+  // Reativa jogo quando bola volta ao centro
+  if (room.getBallPosition().x == 0 && room.getBallPosition().y == 0) {
+    game.rsActive = true;
+    game.outStatus = '';
+  }
+
+  // Controla timeouts de lateral, tiro de meta e escanteio
+  if (game.rsActive == false && game.rsReady == true) {
+    // Lateral vermelha
+    if (game.outStatus == 'redThrow') {
+      if (game.rsTimer == throwTimeOut - 120) {
+        ballWarning('0xff3f34', ++game.warningCount);
+      }
+      if (game.rsTimer == throwTimeOut && game.bringThrowBack == false) {
+        game.outStatus = 'blueThrow';
+        game.rsTimer = 0;
+        room.setDiscProperties(3, { x: 0, y: 2000, radius: 0 });
+        sleep(100).then(() => {
+          room.setDiscProperties(0, {
+            color: '0x0fbcf9',
+            xspeed: 0,
+            yspeed: 0,
+            x: game.ballOutPositionX,
+            y: game.throwInPosY,
+          });
+        });
+      }
+    }
+    // Lateral azul
+    else if (game.outStatus == 'blueThrow') {
+      if (game.rsTimer == throwTimeOut - 120) {
+        ballWarning('0x0fbcf9', ++game.warningCount);
+      }
+      if (game.rsTimer == throwTimeOut && game.bringThrowBack == false) {
+        game.outStatus = 'redThrow';
+        game.rsTimer = 0;
+        room.setDiscProperties(3, { x: 0, y: 2000, radius: 0 });
+        sleep(100).then(() => {
+          room.setDiscProperties(0, {
+            color: '0xff3f34',
+            xspeed: 0,
+            yspeed: 0,
+            x: game.ballOutPositionX,
+            y: game.throwInPosY,
+          });
+        });
+      }
+    }
+    // Tiro de meta
+    else if (game.outStatus == 'blueGK' || game.outStatus == 'redGK') {
+      if (game.rsTimer == gkTimeOut - 120) {
+        if (game.outStatus == 'blueGK') {
+          ballWarning('0x0fbcf9', ++game.warningCount);
+        }
+        if (game.outStatus == 'redGK') {
+          ballWarning('0xff3f34', ++game.warningCount);
+        }
+      }
+      if (game.rsTimer == gkTimeOut) {
+        game.outStatus = '';
+        room.setDiscProperties(0, { color: '0xffffff' });
+        game.rsTimer = 1000000;
+      }
+    }
+    // Escanteio
+    else if (game.outStatus == 'blueCK' || game.outStatus == 'redCK') {
+      if (game.rsTimer == ckTimeOut - 120) {
+        if (game.outStatus == 'blueCK') {
+          ballWarning('0x0fbcf9', ++game.warningCount);
+        }
+        if (game.outStatus == 'redCK') {
+          ballWarning('0xff3f34', ++game.warningCount);
+        }
+      }
+      if (game.rsTimer == ckTimeOut) {
+        game.outStatus = '';
+        room.setDiscProperties(1, { x: 0, y: 2000, radius: 0 });
+        room.setDiscProperties(2, { x: 0, y: 2000, radius: 0 });
+        room.setDiscProperties(0, { color: '0xffffff' });
+        game.rsTimer = 1000000;
+      }
+    }
+  }
 }
 
 function blockThrowIn() {

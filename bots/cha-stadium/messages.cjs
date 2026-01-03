@@ -5,7 +5,7 @@ const { announce, whisper, welcomeWhispers, startCommunityAnnouncements, matchSt
 
 function isAdminPresent() {
   var players = room.getPlayerList();
-  if (players.find((player) => player.admin) != 'Bagrian') {
+  if (players.find((player) => player.admin) != 'assu') {
     return true;
   } else {
     return false;

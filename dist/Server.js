@@ -13,9 +13,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Server = void 0;
 const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
+const auth_client_1 = require("./database/auth-client");
 const log_1 = require("./utils/log");
 const Logger_1 = require("./utils/Logger");
-const auth_client_1 = require("./database/auth-client");
 /**
  * Gerenciador de salas Haxball usando child processes
  * Cada sala roda em processo separado para evitar "Can't init twice"

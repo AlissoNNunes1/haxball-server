@@ -5,9 +5,11 @@
 const presets = {
   default: {
     name: 'CHA Real Soccer - Campeonato',
+    isChampionship: true,
     disableBalance: true,
     allowSpectators: true,
     draftEnabled: false,
+    map: 'RSR', // Usa mapa Real Soccer padrao
     uniforms: {
       home: { name: 'Home', color1: '#ff0000', color2: '#ffffff' },
       away: { name: 'Away', color1: '#0000ff', color2: '#ffffff' },

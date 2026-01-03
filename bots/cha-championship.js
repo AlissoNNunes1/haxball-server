@@ -45,9 +45,16 @@ room = HBInit({
 const mapPath = settings.map;
 try {
   if (mapPath && typeof mapPath === 'string') {
-    const fullMapPath = path.resolve(mapPath);
-    const mapContent = fs.readFileSync(fullMapPath, 'utf-8');
-    room.setCustomStadium(mapContent);
+    // Se for 'RSR', usa o mapa Real Soccer customizado
+    if (mapPath === 'RSR') {
+      room.setCustomStadium(getRealSoccerMap());
+    } else {
+      // Tenta carregar de arquivo - resolve relativo a raiz do projeto, nao ao diretorio bots/
+      const projectRoot = path.resolve(__dirname, '..');
+      const fullMapPath = path.resolve(projectRoot, mapPath);
+      const mapContent = fs.readFileSync(fullMapPath, 'utf-8');
+      room.setCustomStadium(mapContent);
+    }
   } else {
     room.setCustomStadium(getRealSoccerMap());
   }
@@ -100,10 +107,33 @@ try {
   console.error('[STATS] Erro ao inicializar sistema de estatisticas:', error.message);
 }
 
-require('../shared/handlers/playerHandlers.cjs');
-require('../shared/handlers/chatHandlers.cjs');
-require('../shared/handlers/goalHandlers.cjs');
-require('../shared/handlers/matchHandlers.cjs');
+// Importa modulos de Real Soccer ANTES de carregar handlers
+const variables = require('../shared/config/variables.cjs');
+const { Game } = require('../bots/cha-stadium/rules.cjs');
+
+// Configura variaveis globais para Real Soccer ANTES de carregar handlers
+variables.map = settings.map || 'RSR';
+variables.roomName = roomName;
+variables.maxPlayers = maxPlayers;
+variables.roomPublic = isPublic;
+variables.roomPassword = password;
+variables.gameTime = timeLimit;
+
+// Inicializa jogo Real Soccer
+globalThis.room = room;
+globalThis.game = new Game();
+
+// IMPORTANTE: Carrega handlers do Real Soccer ANTES dos handlers globais
+// Os handlers do cha-stadium incluem toda a logica de Real Soccer
+require('../bots/cha-stadium/handlers.cjs');
+
+// Configura authHandler para sistema de tags no chat
+// Importa funcao depois de carregar handlers para evitar conflito
+const { setAuthHandler } = require('../shared/handlers/chatHandlers.cjs');
+if (authHandler) {
+  setAuthHandler(authHandler);
+  console.log('[AUTH] AuthHandler configurado para sistema de chat');
+}
 
 // Inicializa coleta ao comecar partida
 const originalGameStart = room.onGameStart;

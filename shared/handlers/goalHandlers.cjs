@@ -20,6 +20,20 @@ const DEFAULT_GOAL_MESSAGES = {
   score: 'Vermelho {red} - {blue} Azul',
 };
 
+function getTeamName(room, team) {
+  const state = room && room.__uniformState;
+  if (state && state[team] && state[team].name) return state[team].name;
+  return team === 1 ? 'Vermelho' : 'Azul';
+}
+
+function applyTemplate(template, teamName, opponentName) {
+  if (typeof template !== 'string') return null;
+  if (!template.includes('{team}') && !template.includes('{opponent}')) return null;
+  let text = template.replace('{team}', teamName || '');
+  if (opponentName) text = text.replace('{opponent}', opponentName);
+  return text;
+}
+
 /**
  * Converte tempo em segundos para formato MM:SS
  * Exemplo: 225 segundos vira "3:45"
@@ -118,19 +132,27 @@ function announceGoal(room, goalInfo, customMessages = null) {
   if (!room || !goalInfo) return;
 
   const messages = customMessages || DEFAULT_GOAL_MESSAGES;
+  const scoringTeamName = getTeamName(room, goalInfo.team);
+  const otherTeamName = getTeamName(room, goalInfo.team === 1 ? 2 : 1);
 
   // Cor do anuncio
   const color = goalInfo.isOwnGoal ? 0xff6600 : goalInfo.team === 1 ? 0xff0000 : 0x0000ff;
 
   // Linha 1: Tipo de gol
-  let message = '';
-  if (goalInfo.isOwnGoal) {
-    const teamName = goalInfo.team === 1 ? 'red' : 'blue';
-    message += messages.ownGoal[teamName] || DEFAULT_GOAL_MESSAGES.ownGoal[teamName];
-  } else {
-    const teamName = goalInfo.team === 1 ? 'red' : 'blue';
-    message += messages.goal[teamName] || DEFAULT_GOAL_MESSAGES.goal[teamName];
-  }
+  const templateKey = goalInfo.team === 1 ? 'red' : 'blue';
+  const ownTemplate = applyTemplate(
+    messages.ownGoal && messages.ownGoal[templateKey],
+    scoringTeamName,
+    otherTeamName
+  );
+  const goalTemplate = applyTemplate(
+    messages.goal && messages.goal[templateKey],
+    scoringTeamName,
+    otherTeamName
+  );
+  const message = goalInfo.isOwnGoal
+    ? ownTemplate || `Gol contra! ${scoringTeamName} marcou contra ${otherTeamName}!`
+    : goalTemplate || `Gol do ${scoringTeamName}!`;
 
   announce(room, message, null, color, 'bold', 2);
 
@@ -159,7 +181,9 @@ function announceGoal(room, goalInfo, customMessages = null) {
   }
 
   // Linha 4: Placar
-  const scoreMsg = `Vermelho ${goalInfo.redScore} - ${goalInfo.blueScore} Azul`;
+  const scoreMsg = `${getTeamName(room, 1)} ${goalInfo.redScore} - ${
+    goalInfo.blueScore
+  } ${getTeamName(room, 2)}`;
   announce(room, scoreMsg, null, 0xffffff, 'bold', 1);
 
   // Linha 5: Tempo

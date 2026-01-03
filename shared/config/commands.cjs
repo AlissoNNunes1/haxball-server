@@ -20,6 +20,9 @@ const {
   getPlayerTag,
 } = require('./utils.cjs');
 
+// Uniformes globais
+const { handleUniformCommand } = require('../uniforms.cjs');
+
 // Importa handlers globais de chat
 const { handleTeamChat, handlePrivateMessage } = require('../handlers/chatHandlers.cjs');
 
@@ -109,6 +112,12 @@ function processGeneralCommand(room, player, message) {
   // !help ou !ajuda - mostra TODOS os comandos
   if (cmd === 'help' || cmd === 'ajuda') {
     handleGeneralHelp(room, player);
+    return true;
+  }
+
+  // !uni <sigla+numero> - mudar uniforme do time
+  if (cmd === 'uni') {
+    handleUniformCommand(room, player, message);
     return true;
   }
 
@@ -488,6 +497,13 @@ function handleGeneralHelp(room, player) {
   room.sendAnnouncement('!help - Mostra esta lista de comandos', player.id, 0xaaaaaa, 'normal', 1);
   room.sendAnnouncement(
     '!afk - Alternar entre time e espectadores',
+    player.id,
+    0xaaaaaa,
+    'normal',
+    1
+  );
+  room.sendAnnouncement(
+    '!uni <sigla+numero> - Trocar uniforme do seu time',
     player.id,
     0xaaaaaa,
     'normal',

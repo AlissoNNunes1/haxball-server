@@ -59,7 +59,7 @@ Forneca contexto do projeto e diretrizes de codificacao que a IA deve seguir ao 
 
 ## Comunidade e Salas Haxball
 
-Todas as salas feitas aqui é da Comunidae de Haxball CHA (Confederacao Internacional de Real Soccer). Essa comunidade é focada no estilo Real Soccer que simula partidas de futebol realistas com regras, posições e estatísticas,mecanicas como powershot,curva,impedimento,barreira,penalti.A comunidade vai oferecer campeonatos regulares, ligas e eventos especiais para jogadores de todos os niveis.Bem como times fixos,draft,ranqueamento,filas competitivas e amistosas.
+Todas as salas feitas aqui é da Comunidae de Haxball CHA (Confederação Haxball Arena). Essa comunidade é focada no estilo Real Soccer que simula partidas de futebol realistas com regras, posições e estatísticas,mecanicas como powershot,curva,impedimento,barreira,penalti.A comunidade vai oferecer campeonatos regulares, ligas e eventos especiais para jogadores de todos os niveis.Bem como times fixos,draft,ranqueamento,filas competitivas e amistosas...As cores da indentidade visual são #6A2DE4,#FFFFFF,#1C1C1C,#1A0E32.
 
 Todas as salas devem seguir um mesmo padrão/base de configuração,visual,regras,anuncios,mensagens,lidar com afks e etc.Ou seja,ter uma experiencia consistente independente da sala que o jogador entre. (shared\config)
 Todos as salas são integradas com os sistemas de balanceamento,cadastro,estatísticas e ranqueamento da comunidade CHA.(src\balance e src\stats,database,authentication,discord-bot)
